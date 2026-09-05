@@ -10,6 +10,10 @@ CREATE TABLE IF NOT EXISTS houses (
   order_index INT NOT NULL DEFAULT 0
 );
 
+-- Discord role ID whose holders can manage this house without the password
+-- (added after initial launch — IF NOT EXISTS keeps this safe to rerun on every boot)
+ALTER TABLE houses ADD COLUMN IF NOT EXISTS lord_role_id TEXT;
+
 CREATE TABLE IF NOT EXISTS members (
   id TEXT PRIMARY KEY,
   house_slug TEXT NOT NULL REFERENCES houses(slug) ON DELETE CASCADE,

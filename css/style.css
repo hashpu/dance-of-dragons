@@ -824,6 +824,13 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   box-shadow: 0 0 8px var(--green);
 }
 
+.banner-lord {
+  background: rgba(212, 175, 55, 0.1);
+  border: 1px solid rgba(212, 175, 55, 0.4);
+}
+.banner-lord .banner-left { color: #f0dfa0; }
+.dot-lord { background: #d4af37; box-shadow: 0 0 8px #d4af37; }
+
 /* Locked screen */
 .locked-card {
   background: var(--panel);

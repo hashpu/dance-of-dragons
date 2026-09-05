@@ -1,7 +1,7 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { pool } = require("../db");
-const { requireAdmin } = require("../middleware/requireAdmin");
+const { isLordOfHouse, isAdminRequest } = require("../discord");
 
 const router = express.Router();
 
@@ -72,7 +72,8 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// GET /api/houses/:slug — full detail; members omitted while locked
+// GET /api/houses/:slug — full detail; members omitted while locked, unless the
+// caller is signed in as this house's Discord "Lord"
 router.get("/:slug", async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [req.params.slug]);
@@ -89,7 +90,12 @@ router.get("/:slug", async (req, res, next) => {
       locked: house.locked
     };
 
-    if (house.locked) return res.json(base);
+    if (house.locked) {
+      const lordAccess = await isLordOfHouse(req, house);
+      if (!lordAccess) return res.json(base);
+      const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
+      return res.json({ ...base, lordAccess: true, members: membersRes.rows.map(toMemberJson) });
+    }
 
     const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
     res.json({ ...base, members: membersRes.rows.map(toMemberJson) });
@@ -149,13 +155,35 @@ router.post("/:slug/lock", async (req, res, next) => {
   }
 });
 
-// POST /api/houses/:slug/forgot-password — admin-only: clears the lock without the password
-router.post("/:slug/forgot-password", requireAdmin, async (req, res, next) => {
+// POST /api/houses/:slug/forgot-password — clears the lock without the password.
+// Allowed for the site admin, or for this house's own Discord Lord.
+router.post("/:slug/forgot-password", async (req, res, next) => {
   try {
-    const { rowCount } = await pool.query(
-      "UPDATE houses SET locked = false, password_hash = NULL WHERE slug = $1",
-      [req.params.slug]
-    );
+    const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [req.params.slug]);
+    const house = rows[0];
+    if (!house) return res.status(404).json({ error: "House not found." });
+
+    if (!isAdminRequest(req) && !(await isLordOfHouse(req, house))) {
+      return res.status(401).json({ error: "Not authorized to reset this house's lock." });
+    }
+
+    await pool.query("UPDATE houses SET locked = false, password_hash = NULL WHERE slug = $1", [house.slug]);
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/houses/:slug/lord-role { roleId } — admin-only: assigns which Discord
+// role can manage this house without its password
+router.post("/:slug/lord-role", async (req, res, next) => {
+  try {
+    if (!isAdminRequest(req)) return res.status(401).json({ error: "Admin secret required." });
+    const { roleId } = req.body;
+    const { rowCount } = await pool.query("UPDATE houses SET lord_role_id = $2 WHERE slug = $1", [
+      req.params.slug,
+      roleId || null
+    ]);
     if (!rowCount) return res.status(404).json({ error: "House not found." });
     res.json({ ok: true });
   } catch (err) {
@@ -163,23 +191,25 @@ router.post("/:slug/forgot-password", requireAdmin, async (req, res, next) => {
   }
 });
 
-async function assertUnlocked(slug, res) {
-  const { rows } = await pool.query("SELECT locked FROM houses WHERE slug = $1", [slug]);
-  if (!rows[0]) {
+// Unlocked, or the caller is signed in as this house's Discord Lord.
+async function authorizeEdit(req, res, slug) {
+  const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [slug]);
+  const house = rows[0];
+  if (!house) {
     res.status(404).json({ error: "House not found." });
-    return false;
+    return null;
   }
-  if (rows[0].locked) {
+  if (house.locked && !(await isLordOfHouse(req, house))) {
     res.status(403).json({ error: "This house is locked." });
-    return false;
+    return null;
   }
-  return true;
+  return house;
 }
 
 // POST /api/houses/:slug/members — add a member
 router.post("/:slug/members", async (req, res, next) => {
   try {
-    if (!(await assertUnlocked(req.params.slug, res))) return;
+    if (!(await authorizeEdit(req, res, req.params.slug))) return;
 
     const { name, role, parentId, avatarUrl, buildLink, robloxProfile, note } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
@@ -204,7 +234,7 @@ router.post("/:slug/members", async (req, res, next) => {
 // PATCH /api/houses/:slug/members/:id — edit a member (including reparenting)
 router.patch("/:slug/members/:id", async (req, res, next) => {
   try {
-    if (!(await assertUnlocked(req.params.slug, res))) return;
+    if (!(await authorizeEdit(req, res, req.params.slug))) return;
 
     const { id } = req.params;
     const existing = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
@@ -237,7 +267,7 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
 // DELETE /api/houses/:slug/members/:id — cascades to descendants
 router.delete("/:slug/members/:id", async (req, res, next) => {
   try {
-    if (!(await assertUnlocked(req.params.slug, res))) return;
+    if (!(await authorizeEdit(req, res, req.params.slug))) return;
 
     const { id } = req.params;
     const existing = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);

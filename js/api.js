@@ -2,7 +2,13 @@ const API_BASE = "/api";
 
 async function apiFetch(path, { method = "GET", body, headers = {} } = {}) {
   const isFormData = typeof FormData !== "undefined" && body instanceof FormData;
-  const finalHeaders = isFormData ? headers : { "Content-Type": "application/json", ...headers };
+  const finalHeaders = isFormData ? { ...headers } : { "Content-Type": "application/json", ...headers };
+
+  // Lets the server recognize a signed-in Discord "Lord" for house-editing checks.
+  const discordToken = typeof getDiscordAccessToken === "function" ? getDiscordAccessToken() : null;
+  if (discordToken && !finalHeaders.Authorization) {
+    finalHeaders.Authorization = "Bearer " + discordToken;
+  }
 
   const res = await fetch(API_BASE + path, {
     method,
@@ -30,5 +36,7 @@ const Api = {
   updateMember: (slug, id, member) => apiFetch(`/houses/${slug}/members/${id}`, { method: "PATCH", body: member }),
   removeMember: (slug, id) => apiFetch(`/houses/${slug}/members/${id}`, { method: "DELETE" }),
   resetAll: (secret) => apiFetch("/admin/reset", { method: "POST", headers: { "x-admin-secret": secret } }),
+  setLordRole: (slug, roleId, secret) =>
+    apiFetch(`/houses/${slug}/lord-role`, { method: "POST", body: { roleId }, headers: { "x-admin-secret": secret } }),
   submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData })
 };

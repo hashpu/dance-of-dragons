@@ -14,9 +14,33 @@ function renderHeader() {
   `;
 }
 
+function renderAdminTools() {
+  const el = document.getElementById("adminTools");
+  el.innerHTML = `<button class="btn-link" id="lordRoleBtn" style="margin:0 0 22px">Assign this house's Discord Lord role (admin)</button>`;
+  document.getElementById("lordRoleBtn").onclick = async () => {
+    const secret = window.prompt("Admin secret:");
+    if (!secret) return;
+    const roleId = window.prompt(
+      `Discord role ID for House ${house.name}'s Lord (anyone with this role can manage the house without its password). Leave blank to remove.`,
+      ""
+    );
+    if (roleId === null) return;
+    try {
+      await Api.setLordRole(slug, roleId.trim(), secret);
+      alert(
+        roleId.trim()
+          ? `Saved. Anyone with that Discord role can now manage House ${house.name} without the password.`
+          : `Removed — House ${house.name} no longer has a Lord role assigned.`
+      );
+    } catch (e) {
+      alert(e.message);
+    }
+  };
+}
+
 function renderStatus() {
   const el = document.getElementById("statusArea");
-  if (house.locked) {
+  if (house.locked && !house.lordAccess) {
     el.innerHTML = `
       <div class="locked-card">
         <div class="lock-icon">🔒</div>
@@ -34,6 +58,12 @@ function renderStatus() {
       if (e.key === "Enter") tryUnlock();
     });
     document.getElementById("treeArea").innerHTML = "";
+  } else if (house.locked && house.lordAccess) {
+    el.innerHTML = `
+      <div class="banner banner-lord">
+        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this house's Lord — locked for everyone else, but you can add or remove members below.</div>
+      </div>
+    `;
   } else {
     el.innerHTML = `
       <div class="banner banner-unlocked">
@@ -48,6 +78,7 @@ function renderStatus() {
 async function refresh() {
   house = await Api.getHouse(slug);
   renderHeader();
+  renderAdminTools();
   renderStatus();
   renderTree();
   applyHighlight();
@@ -145,7 +176,7 @@ function nodeHtml(node) {
 
 function renderTree() {
   const el = document.getElementById("treeArea");
-  if (house.locked) return;
+  if (house.locked && !house.lordAccess) return;
 
   const forest = buildForest(house.members);
   const toolbar = `

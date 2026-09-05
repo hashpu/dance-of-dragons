@@ -6,6 +6,7 @@
   const backLink = document.getElementById("authBackLink");
   const params = new URLSearchParams(location.hash.replace(/^#/, ""));
   const token = params.get("access_token");
+  const expiresIn = Number(params.get("expires_in")) || 0;
   const error = params.get("error");
 
   function fail(msg) {
@@ -33,7 +34,9 @@
       id: me.id,
       username: me.username,
       discriminator: me.discriminator,
-      avatar: me.avatar
+      avatar: me.avatar,
+      accessToken: token,
+      tokenExpiresAt: expiresIn ? Date.now() + expiresIn * 1000 : null
     });
     const returnTo = sessionStorage.getItem("postAuthReturnTo") || "index.html";
     sessionStorage.removeItem("postAuthReturnTo");

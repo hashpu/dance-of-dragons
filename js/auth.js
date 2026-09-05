@@ -33,6 +33,15 @@ function setDiscordUser(user) {
   localStorage.setItem(DISCORD_AUTH_STORAGE_KEY, JSON.stringify(user));
 }
 
+// The raw Discord access token, used server-side to check "Lord" role
+// membership for a house — returns null once it's expired.
+function getDiscordAccessToken() {
+  const user = getDiscordUser();
+  if (!user || !user.accessToken || !user.tokenExpiresAt) return null;
+  if (Date.now() > user.tokenExpiresAt) return null;
+  return user.accessToken;
+}
+
 function signOutDiscord() {
   localStorage.removeItem(DISCORD_AUTH_STORAGE_KEY);
   location.reload();
@@ -52,7 +61,7 @@ function beginDiscordLogin() {
     "https://discord.com/oauth2/authorize" +
     "?client_id=" + DISCORD_CLIENT_ID +
     "&redirect_uri=" + encodeURIComponent(redirect) +
-    "&response_type=token&scope=identify";
+    "&response_type=token&scope=" + encodeURIComponent("identify guilds.members.read");
   location.href = url;
 }
 
