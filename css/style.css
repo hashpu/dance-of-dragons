@@ -1204,6 +1204,9 @@ input:focus, select:focus, textarea:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 22%, transparent);
 }
 
+.role-custom-wrap { margin-top: 10px; }
+.role-custom-wrap input { width: 100%; }
+
 .parent-preview {
   display: flex;
   align-items: center;

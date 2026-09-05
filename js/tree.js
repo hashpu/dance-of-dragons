@@ -206,6 +206,80 @@ async function handleRemove(memberId) {
   }
 }
 
+const ROLE_GROUPS = [
+  {
+    label: "Royal",
+    titles: [
+      "King of the Seven Kingdoms",
+      "Queen Of The Seven Kingdoms",
+      "King Consort Of The Seven Kingdoms",
+      "Queen Consort of the Realm",
+      "Prince of Dragonstone",
+      "Royal Family",
+      "Royal Prince / Princess",
+      "Dragon Dynasty"
+    ]
+  },
+  {
+    label: "Council",
+    titles: [
+      "Hand of the King",
+      "Master of Coin",
+      "Master of Laws",
+      "Master of Whisperers",
+      "Master of Ships",
+      "Master of War",
+      "Grand Maester",
+      "Small Council",
+      "King / Queen's Court"
+    ]
+  },
+  {
+    label: "Realm",
+    titles: [
+      "Lord/Lady Paramount",
+      "Lord / Lady",
+      "Heir/Heiress",
+      "Highborn",
+      "Wellborn",
+      "Lowborn",
+      "Married"
+    ]
+  }
+];
+
+const ROLE_CUSTOM_VALUE = "__custom__";
+
+function roleFieldHtml(currentRole) {
+  const allTitles = ROLE_GROUPS.flatMap((g) => g.titles);
+  const isCustom = !!currentRole && !allTitles.includes(currentRole);
+
+  const optgroups = ROLE_GROUPS.map(
+    (g) =>
+      `<optgroup label="${g.label}">${g.titles
+        .map((t) => `<option value="${escapeAttr(t)}"${t === currentRole ? " selected" : ""}>${t}</option>`)
+        .join("")}</optgroup>`
+  ).join("");
+
+  return `
+    <div class="field">
+      <label>Role / title <span class="hint">(optional)</span></label>
+      <div class="input-wrap">
+        ${FIELD_ICONS.crown}
+        <select id="fRoleSelect">
+          <option value=""${!currentRole ? " selected" : ""}>No title</option>
+          ${optgroups}
+          <option value="${ROLE_CUSTOM_VALUE}"${isCustom ? " selected" : ""}>Custom / other…</option>
+        </select>
+        <span class="chevron">${FIELD_ICONS.chevron}</span>
+      </div>
+      <div class="role-custom-wrap" id="fRoleCustomWrap"${isCustom ? "" : " hidden"}>
+        <input id="fRoleCustom" placeholder="Type a custom title" value="${isCustom ? escapeAttr(currentRole) : ""}" />
+      </div>
+    </div>
+  `;
+}
+
 const FIELD_ICONS = {
   user: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c1-4.2 4.6-6 7.5-6s6.5 1.8 7.5 6"/></svg>`,
   tree: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="19" r="2.2"/><path d="M12 7.2V12M12 12L6.8 16.8M12 12l5.2 4.8"/></svg>`,
@@ -289,13 +363,7 @@ function openMemberModal({ parentId, member }) {
           <div class="parent-preview" id="parentPreview"></div>
         </div>
 
-        <div class="field">
-          <label>Role / title <span class="hint">(optional)</span></label>
-          <div class="input-wrap">
-            ${FIELD_ICONS.crown}
-            <input id="fRole" placeholder="e.g. Prince, Heir, Lord" value="${isEdit ? escapeAttr(member.role || "") : ""}" />
-          </div>
-        </div>
+        ${roleFieldHtml(isEdit ? member.role || "" : "")}
 
         <details class="more-options"${isEdit && (member.buildLink || member.robloxProfile || member.avatarUrl || member.note) ? " open" : ""}>
           <summary><span class="chev">${FIELD_ICONS.chevronRight}</span> More options <span class="hint">(photo, links, married-in note)</span></summary>
@@ -353,6 +421,12 @@ function openMemberModal({ parentId, member }) {
   document.getElementById("fParent").addEventListener("change", updateParentPreview);
   updateParentPreview();
 
+  document.getElementById("fRoleSelect").addEventListener("change", (e) => {
+    const isCustom = e.target.value === ROLE_CUSTOM_VALUE;
+    document.getElementById("fRoleCustomWrap").hidden = !isCustom;
+    if (isCustom) document.getElementById("fRoleCustom").focus();
+  });
+
   document.getElementById("fAvatar").addEventListener("input", updateAvatarPreview);
   document.getElementById("clearAvatarBtn").addEventListener("click", () => {
     document.getElementById("fAvatar").value = "";
@@ -385,7 +459,8 @@ function closeModal() {
 async function submitMember() {
   const name = document.getElementById("fName").value.trim();
   const parentId = document.getElementById("fParent").value || null;
-  const role = document.getElementById("fRole").value.trim();
+  const roleSelectVal = document.getElementById("fRoleSelect").value;
+  const role = roleSelectVal === ROLE_CUSTOM_VALUE ? document.getElementById("fRoleCustom").value.trim() : roleSelectVal;
   const avatarUrl = document.getElementById("fAvatar").value.trim();
   const buildLink = document.getElementById("fBuildLink").value.trim();
   const robloxProfile = document.getElementById("fRobloxProfile").value.trim();

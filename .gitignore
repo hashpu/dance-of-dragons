@@ -5,3 +5,5 @@ server/uploads/*
 
 .DS_Store
 Thumbs.db
+
+.claude/
