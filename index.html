@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dance of Dragons — House Archives</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar" id="topbar" data-active="index.html"></header>
+
+  <main class="container">
+    <section class="hero">
+      <div class="hero-content">
+        <div class="eyebrow" style="justify-content:center">A Roblox Chronicle</div>
+        <h1 class="hero-title">Dance of <span>Dragons</span></h1>
+        <div class="hero-actions">
+          <a href="#houseGrid" class="btn btn-primary">Explore the Houses</a>
+          <a href="timeline.html" class="btn btn-outline">Read the Timeline</a>
+        </div>
+      </div>
+    </section>
+
+    <h1 class="page-title">Houses</h1>
+    <p class="page-desc">
+      Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or
+      add to its family tree — some houses have builds available already.
+    </p>
+
+    <div class="search-stats-row">
+      <div class="input-wrap search-wrap">
+        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="houseSearch" placeholder="Search houses or members..." />
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+    </div>
+
+    <div id="searchResults"></div>
+    <div class="house-grid" id="houseGrid"></div>
+
+    <button class="btn-link" id="resetAllBtn" style="margin-top:40px">Reset all house data to defaults</button>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/embers.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/house-card.js"></script>
+  <script src="js/houses.js"></script>
+</body>
+</html>
