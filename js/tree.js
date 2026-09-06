@@ -478,7 +478,7 @@ function openMemberModal({ parentId, member }) {
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal" style="--card-color:${house.color}">
+      <div class="modal modal-wide" style="--card-color:${house.color}">
         <div class="modal-header">
           <div class="modal-crest">${HOUSE_ICONS[house.slug]}</div>
           <div>
@@ -495,17 +495,19 @@ function openMemberModal({ parentId, member }) {
           </div>
         </div>
 
-        <div class="field">
-          <label>Who is their parent?</label>
-          <div class="input-wrap">
-            ${FIELD_ICONS.tree}
-            <select id="fParent">${options}</select>
-            <span class="chevron">${FIELD_ICONS.chevron}</span>
+        <div class="more-grid">
+          <div class="field">
+            <label>Who is their parent?</label>
+            <div class="input-wrap">
+              ${FIELD_ICONS.tree}
+              <select id="fParent">${options}</select>
+              <span class="chevron">${FIELD_ICONS.chevron}</span>
+            </div>
+            <div class="parent-preview" id="parentPreview"></div>
           </div>
-          <div class="parent-preview" id="parentPreview"></div>
-        </div>
 
-        ${roleFieldHtml(isEdit ? member.role || "" : "")}
+          ${roleFieldHtml(isEdit ? member.role || "" : "")}
+        </div>
 
         <details class="more-options"${isEdit && (member.buildLink || member.robloxProfile || member.avatarUrl || member.note) ? " open" : ""}>
           <summary><span class="chev">${FIELD_ICONS.chevronRight}</span> More options <span class="hint">(photo, links, married-in note)</span></summary>

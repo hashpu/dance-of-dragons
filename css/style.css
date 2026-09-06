@@ -1258,6 +1258,14 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   animation: modalPop 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+.modal-wide {
+  max-width: 700px;
+  padding: 38px 42px;
+}
+@media (max-width: 760px) {
+  .modal-wide { max-width: 460px; padding: 30px; }
+}
+
 .modal::before {
   content: "";
   position: absolute;
