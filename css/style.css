@@ -597,8 +597,8 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   margin: 0 auto 30px;
 }
 .poll-bar-fill { transition: width 0.4s ease; }
-.poll-bar-green { background: linear-gradient(90deg, #b8922c, #d4af37); }
-.poll-bar-black { background: linear-gradient(90deg, #4a90d9, #3a72ad); }
+.poll-bar-green { background: linear-gradient(90deg, #2f9e5c, #3ecf8e); }
+.poll-bar-black { background: linear-gradient(90deg, #6b6b72, #9a9aa2); }
 
 .poll-teams {
   display: grid;
@@ -646,13 +646,13 @@ div.poll-team:hover { transform: none; }
   border-radius: 6px 6px 0 0;
   opacity: 0.8;
 }
-.poll-team-green::before { background: linear-gradient(90deg, transparent, #d4af37, transparent); }
-.poll-team-black::before { background: linear-gradient(90deg, transparent, #4a90d9, transparent); }
+.poll-team-green::before { background: linear-gradient(90deg, transparent, #3ecf8e, transparent); }
+.poll-team-black::before { background: linear-gradient(90deg, transparent, #9a9aa2, transparent); }
 
-.poll-team-green { color: #d4af37; }
-.poll-team-black { color: #4a90d9; }
-.poll-team-green:hover, .poll-team-green.active { border-color: #d4af37; box-shadow: 0 12px 28px -16px #d4af37; }
-.poll-team-black:hover, .poll-team-black.active { border-color: #4a90d9; box-shadow: 0 12px 28px -16px #4a90d9; }
+.poll-team-green { color: #3ecf8e; }
+.poll-team-black { color: #c5c8ce; }
+.poll-team-green:hover, .poll-team-green.active { border-color: #3ecf8e; box-shadow: 0 12px 28px -16px #3ecf8e; }
+.poll-team-black:hover, .poll-team-black.active { border-color: #c5c8ce; box-shadow: 0 12px 28px -16px rgba(197, 200, 206, 0.5); }
 
 .poll-team-badge {
   position: absolute;
