@@ -252,3 +252,21 @@ test("seed-missing adds only houses that don't exist yet, and never touches an e
   const again = await request.post("/api/admin/seed-missing").set("x-admin-secret", "test-secret");
   assert.deepEqual(again.body.added, []);
 });
+
+test("admin can delete a single house, and only that house", async () => {
+  const noAuth = await request.delete("/api/admin/houses/redwyne");
+  assert.equal(noAuth.status, 401);
+
+  const missing = await request.delete("/api/admin/houses/does-not-exist").set("x-admin-secret", "test-secret");
+  assert.equal(missing.status, 404);
+
+  const del = await request.delete("/api/admin/houses/redwyne").set("x-admin-secret", "test-secret");
+  assert.equal(del.status, 200);
+
+  const check = await request.get("/api/houses/redwyne");
+  assert.equal(check.status, 404);
+
+  // untouched
+  const targaryen = await request.get("/api/houses/targaryen");
+  assert.equal(targaryen.status, 200);
+});

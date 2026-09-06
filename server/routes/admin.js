@@ -31,4 +31,17 @@ router.post("/seed-missing", requireAdmin, async (req, res, next) => {
   }
 });
 
+// DELETE /api/admin/houses/:slug — removes one house and its members
+// entirely (e.g. to clean up a house added with the wrong slug/name).
+// Only ever touches the named house.
+router.delete("/houses/:slug", requireAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("DELETE FROM houses WHERE slug = $1 RETURNING slug", [req.params.slug]);
+    if (!rows[0]) return res.status(404).json({ error: "House not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;
