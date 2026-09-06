@@ -13,15 +13,17 @@ function pollTeamHtml({ side, label, pct, count, myVote, canVote }) {
   const tag = isMine ? `<div class="poll-team-badge">✓ Your Pick</div>` : "";
   const inner = `
     ${tag}
-    <div class="poll-team-icon"><img src="${POLL_TEAM_SIGILS[side]}" alt="${label} sigil" /></div>
-    <div class="poll-team-name">${label}</div>
-    <div class="poll-team-pct">${pct}%</div>
-    <div class="poll-team-count">${count} vote${count === 1 ? "" : "s"}</div>
+    <div class="poll-team-content">
+      <div class="poll-team-name">${label}</div>
+      <div class="poll-team-pct">${pct}%</div>
+      <div class="poll-team-count">${count} vote${count === 1 ? "" : "s"}</div>
+    </div>
   `;
   const cls = `poll-team poll-team-${side}${isMine ? " active" : ""}`;
+  const style = `style="background-image:url('${POLL_TEAM_SIGILS[side]}')"`;
   return canVote
-    ? `<button type="button" class="${cls}" id="voteBtn-${side}">${inner}</button>`
-    : `<div class="${cls}">${inner}</div>`;
+    ? `<button type="button" class="${cls}" ${style} id="voteBtn-${side}">${inner}</button>`
+    : `<div class="${cls}" ${style}>${inner}</div>`;
 }
 
 async function renderPoll() {
@@ -43,8 +45,10 @@ async function renderPoll() {
 
   el.innerHTML = `
     <div class="poll-header">
-      <div class="eyebrow" style="justify-content:center">Community Vote</div>
-      <h2 class="poll-title">Cast Your Vote</h2>
+      <h1 class="poll-title">Cast Your Vote</h1>
+      <p class="page-desc" style="max-width:480px; margin:0 auto">
+        The realm is dividing. ${total ? `${total.toLocaleString()} vote${total === 1 ? "" : "s"} cast so far.` : "Be the first to declare."}
+      </p>
     </div>
     <div class="poll-bar">
       <div class="poll-bar-fill poll-bar-green" style="width:${greenPct}%"></div>
@@ -52,7 +56,7 @@ async function renderPoll() {
     </div>
     <div class="poll-teams">
       ${pollTeamHtml({ side: "green", label: "Team Green", pct: greenPct, count: data.green, myVote: data.myVote, canVote: !!user })}
-      <div class="poll-vs">VS</div>
+      <div class="poll-vs"><span>VS</span></div>
       ${pollTeamHtml({ side: "black", label: "Team Black", pct: blackPct, count: data.black, myVote: data.myVote, canVote: !!user })}
     </div>
     ${
