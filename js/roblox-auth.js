@@ -63,7 +63,7 @@ async function pkceChallenge(verifier) {
 
 async function beginRobloxLogin() {
   if (location.protocol === "file:") {
-    alert("Roblox sign-in needs this site to be served over http/https — it can't complete from a local file.");
+    alert("Roblox sign-in needs this site to be served over http/https. It can't complete from a local file.");
     return;
   }
   const verifier = randomPkceVerifier();

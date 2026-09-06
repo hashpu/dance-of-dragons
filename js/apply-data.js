@@ -9,9 +9,9 @@ const DEPARTMENTS = [
     name: "Developer / Scripter",
     color: "#5b9bd5",
     icon: "wrench",
-    blurb: "Build and script the systems that power the game — combat, UI, tools, and more.",
+    blurb: "Build and script the systems that power the game: combat, UI, tools, and more.",
     questions: [
-      { id: "experience", label: "Scripting experience — languages/tools, how long, notable projects", type: "textarea", required: true },
+      { id: "experience", label: "Scripting experience: languages/tools, how long, notable projects", type: "textarea", required: true },
       { id: "portfolio", label: "Portfolio / GitHub / example script link", type: "text", placeholder: "https://...", required: false }
     ]
   },
@@ -34,7 +34,7 @@ const DEPARTMENTS = [
     blurb: "Research and write the in-universe history, houses, and storylines that give the game its world.",
     questions: [
       { id: "familiarity", label: "Your familiarity with A Song of Ice and Fire / House of the Dragon lore", type: "textarea", required: true },
-      { id: "sample", label: "Writing sample — a few sentences describing a fictional minor house or character", type: "textarea", required: true }
+      { id: "sample", label: "Writing sample: a few sentences describing a fictional minor house or character", type: "textarea", required: true }
     ]
   },
   {

@@ -45,6 +45,6 @@
     sessionStorage.removeItem("postAuthReturnTo");
     location.href = returnTo;
   } catch (e) {
-    fail("Couldn't verify your Roblox account — " + e.message);
+    fail("Couldn't verify your Roblox account: " + e.message);
   }
 })();

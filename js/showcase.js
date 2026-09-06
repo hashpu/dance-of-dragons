@@ -25,7 +25,7 @@ async function renderShowcase() {
   if (!groups.length) {
     container.innerHTML = `
       <div class="empty-tree" style="padding:60px 0">
-        No Roblox builds linked yet. Add one from any house's family tree — open a member's
+        No Roblox builds linked yet. Add one from any house's family tree: open a member's
         "More options" and fill in "Roblox build link".
       </div>
     `;

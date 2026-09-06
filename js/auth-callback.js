@@ -42,6 +42,6 @@
     sessionStorage.removeItem("postAuthReturnTo");
     location.href = returnTo;
   } catch (e) {
-    fail("Couldn't verify your Discord account — " + e.message);
+    fail("Couldn't verify your Discord account: " + e.message);
   }
 })();

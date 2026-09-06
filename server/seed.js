@@ -69,7 +69,7 @@ const HOUSES = [
     locked: true, password: "skyguard", members: [] },
   { slug: "faith-militant", name: "Faith Militant", faction: "CROWN", color: "#9c7a3f",
     tagline: "The Seven Protect",
-    description: "The Warrior's Sons and Poor Fellows — the martial arm of the Faith of the Seven, sworn to defend the realm's faithful.",
+    description: "The Warrior's Sons and Poor Fellows, the martial arm of the Faith of the Seven, sworn to defend the realm's faithful.",
     locked: true, password: "sevenpointed", members: [] },
   { slug: "city-watch", name: "City Watch", faction: "CROWN", color: "#c9a227",
     tagline: "Keepers of King's Landing",

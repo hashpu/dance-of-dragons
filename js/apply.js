@@ -57,7 +57,7 @@ function openApplyModal(deptKey) {
           </div>
 
           <div class="field">
-            <label>Attach an image <span class="hint">(optional — portfolio, screenshot, etc.)</span></label>
+            <label>Attach an image <span class="hint">(optional: portfolio, screenshot, etc.)</span></label>
             <div class="avatar-field-row">
               <input type="file" id="q_image" accept="image/*" style="flex:1" />
               <img id="imagePreview" class="avatar-preview" alt="" hidden />

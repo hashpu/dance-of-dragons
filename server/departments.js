@@ -4,14 +4,14 @@
    the frontend copy is only for rendering the form. */
 const DEPARTMENTS = [
   { key: "developer", name: "Developer / Scripter", color: "#5b9bd5",
-    questions: [{ id: "experience", label: "Scripting experience — languages/tools, how long, notable projects", required: true },
+    questions: [{ id: "experience", label: "Scripting experience: languages/tools, how long, notable projects", required: true },
                 { id: "portfolio", label: "Portfolio / GitHub / example script link", required: false }] },
   { key: "warfare", name: "Warfare Department", color: "#e0483e",
     questions: [{ id: "experience", label: "Experience hosting or leading large in-game battles/events", required: true },
                 { id: "combatKnowledge", label: "Your understanding of the group's combat or military systems", required: true }] },
   { key: "lore", name: "Lore Department", color: "#b08d57",
     questions: [{ id: "familiarity", label: "Your familiarity with A Song of Ice and Fire / House of the Dragon lore", required: true },
-                { id: "sample", label: "Writing sample — a few sentences describing a fictional minor house or character", required: true }] },
+                { id: "sample", label: "Writing sample: a few sentences describing a fictional minor house or character", required: true }] },
   { key: "regional", name: "Regional Department", color: "#2dd4a7",
     questions: [{ id: "regionLang", label: "Region & languages you speak", required: true },
                 { id: "experience", label: "Experience managing a regional community or server", required: true }] },

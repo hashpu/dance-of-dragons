@@ -14,7 +14,7 @@ const UPLOAD_DIR = path.join(__dirname, "..", "uploads");
 // Discord rejects the entire embed if any field.value exceeds 1024 chars —
 // truncate defensively so one long answer can't silently kill the whole post.
 function truncate(str, max = 1024) {
-  const s = String(str ?? "—");
+  const s = String(str ?? "N/A");
   return s.length > max ? s.slice(0, max - 1) + "…" : s;
 }
 
@@ -23,8 +23,8 @@ function logApplication(dept, data, imagePath) {
     `=== New ${dept.name} application ===`,
     `Roblox: ${data.robloxUsername}`,
     `Discord: ${data.discordUsername}`,
-    `Availability: ${data.availability || "—"}`,
-    ...dept.questions.map((q) => `${q.label}: ${data.answers[q.id] || "—"}`),
+    `Availability: ${data.availability || "N/A"}`,
+    ...dept.questions.map((q) => `${q.label}: ${data.answers[q.id] || "N/A"}`),
     `Why they want to join: ${data.why}`,
     `Image: ${imagePath || "(none)"}`
   ];
@@ -42,13 +42,13 @@ async function forwardToDiscord(webhookUrl, dept, data, imageBuffer, imageFilena
         value: [
           `**Roblox:** ${truncate(data.robloxUsername, 300)}`,
           `**Discord:** ${truncate(data.discordUsername, 300)}`,
-          `**Availability:** ${truncate(data.availability || "—", 300)}`
+          `**Availability:** ${truncate(data.availability || "N/A", 300)}`
         ].join("\n")
       },
       ...dept.questions.map((q) => ({ name: `📝 ${q.label}`, value: truncate(data.answers[q.id]) })),
       { name: "💬 Why they want to join", value: truncate(data.why) }
     ],
-    footer: { text: "Dungeons & Dragons — Application System" },
+    footer: { text: "Dungeons & Dragons Application System" },
     timestamp: new Date().toISOString()
   };
 

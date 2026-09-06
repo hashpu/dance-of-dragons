@@ -50,7 +50,7 @@ function signOutDiscord() {
 function beginDiscordLogin() {
   if (location.protocol === "file:") {
     alert(
-      "Discord sign-in needs this site to be served over http/https — it can't complete from a local file.\n\n" +
+      "Discord sign-in needs this site to be served over http/https. It can't complete from a local file.\n\n" +
       "Host the site (even a local dev server works for testing), then add its auth-callback.html URL as an OAuth2 redirect for this app in the Discord Developer Portal."
     );
     return;

@@ -299,7 +299,7 @@ async function authorizeEdit(req, res, slug, { allowLordBypass = true } = {}) {
 
 async function logLordEdit(req, house, action) {
   const userId = await getRequestDiscordUserId(req);
-  await postLog("✍️ Lord edited a locked house", `**${house.name}** — ${action} by Discord ID \`${userId}\`.`, 0xd4af37);
+  await postLog("✍️ Lord edited a locked house", `**${house.name}**: ${action} by Discord ID \`${userId}\`.`, 0xd4af37);
 }
 
 // POST /api/houses/:slug/members — add a member
@@ -346,7 +346,7 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
       if (parentId === id) return res.status(400).json({ error: "A member can't be their own parent." });
       const descendantIds = await getDescendantIds(req.params.slug, id);
       if (descendantIds.includes(parentId)) {
-        return res.status(400).json({ error: "Can't set a descendant as the parent — that would create a loop." });
+        return res.status(400).json({ error: "Can't set a descendant as the parent. That would create a loop." });
       }
       const parent = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [parentId, req.params.slug]);
       if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found in this house." });

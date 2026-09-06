@@ -104,7 +104,7 @@ document.getElementById("resetAllBtn").onclick = async () => {
   const ok = await Dialog.confirm({
     kicker: "Admin only",
     title: "Reset all houses?",
-    message: "This resets every house's lore, locks, and members back to default — for every visitor. This cannot be undone.",
+    message: "This resets every house's lore, locks, and members back to default, for every visitor. This cannot be undone.",
     confirmText: "Reset everything",
     danger: true
   });

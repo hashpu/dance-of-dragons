@@ -10,7 +10,7 @@ let house = null;
 let sessionPassword = null;
 
 function renderHeader() {
-  document.title = `${house.name} — Family Tree`;
+  document.title = `${house.name} · Family Tree`;
   document.getElementById("houseHeader").innerHTML = `
     <div class="house-banner" style="--card-color:${house.color}">
       <div class="house-icon house-icon-lg" style="background:color-mix(in srgb, ${house.color} 18%, transparent); border-color:color-mix(in srgb, ${house.color} 45%, transparent);">${HOUSE_ICONS[house.slug]}</div>
@@ -121,13 +121,13 @@ function renderStatus() {
   if (house.locked && sessionPassword) {
     el.innerHTML = `
       <div class="banner banner-lord">
-        <div class="banner-left"><span class="dot dot-lord"></span> Unlocked for this visit — you'll need House ${house.name}'s password again next time you come back.</div>
+        <div class="banner-left"><span class="dot dot-lord"></span> Unlocked for this visit. You'll need House ${house.name}'s password again next time you come back.</div>
       </div>
     `;
   } else if (house.locked && house.lordAccess) {
     el.innerHTML = `
       <div class="banner banner-lord">
-        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this house's Lord — locked for everyone else. You can add new members below, but editing or removing existing ones needs the house password.</div>
+        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this house's Lord, locked for everyone else. You can add new members below, but editing or removing existing ones needs the house password.</div>
       </div>
     `;
   } else if (house.locked) {
@@ -151,7 +151,7 @@ function renderStatus() {
   } else {
     el.innerHTML = `
       <div class="banner banner-unlocked">
-        <div class="banner-left"><span class="dot"></span> Unlocked — you can add or remove members below.</div>
+        <div class="banner-left"><span class="dot"></span> Unlocked. You can add or remove members below.</div>
         <button class="btn btn-outline" id="lockBtn">Lock</button>
       </div>
     `;
@@ -467,7 +467,7 @@ function openEditModal(memberId) {
 function openMemberModal({ parentId, member }) {
   const isEdit = !!member;
   const excluded = isEdit ? new Set([member.id, ...getDescendantIds(member.id)]) : new Set();
-  const options = [`<option value="">Nobody — they start a new branch</option>`]
+  const options = [`<option value="">Nobody, they start a new branch</option>`]
     .concat(
       house.members
         .filter((m) => !excluded.has(m.id))
