@@ -3,13 +3,17 @@
    sign-in), tallied server-side in the votes table. See
    server/routes/votes.js. */
 
+const POLL_TEAM_SIGILS = {
+  green: "assets/sigils/team-green-dragon.jpg",
+  black: "assets/sigils/team-black-dragon.jpg"
+};
+
 function pollTeamHtml({ side, label, pct, count, myVote, canVote }) {
   const isMine = myVote === side;
-  const icon = HOUSE_ICONS.targaryen;
   const tag = isMine ? `<div class="poll-team-badge">✓ Your Pick</div>` : "";
   const inner = `
     ${tag}
-    <div class="poll-team-icon">${icon}</div>
+    <div class="poll-team-icon"><img src="${POLL_TEAM_SIGILS[side]}" alt="${label} sigil" /></div>
     <div class="poll-team-name">${label}</div>
     <div class="poll-team-pct">${pct}%</div>
     <div class="poll-team-count">${count} vote${count === 1 ? "" : "s"}</div>
