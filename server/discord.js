@@ -46,14 +46,19 @@ async function getGuildMemberRoles(userId, guildId) {
   }
 }
 
+// The verified Discord ID of whoever is making this request, if any — used
+// for audit-log messages so a Lord action can say who did it.
+async function getRequestDiscordUserId(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  return verifyDiscordUserId(token);
+}
+
 async function isLordOfHouse(req, house) {
   const guildId = process.env.DISCORD_GUILD_ID;
   if (!guildId || !process.env.DISCORD_BOT_TOKEN || !house.lord_role_id) return false;
 
-  const token = getBearerToken(req);
-  if (!token) return false;
-
-  const userId = await verifyDiscordUserId(token);
+  const userId = await getRequestDiscordUserId(req);
   if (!userId) return false;
 
   const roles = await getGuildMemberRoles(userId, guildId);
@@ -65,4 +70,4 @@ function isAdminRequest(req) {
   return !!secret && req.get("x-admin-secret") === secret;
 }
 
-module.exports = { isLordOfHouse, isAdminRequest };
+module.exports = { isLordOfHouse, isAdminRequest, getRequestDiscordUserId };

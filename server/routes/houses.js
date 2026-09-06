@@ -1,7 +1,8 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
 const { pool } = require("../db");
-const { isLordOfHouse, isAdminRequest } = require("../discord");
+const { isLordOfHouse, isAdminRequest, getRequestDiscordUserId } = require("../discord");
+const { postLog } = require("../logs");
 
 const router = express.Router();
 
@@ -163,11 +164,17 @@ router.post("/:slug/forgot-password", async (req, res, next) => {
     const house = rows[0];
     if (!house) return res.status(404).json({ error: "House not found." });
 
-    if (!isAdminRequest(req) && !(await isLordOfHouse(req, house))) {
+    const admin = isAdminRequest(req);
+    const lord = !admin && (await isLordOfHouse(req, house));
+    if (!admin && !lord) {
       return res.status(401).json({ error: "Not authorized to reset this house's lock." });
     }
 
     await pool.query("UPDATE houses SET locked = false, password_hash = NULL WHERE slug = $1", [house.slug]);
+
+    const actor = admin ? "the site admin" : `this house's Lord (Discord ID \`${await getRequestDiscordUserId(req)}\`)`;
+    await postLog("🔓 House lock reset", `**${house.name}**'s lock was reset by ${actor}.`, 0xd4af37);
+
     res.json({ ok: true });
   } catch (err) {
     next(err);
@@ -179,19 +186,29 @@ router.post("/:slug/forgot-password", async (req, res, next) => {
 router.post("/:slug/lord-role", async (req, res, next) => {
   try {
     if (!isAdminRequest(req)) return res.status(401).json({ error: "Admin secret required." });
+    const { rows } = await pool.query("SELECT name FROM houses WHERE slug = $1", [req.params.slug]);
+    if (!rows[0]) return res.status(404).json({ error: "House not found." });
+
     const { roleId } = req.body;
-    const { rowCount } = await pool.query("UPDATE houses SET lord_role_id = $2 WHERE slug = $1", [
-      req.params.slug,
-      roleId || null
-    ]);
-    if (!rowCount) return res.status(404).json({ error: "House not found." });
+    await pool.query("UPDATE houses SET lord_role_id = $2 WHERE slug = $1", [req.params.slug, roleId || null]);
+
+    await postLog(
+      "🛡️ Lord role updated",
+      roleId
+        ? `**${rows[0].name}**'s Lord role was set to \`${roleId}\` by an admin.`
+        : `**${rows[0].name}**'s Lord role was cleared by an admin.`,
+      0xd4af37
+    );
+
     res.json({ ok: true });
   } catch (err) {
     next(err);
   }
 });
 
-// Unlocked, or the caller is signed in as this house's Discord Lord.
+// Unlocked, or the caller is signed in as this house's Discord Lord. When the
+// latter is how access was granted, that's logged by the caller as a
+// privileged edit (the house is otherwise locked to everyone else).
 async function authorizeEdit(req, res, slug) {
   const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [slug]);
   const house = rows[0];
@@ -199,17 +216,25 @@ async function authorizeEdit(req, res, slug) {
     res.status(404).json({ error: "House not found." });
     return null;
   }
-  if (house.locked && !(await isLordOfHouse(req, house))) {
+  if (!house.locked) return { house, viaLordBypass: false };
+
+  if (!(await isLordOfHouse(req, house))) {
     res.status(403).json({ error: "This house is locked." });
     return null;
   }
-  return house;
+  return { house, viaLordBypass: true };
+}
+
+async function logLordEdit(req, house, action) {
+  const userId = await getRequestDiscordUserId(req);
+  await postLog("✍️ Lord edited a locked house", `**${house.name}** — ${action} by Discord ID \`${userId}\`.`, 0xd4af37);
 }
 
 // POST /api/houses/:slug/members — add a member
 router.post("/:slug/members", async (req, res, next) => {
   try {
-    if (!(await authorizeEdit(req, res, req.params.slug))) return;
+    const access = await authorizeEdit(req, res, req.params.slug);
+    if (!access) return;
 
     const { name, role, parentId, avatarUrl, buildLink, robloxProfile, note } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
@@ -225,6 +250,7 @@ router.post("/:slug/members", async (req, res, next) => {
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
       [id, req.params.slug, parentId || null, name.trim(), role || "", avatarUrl || "", buildLink || "", robloxProfile || "", note || ""]
     );
+    if (access.viaLordBypass) await logLordEdit(req, access.house, `added member "${name.trim()}"`);
     res.status(201).json(toMemberJson(rows[0]));
   } catch (err) {
     next(err);
@@ -234,7 +260,8 @@ router.post("/:slug/members", async (req, res, next) => {
 // PATCH /api/houses/:slug/members/:id — edit a member (including reparenting)
 router.patch("/:slug/members/:id", async (req, res, next) => {
   try {
-    if (!(await authorizeEdit(req, res, req.params.slug))) return;
+    const access = await authorizeEdit(req, res, req.params.slug);
+    if (!access) return;
 
     const { id } = req.params;
     const existing = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
@@ -258,6 +285,7 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
        WHERE id=$8 AND house_slug=$9 RETURNING *`,
       [name.trim(), role || "", parentId || null, avatarUrl || "", buildLink || "", robloxProfile || "", note || "", id, req.params.slug]
     );
+    if (access.viaLordBypass) await logLordEdit(req, access.house, `edited member "${name.trim()}"`);
     res.json(toMemberJson(rows[0]));
   } catch (err) {
     next(err);
@@ -267,14 +295,16 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
 // DELETE /api/houses/:slug/members/:id — cascades to descendants
 router.delete("/:slug/members/:id", async (req, res, next) => {
   try {
-    if (!(await authorizeEdit(req, res, req.params.slug))) return;
+    const access = await authorizeEdit(req, res, req.params.slug);
+    if (!access) return;
 
     const { id } = req.params;
-    const existing = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
+    const existing = await pool.query("SELECT id, name FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
     if (!existing.rows[0]) return res.status(404).json({ error: "Member not found." });
 
     const descendantIds = await getDescendantIds(req.params.slug, id);
     await pool.query("DELETE FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
+    if (access.viaLordBypass) await logLordEdit(req, access.house, `deleted member "${existing.rows[0].name}" (+${descendantIds.length} descendants)`);
     res.json({ ok: true, removedCount: descendantIds.length + 1 });
   } catch (err) {
     next(err);
