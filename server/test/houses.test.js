@@ -15,7 +15,7 @@ test.before(async () => {
 test("GET /api/houses lists all houses with correct member counts, in order", async () => {
   const res = await request.get("/api/houses");
   assert.equal(res.status, 200);
-  assert.equal(res.body.length, 26);
+  assert.equal(res.body.length, 27);
   assert.equal(res.body[0].slug, "targaryen");
   assert.equal(res.body[0].memberCount, 5);
   assert.equal(res.body[1].slug, "velaryon");
