@@ -61,7 +61,7 @@ function beginDiscordLogin() {
     "https://discord.com/oauth2/authorize" +
     "?client_id=" + DISCORD_CLIENT_ID +
     "&redirect_uri=" + encodeURIComponent(redirect) +
-    "&response_type=token&scope=" + encodeURIComponent("identify guilds.members.read");
+    "&response_type=token&scope=identify";
   location.href = url;
 }
 
