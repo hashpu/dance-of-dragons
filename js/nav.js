@@ -16,7 +16,7 @@ const NAV_ICONS = {
   const links = [
     { href: "index.html", label: "Houses", icon: "houses" },
     { href: "timeline.html", label: "Timeline", icon: "timeline" },
-    { href: "factions.html", label: "Factions", icon: "factions" },
+    { href: "factions.html", label: "Crown Orders", icon: "factions" },
     { href: "showcase.html", label: "Build Showcase", icon: "showcase" },
     { href: "apply.html", label: "Apply", icon: "apply" }
   ];
