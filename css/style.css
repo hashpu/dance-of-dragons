@@ -1009,8 +1009,7 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 /* Tree panel */
 .tree-panel {
-  position: relative;
-  background: radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in srgb, var(--card-color, var(--red)) 7%, transparent), transparent 70%), var(--panel);
+  background: var(--panel);
   border: 1px solid #3a3a3d;
   border-radius: 4px;
   padding: 40px 20px;
@@ -1021,26 +1020,6 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 @media (max-width: 560px) {
   .tree-panel { padding: 28px 14px; }
-}
-
-.tree-watermark {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: min(60%, 420px);
-  height: min(60%, 420px);
-  transform: translate(-50%, -50%);
-  color: var(--card-color, var(--red));
-  opacity: 0.05;
-  pointer-events: none;
-  z-index: 0;
-}
-.tree-watermark svg { width: 100%; height: 100%; }
-
-.tree-panel > .tree,
-.tree-panel > .empty-tree {
-  position: relative;
-  z-index: 1;
 }
 
 .panel-toolbar {

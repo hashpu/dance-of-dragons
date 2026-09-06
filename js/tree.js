@@ -295,13 +295,11 @@ function renderTree() {
       <button class="btn btn-primary" onclick="openAddModal(null)">+ Add family member</button>
     </div>
   `;
-  const watermark = `<div class="tree-watermark">${HOUSE_ICONS[house.slug]}</div>`;
 
   if (!forest.length) {
     el.innerHTML = `
       ${toolbar}
       <div class="tree-panel" style="--card-color:${house.color}">
-        ${watermark}
         <div class="empty-tree">No members yet. Be the first to add one to House ${house.name}.</div>
       </div>
     `;
@@ -311,7 +309,6 @@ function renderTree() {
   el.innerHTML = `
     ${toolbar}
     <div class="tree-panel" style="--card-color:${house.color}">
-      ${watermark}
       <ul class="tree">
         ${forest.map((n) => `<li>${nodeHtml(n, true)}</li>`).join("")}
       </ul>
