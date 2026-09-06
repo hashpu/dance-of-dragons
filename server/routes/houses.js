@@ -1,11 +1,24 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
+const fs = require("fs");
+const path = require("path");
+const multer = require("multer");
 const { pool } = require("../db");
 const { isLordOfHouse, isAdminRequest, getRequestDiscordUserId } = require("../discord");
 const { resolveRobloxUsername } = require("../roblox");
 const { postLog } = require("../logs");
 
 const router = express.Router();
+
+const AVATAR_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "avatars");
+const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
+const avatarUpload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 },
+  fileFilter(req, file, cb) {
+    cb(null, ALLOWED_AVATAR_TYPES.has(file.mimetype));
+  }
+});
 
 function toMemberJson(row) {
   return {
@@ -301,6 +314,34 @@ async function logLordEdit(req, house, action) {
   const userId = await getRequestDiscordUserId(req);
   await postLog("✍️ Lord edited a locked house", `**${house.name}**: ${action} by Discord ID \`${userId}\`.`, 0xd4af37);
 }
+
+// POST /api/houses/:slug/avatar { avatar: <file> } — uploads a member photo/GIF
+// and returns its URL, for use as a member's avatarUrl. Same access rules as
+// adding a member (unlocked, Lord, or house password).
+router.post("/:slug/avatar", (req, res, next) => {
+  avatarUpload.single("avatar")(req, res, (err) => {
+    if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
+      return res.status(400).json({ error: "Image is too large (5MB max)." });
+    }
+    next(err);
+  });
+}, async (req, res, next) => {
+  try {
+    const access = await authorizeEdit(req, res, req.params.slug);
+    if (!access) return;
+
+    if (!req.file) return res.status(400).json({ error: "Attach a PNG, JPEG, GIF, or WEBP image." });
+
+    const ext = { "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[req.file.mimetype];
+    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
+    fs.mkdirSync(AVATAR_UPLOAD_DIR, { recursive: true });
+    fs.writeFileSync(path.join(AVATAR_UPLOAD_DIR, filename), req.file.buffer);
+
+    res.status(201).json({ url: `/uploads/avatars/${filename}` });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/houses/:slug/members — add a member
 router.post("/:slug/members", async (req, res, next) => {

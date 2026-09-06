@@ -83,6 +83,26 @@ test("writes to a locked house require the password on every request; wrong/miss
   assert.equal(wrongPassword.status, 403);
 });
 
+test("avatar upload requires access, accepts an image, and rejects a disallowed file type", async () => {
+  const noAuth = await request
+    .post("/api/houses/targaryen/avatar")
+    .attach("avatar", Buffer.from("fake-png-bytes"), { filename: "photo.png", contentType: "image/png" });
+  assert.equal(noAuth.status, 403);
+
+  const badType = await request
+    .post("/api/houses/targaryen/avatar")
+    .set("x-house-password", "dracarys")
+    .attach("avatar", Buffer.from("just text"), { filename: "notes.txt", contentType: "text/plain" });
+  assert.equal(badType.status, 400);
+
+  const ok = await request
+    .post("/api/houses/targaryen/avatar")
+    .set("x-house-password", "dracarys")
+    .attach("avatar", Buffer.from("fake-gif-bytes"), { filename: "photo.gif", contentType: "image/gif" });
+  assert.equal(ok.status, 201);
+  assert.match(ok.body.url, /^\/uploads\/avatars\/.+\.gif$/);
+});
+
 test("adding, editing, and reparent-loop protection on members", async () => {
   const add = await request
     .post("/api/houses/targaryen/members")

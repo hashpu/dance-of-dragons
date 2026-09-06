@@ -1063,15 +1063,15 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   right: 50%;
   width: 50%;
   height: 28px;
-  border-top: 2px solid rgba(224, 72, 62, 0.55);
+  border-top: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent);
 }
-.tree li::after { right: auto; left: 50%; border-left: 2px solid rgba(224, 72, 62, 0.55); }
+.tree li::after { right: auto; left: 50%; border-left: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent); }
 .tree li:only-child::before, .tree li:only-child::after { display: none; }
 .tree li:only-child { padding-top: 0; }
 .tree li:first-child::before { border: none; }
 .tree li:last-child::after { border: none; }
 .tree li:last-child::before {
-  border-right: 2px solid rgba(224, 72, 62, 0.55);
+  border-right: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent);
   border-radius: 0 6px 0 0;
 }
 .tree li:first-child::after { border-radius: 6px 0 0 0; }
@@ -1085,19 +1085,56 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   left: 50%;
   width: 0;
   height: 28px;
-  border-left: 2px solid rgba(224, 72, 62, 0.55);
+  border-left: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent);
 }
 
 .node {
   position: relative;
-  background: #1c1c1e;
+  background: linear-gradient(165deg, #212123, #1a1a1c 65%);
   border: 1px solid #3a3a3d;
-  border-radius: 4px;
-  padding: 16px;
-  width: 150px;
+  border-radius: 6px;
+  padding: 20px 16px 16px;
+  width: 168px;
   text-align: center;
   box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.6);
+  transition: box-shadow 0.2s ease, transform 0.15s ease-out, border-color 0.2s ease;
+  --tilt-rx: 0deg;
+  --tilt-ry: 0deg;
+  --tilt-mx: 50%;
+  --tilt-my: 50%;
 }
+
+/* Not clipped with overflow:hidden — the edit/remove badges intentionally
+   overflow the card's corners, so these match the card's own radius instead. */
+.node::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  border-radius: 6px 6px 0 0;
+  background: linear-gradient(90deg, transparent, var(--card-color, var(--red)), transparent);
+  opacity: 0.7;
+}
+
+.node::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 6px;
+  background: radial-gradient(circle at var(--tilt-mx) var(--tilt-my), color-mix(in srgb, var(--card-color, var(--red)) 20%, transparent), transparent 60%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+  pointer-events: none;
+}
+
+.node:hover {
+  transform: perspective(700px) rotateX(var(--tilt-rx)) rotateY(var(--tilt-ry)) translateY(-3px);
+  border-color: color-mix(in srgb, var(--card-color, var(--red)) 55%, var(--panel-border));
+  box-shadow: 0 16px 30px -16px color-mix(in srgb, var(--card-color, var(--red)) 60%, transparent);
+}
+.node:hover::after { opacity: 1; }
 
 .node-remove {
   position: absolute;
@@ -1137,24 +1174,26 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .node-edit:hover { color: var(--text); border-color: #555; }
 
 @keyframes nodeHighlightPulse {
-  0%, 100% { box-shadow: 0 0 0 2px var(--red), 0 0 26px rgba(224, 72, 62, 0.65); }
-  50% { box-shadow: 0 0 0 2px var(--red), 0 0 8px rgba(224, 72, 62, 0.3); }
+  0%, 100% { box-shadow: 0 0 0 2px var(--card-color, var(--red)), 0 0 26px color-mix(in srgb, var(--card-color, var(--red)) 65%, transparent); }
+  50% { box-shadow: 0 0 0 2px var(--card-color, var(--red)), 0 0 8px color-mix(in srgb, var(--card-color, var(--red)) 30%, transparent); }
 }
-.node-highlight { animation: nodeHighlightPulse 1s ease-in-out 3; border-radius: 4px; }
+.node-highlight { animation: nodeHighlightPulse 1s ease-in-out 3; border-radius: 6px; }
 
 .node-avatar {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   object-fit: cover;
   margin: 0 auto 10px;
   display: block;
   background: #2a2a2c;
-  border: 1px solid var(--panel-border);
-  transition: box-shadow 0.15s;
+  border: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 45%, var(--panel-border));
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 14%, transparent);
+  transition: box-shadow 0.15s, border-color 0.15s;
 }
 .node a:has(.node-avatar):hover .node-avatar {
-  box-shadow: 0 0 0 2px var(--red);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 35%, transparent);
+  border-color: var(--card-color, var(--red));
 }
 
 .node-name { font-family: "Cinzel", serif; font-weight: 700; font-size: 14px; }

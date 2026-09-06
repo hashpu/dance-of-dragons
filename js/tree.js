@@ -292,7 +292,7 @@ function renderTree() {
   if (!forest.length) {
     el.innerHTML = `
       ${toolbar}
-      <div class="tree-panel">
+      <div class="tree-panel" style="--card-color:${house.color}">
         <div class="empty-tree">No members yet. Be the first to add one to House ${house.name}.</div>
       </div>
     `;
@@ -301,7 +301,7 @@ function renderTree() {
 
   el.innerHTML = `
     ${toolbar}
-    <div class="tree-panel">
+    <div class="tree-panel" style="--card-color:${house.color}">
       <ul class="tree">
         ${forest.map((n) => `<li>${nodeHtml(n)}</li>`).join("")}
       </ul>
@@ -430,6 +430,7 @@ const FIELD_ICONS = {
   heart: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3s-7.2-4.4-9.4-8.7C1.2 8.4 2.8 5 6.2 5c2 0 3.4 1.2 5.8 4 2.4-2.8 3.8-4 5.8-4 3.4 0 5 3.4 3.6 6.6-2.2 4.3-9.4 8.7-9.4 8.7z"/></svg>`,
   badge: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.2"/><circle cx="12" cy="10" r="2.6"/><path d="M7.3 17c.9-2.3 2.7-3.4 4.7-3.4s3.8 1.1 4.7 3.4"/></svg>`,
   x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
+  upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>`,
   chevron: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`,
   chevronRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`
 };
@@ -526,15 +527,18 @@ function openMemberModal({ parentId, member }) {
           </div>
 
           <div class="field">
-            <label>Avatar image or GIF URL <span class="hint">(pasted GIFs will animate)</span></label>
+            <label>Avatar photo or GIF <span class="hint">(upload a file, or paste an image/GIF URL)</span></label>
             <div class="avatar-field-row">
               <div class="input-wrap" style="flex:1">
                 ${FIELD_ICONS.image}
                 <input id="fAvatar" placeholder="https://... .png / .gif" value="${isEdit ? escapeAttr(member.avatarUrl || "") : ""}" />
               </div>
               <img id="avatarPreview" class="avatar-preview" alt="" hidden />
+              <button type="button" class="field-clear" id="uploadAvatarBtn" title="Upload a photo or GIF">${FIELD_ICONS.upload}</button>
               <button type="button" class="field-clear" id="clearAvatarBtn" title="Remove photo" hidden>${FIELD_ICONS.x}</button>
+              <input type="file" id="fAvatarFile" accept="image/png,image/jpeg,image/gif,image/webp" hidden />
             </div>
+            <p class="error-text" id="avatarUploadError" style="display:none"></p>
           </div>
 
           <div class="field">
@@ -573,9 +577,38 @@ function openMemberModal({ parentId, member }) {
     document.getElementById("fAvatar").value = "";
     updateAvatarPreview();
   });
+  document.getElementById("uploadAvatarBtn").addEventListener("click", () => {
+    document.getElementById("fAvatarFile").click();
+  });
+  document.getElementById("fAvatarFile").addEventListener("change", handleAvatarFileChange);
   updateAvatarPreview();
 
   document.getElementById("fName").focus();
+}
+
+async function handleAvatarFileChange(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const uploadBtn = document.getElementById("uploadAvatarBtn");
+  const err = document.getElementById("avatarUploadError");
+  err.style.display = "none";
+  uploadBtn.disabled = true;
+  const originalHtml = uploadBtn.innerHTML;
+  uploadBtn.innerHTML = "…";
+
+  try {
+    const { url } = await Api.uploadAvatar(slug, file, sessionPassword);
+    document.getElementById("fAvatar").value = url;
+    updateAvatarPreview();
+  } catch (ex) {
+    err.textContent = ex.message;
+    err.style.display = "block";
+  } finally {
+    uploadBtn.disabled = false;
+    uploadBtn.innerHTML = originalHtml;
+    e.target.value = "";
+  }
 }
 
 function updateAvatarPreview() {

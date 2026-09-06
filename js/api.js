@@ -45,6 +45,11 @@ const Api = {
   updateMember: (slug, id, member, housePassword) =>
     apiFetch(`/houses/${slug}/members/${id}`, { method: "PATCH", body: member, housePassword }),
   removeMember: (slug, id, housePassword) => apiFetch(`/houses/${slug}/members/${id}`, { method: "DELETE", housePassword }),
+  uploadAvatar: (slug, file, housePassword) => {
+    const formData = new FormData();
+    formData.append("avatar", file);
+    return apiFetch(`/houses/${slug}/avatar`, { method: "POST", body: formData, housePassword });
+  },
   resetAll: (secret) => apiFetch("/admin/reset", { method: "POST", headers: { "x-admin-secret": secret } }),
   setLordRole: (slug, roleId, robloxUsername, secret) =>
     apiFetch(`/houses/${slug}/lord-role`, {
