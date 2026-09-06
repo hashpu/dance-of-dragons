@@ -63,5 +63,7 @@ const Api = {
       body: { discordUserId },
       headers: { "x-admin-secret": secret }
     }),
-  submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData })
+  submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData }),
+  getVotes: () => apiFetch("/votes"),
+  castVote: (choice) => apiFetch("/votes", { method: "POST", body: { choice } })
 };

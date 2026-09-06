@@ -566,6 +566,83 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   margin: 0 auto 30px;
 }
 
+/* Poll — Team Green (gold) vs Team Black (blue), matching the same color
+   convention already used for these two factions elsewhere (timeline tags,
+   faction badges) rather than literal green/black, which wouldn't read
+   well against the dark background. */
+.poll-widget {
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  padding: 30px 28px;
+  max-width: 640px;
+  margin: 0 auto 44px;
+  text-align: center;
+}
+.poll-widget:empty { display: none; }
+
+.poll-title { margin: 0 0 22px; font-size: 22px; }
+
+.poll-bar {
+  display: flex;
+  height: 14px;
+  border-radius: 7px;
+  overflow: hidden;
+  background: #232325;
+  border: 1px solid var(--panel-border);
+}
+.poll-bar-fill { transition: width 0.4s ease; }
+.poll-bar-green { background: linear-gradient(90deg, #b8922c, #d4af37); }
+.poll-bar-black { background: linear-gradient(90deg, #4a90d9, #3a72ad); }
+
+.poll-counts {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  margin-top: 10px;
+}
+.poll-count-green { color: #d4af37; }
+.poll-count-black { color: #4a90d9; }
+
+.poll-actions { margin-top: 22px; }
+
+.poll-vote-row {
+  display: flex;
+  gap: 14px;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.poll-vote-btn {
+  padding: 12px 26px;
+  border-radius: 4px;
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  background: #202022;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+.poll-vote-btn:hover { transform: translateY(-2px); }
+
+.poll-vote-green { border: 1px solid color-mix(in srgb, #d4af37 45%, var(--panel-border)); color: #d4af37; }
+.poll-vote-green:hover, .poll-vote-green.active {
+  border-color: #d4af37;
+  box-shadow: 0 0 0 1px #d4af37 inset, 0 8px 20px -10px #d4af37;
+}
+
+.poll-vote-black { border: 1px solid color-mix(in srgb, #4a90d9 45%, var(--panel-border)); color: #4a90d9; }
+.poll-vote-black:hover, .poll-vote-black.active {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 1px #4a90d9 inset, 0 8px 20px -10px #4a90d9;
+}
+
+.poll-note { color: var(--muted); font-size: 12px; margin: 14px 0 0; }
+.poll-signin-btn { margin: 0 auto; }
+
 /* Search + stats */
 .search-stats-row {
   display: flex;

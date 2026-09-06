@@ -59,6 +59,15 @@ CREATE TABLE IF NOT EXISTS uploaded_files (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- One row per Discord account: which side of the Dance they're backing.
+-- Voting again just changes the existing row (see routes/votes.js's
+-- upsert) rather than adding a second vote.
+CREATE TABLE IF NOT EXISTS votes (
+  discord_user_id TEXT PRIMARY KEY,
+  choice TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,
   department TEXT NOT NULL,
