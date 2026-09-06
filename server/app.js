@@ -29,6 +29,11 @@ app.get("/api/health", (req, res) => res.json({ ok: true }));
 const ROOT = path.join(__dirname, "..");
 app.use(express.static(ROOT));
 
+// Nothing above matched. An unknown API route gets a JSON 404 (so API
+// consumers don't have to parse HTML); anything else gets the themed page.
+app.use("/api", (req, res) => res.status(404).json({ error: "Not found." }));
+app.use((req, res) => res.status(404).sendFile(path.join(ROOT, "404.html")));
+
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
   console.error(err);
