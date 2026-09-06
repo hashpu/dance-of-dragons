@@ -1,9 +1,9 @@
-/* Mouse-tracked 3D tilt for house/faction/timeline cards. Uses event
-   delegation on document so it works on cards rendered after this script
-   loads (house grids fetch and render asynchronously). Skipped entirely on
-   touch devices (no hover) and when the user prefers reduced motion. */
+/* Mouse-tracked 3D tilt for timeline cards. Uses event delegation on
+   document so it works on cards rendered after this script loads. Skipped
+   entirely on touch devices (no hover) and when the user prefers reduced
+   motion. */
 (function () {
-  const SELECTOR = ".house-card, .timeline-card";
+  const SELECTOR = ".timeline-card";
   const MAX_DEG = 7;
 
   if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
