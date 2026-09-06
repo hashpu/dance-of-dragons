@@ -48,7 +48,7 @@ async function forwardToDiscord(webhookUrl, dept, data, imageBuffer, imageFilena
       ...dept.questions.map((q) => ({ name: `📝 ${q.label}`, value: truncate(data.answers[q.id]) })),
       { name: "💬 Why they want to join", value: truncate(data.why) }
     ],
-    footer: { text: "Dance of Dragons — Application System" },
+    footer: { text: "Dungeons & Dragons — Application System" },
     timestamp: new Date().toISOString()
   };
 

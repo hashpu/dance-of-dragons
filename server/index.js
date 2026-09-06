@@ -19,7 +19,7 @@ async function bootstrap() {
 
   const PORT = process.env.PORT || 3001;
   app.listen(PORT, () => {
-    console.log(`Dance of Dragons server listening on http://localhost:${PORT}`);
+    console.log(`Dungeons & Dragons server listening on http://localhost:${PORT}`);
   });
 }
 

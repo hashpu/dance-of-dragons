@@ -1,7 +1,7 @@
 {
   "name": "dance-of-dragons-server",
   "version": "1.0.0",
-  "description": "Backend API for the Dance of Dragons lore site — Express + PostgreSQL.",
+  "description": "Backend API for the Dungeons & Dragons lore site — Express + PostgreSQL.",
   "main": "index.js",
   "scripts": {
     "start": "node index.js",

@@ -32,7 +32,7 @@ const NAV_ICONS = {
     : `<button class="btn btn-outline" onclick="beginDiscordLogin()">Sign in</button>`;
 
   el.innerHTML = `
-    <a href="index.html" class="brand"><span class="brand-icon">${HOUSE_ICONS.targaryen}</span>Dance of Dragons</a>
+    <a href="index.html" class="brand"><span class="brand-icon">${HOUSE_ICONS.targaryen}</span>Dungeons &amp; Dragons</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false">
       <svg class="icon-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
       <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg>
@@ -59,7 +59,7 @@ const NAV_ICONS = {
     `
     <footer class="site-footer">
       <div class="footer-inner">
-        <div class="footer-brand"><span class="brand-icon">${HOUSE_ICONS.targaryen}</span>Dance of Dragons</div>
+        <div class="footer-brand"><span class="brand-icon">${HOUSE_ICONS.targaryen}</span>Dungeons &amp; Dragons</div>
         <nav class="footer-links">
           ${links.map((l) => `<a href="${l.href}">${l.label}</a>`).join("")}
         </nav>
