@@ -557,30 +557,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   .poll-title { animation: none; }
 }
 
-.poll-divider {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  max-width: 220px;
-  margin: 0 auto 16px;
-}
-.poll-divider::before, .poll-divider::after {
-  content: "";
-  flex: 1;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--panel-border));
-}
-.poll-divider::after { background: linear-gradient(90deg, var(--panel-border), transparent); }
-.poll-divider span {
-  width: 7px;
-  height: 7px;
-  background: var(--red);
-  transform: rotate(45deg);
-  box-shadow: 0 0 10px -1px var(--red);
-  flex-shrink: 0;
-}
-
 .poll-subtitle { color: var(--muted); font-size: 14px; margin: 0 0 28px; }
 
 .poll-bar {

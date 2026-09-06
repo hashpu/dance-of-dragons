@@ -61,7 +61,6 @@ async function renderPoll() {
   el.innerHTML = `
     <div class="poll-header">
       <h2 class="poll-title">Cast Your Vote</h2>
-      <div class="poll-divider"><span></span></div>
       <p class="poll-subtitle">${total ? `${total.toLocaleString()} vote${total === 1 ? "" : "s"} cast. The realm is dividing.` : "Be the first to declare a side."}</p>
     </div>
     <div class="poll-bar">
