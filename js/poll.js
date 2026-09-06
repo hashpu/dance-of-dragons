@@ -3,6 +3,23 @@
    sign-in), tallied server-side in the votes table. See
    server/routes/votes.js. */
 
+function pollTeamHtml({ side, label, pct, count, myVote, canVote }) {
+  const isMine = myVote === side;
+  const icon = HOUSE_ICONS.targaryen;
+  const tag = isMine ? `<div class="poll-team-badge">✓ Your Pick</div>` : "";
+  const inner = `
+    ${tag}
+    <div class="poll-team-icon">${icon}</div>
+    <div class="poll-team-name">${label}</div>
+    <div class="poll-team-pct">${pct}%</div>
+    <div class="poll-team-count">${count} vote${count === 1 ? "" : "s"}</div>
+  `;
+  const cls = `poll-team poll-team-${side}${isMine ? " active" : ""}`;
+  return canVote
+    ? `<button type="button" class="${cls}" id="voteBtn-${side}">${inner}</button>`
+    : `<div class="${cls}">${inner}</div>`;
+}
+
 async function renderPoll() {
   const el = document.getElementById("pollWidget");
   if (!el) return;
@@ -20,42 +37,33 @@ async function renderPoll() {
   const blackPct = 100 - greenPct;
   const user = typeof getDiscordUser === "function" ? getDiscordUser() : null;
 
-  const actionsHtml = user
-    ? `
-      <div class="poll-vote-row">
-        <button class="poll-vote-btn poll-vote-green${data.myVote === "green" ? " active" : ""}" id="voteGreenBtn">
-          ${data.myVote === "green" ? "✓ " : ""}Team Green
-        </button>
-        <button class="poll-vote-btn poll-vote-black${data.myVote === "black" ? " active" : ""}" id="voteBlackBtn">
-          ${data.myVote === "black" ? "✓ " : ""}Team Black
-        </button>
-      </div>
-      <p class="poll-note">${data.myVote ? "You can change your vote any time." : "Signed in — pick a side."}</p>
-    `
-    : `
-      <button class="btn btn-outline poll-signin-btn" id="pollSignInBtn">Sign in with Discord to vote</button>
-      <p class="poll-note">One vote per Discord account.</p>
-    `;
-
   el.innerHTML = `
     <div class="poll-header">
-      <div class="eyebrow" style="justify-content:center">Choose Your Side</div>
-      <h2 class="poll-title">Team Green or Team Black?</h2>
+      <div class="eyebrow" style="justify-content:center">Fire and Blood</div>
+      <h2 class="poll-title">What Team Are You?</h2>
     </div>
     <div class="poll-bar">
       <div class="poll-bar-fill poll-bar-green" style="width:${greenPct}%"></div>
       <div class="poll-bar-fill poll-bar-black" style="width:${blackPct}%"></div>
     </div>
-    <div class="poll-counts">
-      <span class="poll-count-green">Green ${greenPct}% (${data.green})</span>
-      <span class="poll-count-black">Black ${blackPct}% (${data.black})</span>
+    <div class="poll-teams">
+      ${pollTeamHtml({ side: "green", label: "Team Green", pct: greenPct, count: data.green, myVote: data.myVote, canVote: !!user })}
+      <div class="poll-vs">VS</div>
+      ${pollTeamHtml({ side: "black", label: "Team Black", pct: blackPct, count: data.black, myVote: data.myVote, canVote: !!user })}
     </div>
-    <div class="poll-actions">${actionsHtml}</div>
+    ${
+      user
+        ? `<p class="poll-note">${data.myVote ? "Riding for the realm. Click the other side any time to switch." : "Pick a side."}</p>`
+        : `
+          <button class="btn btn-outline poll-signin-btn" id="pollSignInBtn">Sign in with Discord to vote</button>
+          <p class="poll-note">One vote per Discord account.</p>
+        `
+    }
   `;
 
   if (user) {
-    document.getElementById("voteGreenBtn").onclick = () => castVote("green");
-    document.getElementById("voteBlackBtn").onclick = () => castVote("black");
+    document.getElementById("voteBtn-green").onclick = () => castVote("green");
+    document.getElementById("voteBtn-black").onclick = () => castVote("black");
   } else {
     document.getElementById("pollSignInBtn").onclick = () => {
       if (typeof beginDiscordLogin === "function") beginDiscordLogin();
