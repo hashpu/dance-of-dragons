@@ -43,6 +43,11 @@ CREATE TABLE IF NOT EXISTS members (
 CREATE INDEX IF NOT EXISTS members_house_idx ON members(house_slug);
 CREATE INDEX IF NOT EXISTS members_parent_idx ON members(parent_id);
 
+-- The real person's Discord account behind this family-tree character —
+-- just a label shown on their card, not tied to any access control (see
+-- houses.lord_discord_user_id above for that).
+ALTER TABLE members ADD COLUMN IF NOT EXISTS discord_id TEXT NOT NULL DEFAULT '';
+
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,
   department TEXT NOT NULL,

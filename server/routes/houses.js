@@ -29,6 +29,7 @@ function toMemberJson(row, externalParent) {
     avatarUrl: row.avatar_url,
     buildLink: row.build_link,
     robloxProfile: row.roblox_profile,
+    discordId: row.discord_id,
     note: row.note,
     ...(externalParent ? { externalParent } : {})
   };
@@ -376,7 +377,7 @@ router.post("/:slug/members", async (req, res, next) => {
     const access = await authorizeEdit(req, res, req.params.slug);
     if (!access) return;
 
-    const { name, role, parentId, avatarUrl, buildLink, robloxProfile, note } = req.body;
+    const { name, role, parentId, avatarUrl, buildLink, robloxProfile, discordId, note } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
 
     if (parentId) {
@@ -388,9 +389,9 @@ router.post("/:slug/members", async (req, res, next) => {
 
     const id = makeMemberId(name.trim());
     const { rows } = await pool.query(
-      `INSERT INTO members (id, house_slug, parent_id, name, role, avatar_url, build_link, roblox_profile, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [id, req.params.slug, parentId || null, name.trim(), role || "", avatarUrl || "", buildLink || "", robloxProfile || "", note || ""]
+      `INSERT INTO members (id, house_slug, parent_id, name, role, avatar_url, build_link, roblox_profile, discord_id, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [id, req.params.slug, parentId || null, name.trim(), role || "", avatarUrl || "", buildLink || "", robloxProfile || "", discordId || "", note || ""]
     );
     if (access.viaLordBypass) await logLordEdit(req, access.house, `added member "${name.trim()}"`);
     res.status(201).json(toMemberJson(rows[0]));
@@ -409,7 +410,7 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
     const existing = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
     if (!existing.rows[0]) return res.status(404).json({ error: "Member not found." });
 
-    const { name, role, parentId, avatarUrl, buildLink, robloxProfile, note } = req.body;
+    const { name, role, parentId, avatarUrl, buildLink, robloxProfile, discordId, note } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
 
     if (parentId) {
@@ -425,9 +426,9 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
     }
 
     const { rows } = await pool.query(
-      `UPDATE members SET name=$1, role=$2, parent_id=$3, avatar_url=$4, build_link=$5, roblox_profile=$6, note=$7
-       WHERE id=$8 AND house_slug=$9 RETURNING *`,
-      [name.trim(), role || "", parentId || null, avatarUrl || "", buildLink || "", robloxProfile || "", note || "", id, req.params.slug]
+      `UPDATE members SET name=$1, role=$2, parent_id=$3, avatar_url=$4, build_link=$5, roblox_profile=$6, discord_id=$7, note=$8
+       WHERE id=$9 AND house_slug=$10 RETURNING *`,
+      [name.trim(), role || "", parentId || null, avatarUrl || "", buildLink || "", robloxProfile || "", discordId || "", note || "", id, req.params.slug]
     );
     res.json(toMemberJson(rows[0]));
   } catch (err) {

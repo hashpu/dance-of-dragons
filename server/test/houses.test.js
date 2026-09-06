@@ -121,6 +121,22 @@ test("a member's parent can belong to a different house, and the API reports who
   assert.equal(laenor.externalParent, undefined);
 });
 
+test("a member can store the Discord account of the real person behind them", async () => {
+  const add = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Vaemond", role: "", discordId: "123456789012345678" });
+  assert.equal(add.status, 201);
+  assert.equal(add.body.discordId, "123456789012345678");
+
+  const edit = await request
+    .patch(`/api/houses/velaryon/members/${add.body.id}`)
+    .set("x-house-password", "driftmark")
+    .send({ name: "Vaemond", role: "", discordId: "987654321098765432" });
+  assert.equal(edit.status, 200);
+  assert.equal(edit.body.discordId, "987654321098765432");
+});
+
 test("adding, editing, and reparent-loop protection on members", async () => {
   const add = await request
     .post("/api/houses/targaryen/members")

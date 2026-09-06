@@ -267,6 +267,7 @@ function nodeHtml(node) {
   const linksHtml = `
     ${node.buildLink ? `<a class="node-build-link" href="${escapeAttr(node.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
     ${node.robloxProfile ? `<a class="node-build-link" href="${escapeAttr(node.robloxProfile)}" target="_blank" rel="noopener">Roblox profile ↗</a>` : ""}
+    ${node.discordId ? `<div class="node-discord">${FIELD_ICONS.discord} ${escapeAttr(node.discordId)}</div>` : ""}
   `;
   const childrenHtml = node.children.length
     ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c)}</li>`).join("")}</ul>`
@@ -445,6 +446,7 @@ const FIELD_ICONS = {
   image: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="2"/><circle cx="8.5" cy="9.5" r="1.4"/><path d="M20 15l-4.5-4.5L9 17"/></svg>`,
   heart: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20.3s-7.2-4.4-9.4-8.7C1.2 8.4 2.8 5 6.2 5c2 0 3.4 1.2 5.8 4 2.4-2.8 3.8-4 5.8-4 3.4 0 5 3.4 3.6 6.6-2.2 4.3-9.4 8.7-9.4 8.7z"/></svg>`,
   badge: `<svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="3" width="16" height="18" rx="2.2"/><circle cx="12" cy="10" r="2.6"/><path d="M7.3 17c.9-2.3 2.7-3.4 4.7-3.4s3.8 1.1 4.7 3.4"/></svg>`,
+  discord: `<svg class="field-icon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.32 4.37a19.8 19.8 0 00-4.9-1.52.07.07 0 00-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 00-5.48 0 12.6 12.6 0 00-.63-1.26.08.08 0 00-.08-.04 19.7 19.7 0 00-4.9 1.52.07.07 0 00-.03.03C1.24 9.05.47 13.58.83 18.06a.08.08 0 00.03.06 19.9 19.9 0 006 3.02.08.08 0 00.08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 00-.04-.11 13 13 0 01-1.88-.9.08.08 0 01-.01-.13c.13-.09.25-.19.37-.29a.07.07 0 01.08-.01c3.93 1.8 8.18 1.8 12.07 0a.08.08 0 01.08.01c.12.1.24.2.37.29a.08.08 0 010 .13c-.6.35-1.23.65-1.89.9a.08.08 0 00-.04.11c.37.7.78 1.37 1.23 2a.08.08 0 00.08.03 19.8 19.8 0 006.03-3.02.08.08 0 00.03-.06c.43-5.19-.72-9.68-3.05-13.66a.06.06 0 00-.03-.03zM8.52 15.3c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.17 1.1 2.15 2.43 0 1.33-.95 2.42-2.15 2.42zm6.98 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.17 1.1 2.15 2.43 0 1.33-.94 2.42-2.15 2.42z"/></svg>`,
   x: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg>`,
   upload: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3"/></svg>`,
   chevron: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>`,
@@ -581,7 +583,7 @@ async function openMemberModal({ parentId, member }) {
           <div class="parent-preview" id="parentPreview"></div>
         </div>
 
-        <details class="more-options"${isEdit && (member.buildLink || member.robloxProfile || member.avatarUrl || member.note) ? " open" : ""}>
+        <details class="more-options"${isEdit && (member.buildLink || member.robloxProfile || member.discordId || member.avatarUrl || member.note) ? " open" : ""}>
           <summary><span class="chev">${FIELD_ICONS.chevronRight}</span> More options <span class="hint">(photo, links, married-in note)</span></summary>
           <div class="more-grid">
             <div class="field">
@@ -597,6 +599,14 @@ async function openMemberModal({ parentId, member }) {
                 ${FIELD_ICONS.badge}
                 <input id="fRobloxProfile" placeholder="https://www.roblox.com/users/.../profile" value="${isEdit ? escapeAttr(member.robloxProfile || "") : ""}" />
               </div>
+            </div>
+          </div>
+
+          <div class="field">
+            <label>Discord account ID <span class="hint">(the real person behind this character, optional)</span></label>
+            <div class="input-wrap">
+              ${FIELD_ICONS.discord}
+              <input id="fDiscordId" placeholder="e.g. 123456789012345678" value="${isEdit ? escapeAttr(member.discordId || "") : ""}" />
             </div>
           </div>
 
@@ -715,6 +725,7 @@ async function submitMember() {
   const avatarUrl = document.getElementById("fAvatar").value.trim();
   const buildLink = document.getElementById("fBuildLink").value.trim();
   const robloxProfile = document.getElementById("fRobloxProfile").value.trim();
+  const discordId = document.getElementById("fDiscordId").value.trim();
   const note = document.getElementById("fNote").value.trim();
 
   if (!name) {
@@ -724,7 +735,7 @@ async function submitMember() {
     return;
   }
 
-  const payload = { name, role, parentId, avatarUrl, buildLink, robloxProfile, note };
+  const payload = { name, role, parentId, avatarUrl, buildLink, robloxProfile, discordId, note };
 
   try {
     if (editingMemberId) {
