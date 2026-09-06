@@ -6,6 +6,7 @@ const housesRouter = require("./routes/houses");
 const applicationsRouter = require("./routes/applications");
 const adminRouter = require("./routes/admin");
 const robloxRouter = require("./routes/roblox");
+const uploadsRouter = require("./routes/uploads");
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use("/api/houses", housesRouter);
 app.use("/api/applications", applicationsRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/roblox", robloxRouter);
+app.use("/api/uploads", uploadsRouter);
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 

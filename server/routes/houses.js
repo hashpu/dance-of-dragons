@@ -1,16 +1,14 @@
 const express = require("express");
 const bcrypt = require("bcrypt");
-const fs = require("fs");
-const path = require("path");
 const multer = require("multer");
 const { pool } = require("../db");
 const { isLordOfHouse, isAdminRequest, getRequestDiscordUserId } = require("../discord");
 const { resolveRobloxUsername } = require("../roblox");
 const { postLog } = require("../logs");
+const { saveUpload } = require("../uploads");
 
 const router = express.Router();
 
-const AVATAR_UPLOAD_DIR = path.join(__dirname, "..", "uploads", "avatars");
 const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
@@ -360,12 +358,8 @@ router.post("/:slug/avatar", (req, res, next) => {
 
     if (!req.file) return res.status(400).json({ error: "Attach a PNG, JPEG, GIF, or WEBP image." });
 
-    const ext = { "image/png": ".png", "image/jpeg": ".jpg", "image/gif": ".gif", "image/webp": ".webp" }[req.file.mimetype];
-    const filename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-    fs.mkdirSync(AVATAR_UPLOAD_DIR, { recursive: true });
-    fs.writeFileSync(path.join(AVATAR_UPLOAD_DIR, filename), req.file.buffer);
-
-    res.status(201).json({ url: `/uploads/avatars/${filename}` });
+    const url = await saveUpload(req.file.buffer, req.file.mimetype);
+    res.status(201).json({ url });
   } catch (err) {
     next(err);
   }

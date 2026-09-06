@@ -1,15 +1,12 @@
 const express = require("express");
-const fs = require("fs");
-const path = require("path");
 const multer = require("multer");
 const { pool } = require("../db");
 const { findDepartment } = require("../departments");
 const { requireAdmin } = require("../middleware/requireAdmin");
+const { saveUpload } = require("../uploads");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 const router = express.Router();
-
-const UPLOAD_DIR = path.join(__dirname, "..", "uploads");
 
 // Discord rejects the entire embed if any field.value exceeds 1024 chars —
 // truncate defensively so one long answer can't silently kill the whole post.
@@ -94,11 +91,8 @@ router.post("/", upload.single("image"), async (req, res, next) => {
     let imagePath = null;
     let imageFilename = null;
     if (req.file) {
-      const ext = path.extname(req.file.originalname) || ".png";
-      imageFilename = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}${ext}`;
-      fs.mkdirSync(UPLOAD_DIR, { recursive: true });
-      fs.writeFileSync(path.join(UPLOAD_DIR, imageFilename), req.file.buffer);
-      imagePath = `/uploads/${imageFilename}`;
+      imageFilename = req.file.originalname || "image.png";
+      imagePath = await saveUpload(req.file.buffer, req.file.mimetype);
     }
 
     const insertRes = await pool.query(

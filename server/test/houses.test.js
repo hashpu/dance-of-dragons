@@ -100,7 +100,16 @@ test("avatar upload requires access, accepts an image, and rejects a disallowed 
     .set("x-house-password", "dracarys")
     .attach("avatar", Buffer.from("fake-gif-bytes"), { filename: "photo.gif", contentType: "image/gif" });
   assert.equal(ok.status, 201);
-  assert.match(ok.body.url, /^\/uploads\/avatars\/.+\.gif$/);
+  assert.match(ok.body.url, /^\/api\/uploads\/.+$/);
+
+  // stored in the database, not on disk — survives across deploys
+  const fetched = await request.get(ok.body.url);
+  assert.equal(fetched.status, 200);
+  assert.equal(fetched.headers["content-type"], "image/gif");
+  assert.equal(Buffer.from(fetched.body).toString(), "fake-gif-bytes");
+
+  const missing = await request.get("/api/uploads/does-not-exist");
+  assert.equal(missing.status, 404);
 });
 
 test("a member's parent can belong to a different house, and the API reports who they are", async () => {

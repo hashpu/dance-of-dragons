@@ -48,6 +48,17 @@ CREATE INDEX IF NOT EXISTS members_parent_idx ON members(parent_id);
 -- houses.lord_discord_user_id above for that).
 ALTER TABLE members ADD COLUMN IF NOT EXISTS discord_id TEXT NOT NULL DEFAULT '';
 
+-- Uploaded files (member avatars, application images) stored in the
+-- database itself rather than on local disk — Render's local filesystem is
+-- wiped on every redeploy/restart, but this table lives in the same
+-- Postgres database as everything else, so uploads survive updates.
+CREATE TABLE IF NOT EXISTS uploaded_files (
+  id TEXT PRIMARY KEY,
+  mime_type TEXT NOT NULL,
+  data BYTEA NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,
   department TEXT NOT NULL,
