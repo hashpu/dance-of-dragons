@@ -15,13 +15,30 @@ function pollTeamHtml({ side, label, pct, count, myVote, canVote }) {
     ${tag}
     <div class="poll-team-icon"><img src="${POLL_TEAM_SIGILS[side]}" alt="${label} sigil" /></div>
     <div class="poll-team-name">${label}</div>
-    <div class="poll-team-pct">${pct}%</div>
+    <div class="poll-team-pct" id="pct-${side}" data-target="${pct}">0%</div>
     <div class="poll-team-count">${count} vote${count === 1 ? "" : "s"}</div>
   `;
   const cls = `poll-team poll-team-${side}${isMine ? " active" : ""}`;
   return canVote
     ? `<button type="button" class="${cls}" id="voteBtn-${side}">${inner}</button>`
     : `<div class="${cls}">${inner}</div>`;
+}
+
+function animateCount(el, duration = 700) {
+  if (!el) return;
+  const target = Number(el.dataset.target) || 0;
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    el.textContent = target + "%";
+    return;
+  }
+  const start = performance.now();
+  function step(now) {
+    const progress = Math.min((now - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    el.textContent = Math.round(eased * target) + "%";
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
 }
 
 async function renderPoll() {
@@ -44,6 +61,7 @@ async function renderPoll() {
   el.innerHTML = `
     <div class="poll-header">
       <h2 class="poll-title">Cast Your Vote</h2>
+      <div class="poll-divider"><span></span></div>
       <p class="poll-subtitle">${total ? `${total.toLocaleString()} vote${total === 1 ? "" : "s"} cast. The realm is dividing.` : "Be the first to declare a side."}</p>
     </div>
     <div class="poll-bar">
@@ -64,6 +82,9 @@ async function renderPoll() {
         `
     }
   `;
+
+  animateCount(document.getElementById("pct-green"));
+  animateCount(document.getElementById("pct-black"));
 
   if (user) {
     document.getElementById("voteBtn-green").onclick = () => castVote("green");
