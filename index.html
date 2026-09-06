@@ -42,7 +42,10 @@
     <div id="searchResults"></div>
     <div class="house-grid" id="houseGrid"></div>
 
-    <button class="btn-link" id="resetAllBtn" style="margin-top:40px">Reset all house data to defaults</button>
+    <div style="margin-top:40px; display:flex; gap:20px; flex-wrap:wrap">
+      <button class="btn-link" id="seedMissingBtn">Add any new houses (safe, doesn't touch existing data)</button>
+      <button class="btn-link" id="resetAllBtn">Reset all house data to defaults</button>
+    </div>
   </main>
 
   <script src="js/api.js"></script>

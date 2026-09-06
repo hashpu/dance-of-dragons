@@ -219,3 +219,36 @@ test("admin reset requires the correct secret and restores default data", async 
   assert.equal(unlocked.status, 200);
   assert.equal(unlocked.body.members.length, 5);
 });
+
+test("seed-missing adds only houses that don't exist yet, and never touches an existing house's members", async () => {
+  const noAuth = await request.post("/api/admin/seed-missing");
+  assert.equal(noAuth.status, 401);
+
+  // give hightower some "real" data that must survive
+  const added = await request
+    .post("/api/houses/hightower/members")
+    .set("x-house-password", "oldtown")
+    .send({ name: "Lord Ormund Hightower", role: "Lord/Lady Paramount" });
+  assert.equal(added.status, 201);
+
+  // simulate a house that hasn't been added to this database yet
+  await memPool.query("DELETE FROM houses WHERE slug = $1", ["redwyne"]);
+  const missingCheck = await request.get("/api/houses/redwyne");
+  assert.equal(missingCheck.status, 404);
+
+  const res = await request.post("/api/admin/seed-missing").set("x-admin-secret", "test-secret");
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.added, ["redwyne"]);
+
+  const redwyne = await request.get("/api/houses/redwyne");
+  assert.equal(redwyne.status, 200);
+
+  // hightower's real data is untouched
+  const hightower = await request.get("/api/houses/hightower").set("x-house-password", "oldtown");
+  assert.equal(hightower.body.members.length, 1);
+  assert.equal(hightower.body.members[0].name, "Lord Ormund Hightower");
+
+  // running it again with nothing missing adds nothing
+  const again = await request.post("/api/admin/seed-missing").set("x-admin-secret", "test-secret");
+  assert.deepEqual(again.body.added, []);
+});

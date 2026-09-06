@@ -51,6 +51,7 @@ const Api = {
     return apiFetch(`/houses/${slug}/avatar`, { method: "POST", body: formData, housePassword });
   },
   resetAll: (secret) => apiFetch("/admin/reset", { method: "POST", headers: { "x-admin-secret": secret } }),
+  seedMissingHouses: (secret) => apiFetch("/admin/seed-missing", { method: "POST", headers: { "x-admin-secret": secret } }),
   setLordRole: (slug, roleId, robloxUsername, secret) =>
     apiFetch(`/houses/${slug}/lord-role`, {
       method: "POST",

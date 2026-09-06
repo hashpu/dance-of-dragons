@@ -146,7 +146,41 @@ async function seed(pool) {
   }
 }
 
-module.exports = { seed, HOUSES };
+// Adds any house from HOUSES that isn't already in the database, and
+// nothing else — never touches an existing house's row or its members.
+// This is how new houses should get added to a live site: `seed` above
+// wipes everything (including real visitors' family trees) and should
+// only ever run on an admin's own explicit "reset everything" request.
+async function seedMissingHouses(pool) {
+  const existing = await pool.query("SELECT slug FROM houses");
+  const existingSlugs = new Set(existing.rows.map((r) => r.slug));
+
+  const orderRes = await pool.query("SELECT COALESCE(MAX(order_index), -1) AS max_order FROM houses");
+  let nextOrder = Number(orderRes.rows[0].max_order) + 1;
+
+  const added = [];
+  for (const h of HOUSES) {
+    if (existingSlugs.has(h.slug)) continue;
+
+    const passwordHash = h.password ? await bcrypt.hash(h.password, 10) : null;
+    await pool.query(
+      `INSERT INTO houses (slug, name, faction, color, tagline, description, locked, password_hash, order_index)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+      [h.slug, h.name, h.faction, h.color, h.tagline, h.description, h.locked, passwordHash, nextOrder++]
+    );
+    for (const m of h.members) {
+      await pool.query(
+        `INSERT INTO members (id, house_slug, parent_id, name, role)
+         VALUES ($1,$2,$3,$4,$5)`,
+        [m.id, h.slug, m.parentId, m.name, m.role || ""]
+      );
+    }
+    added.push(h.slug);
+  }
+  return added;
+}
+
+module.exports = { seed, seedMissingHouses, HOUSES };
 
 if (require.main === module) {
   seed(pool)

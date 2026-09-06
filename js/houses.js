@@ -128,3 +128,33 @@ document.getElementById("resetAllBtn").onclick = async () => {
     await Dialog.alert({ title: "Couldn't reset", message: e.message, icon: "warning", cardColor: "var(--red)" });
   }
 };
+
+// Safe alternative to "Reset all houses" — only adds houses that don't
+// exist in the database yet, never touching an existing house or its
+// members. This is what should be used whenever new houses get added to
+// the site going forward.
+document.getElementById("seedMissingBtn").onclick = async () => {
+  const secret = await Dialog.prompt({
+    kicker: "Admin only",
+    title: "Enter admin secret",
+    label: "Admin secret",
+    type: "password",
+    placeholder: "••••••••",
+    confirmText: "Add new houses",
+    icon: "lock"
+  });
+  if (!secret) return;
+  try {
+    const { added } = await Api.seedMissingHouses(secret);
+    await renderHouseGrid();
+    await Dialog.alert({
+      title: added.length ? "Houses added" : "Nothing to add",
+      message: added.length
+        ? `Added: ${added.join(", ")}. Every other house was left untouched.`
+        : "Every house in the list already exists here.",
+      icon: "info"
+    });
+  } catch (e) {
+    await Dialog.alert({ title: "Couldn't add new houses", message: e.message, icon: "warning", cardColor: "var(--red)" });
+  }
+};
