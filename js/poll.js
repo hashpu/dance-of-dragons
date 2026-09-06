@@ -39,8 +39,8 @@ async function renderPoll() {
 
   el.innerHTML = `
     <div class="poll-header">
-      <div class="eyebrow" style="justify-content:center">Dance of the Dragons</div>
-      <h2 class="poll-title">Pick Your Side</h2>
+      <div class="eyebrow" style="justify-content:center">Community Vote</div>
+      <h2 class="poll-title">Cast Your Vote</h2>
     </div>
     <div class="poll-bar">
       <div class="poll-bar-fill poll-bar-green" style="width:${greenPct}%"></div>
