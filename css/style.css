@@ -578,7 +578,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   border-radius: 4px;
   padding: 36px 32px 32px;
   max-width: 760px;
-  margin: 0 auto 48px;
+  margin: 40px auto 0;
   text-align: center;
   box-shadow: 0 20px 50px -30px rgba(0, 0, 0, 0.8);
 }
