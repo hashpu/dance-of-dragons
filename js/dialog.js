@@ -1,0 +1,189 @@
+/* ---------------------------------------------------------------
+   Dialog — themed replacements for window.prompt/confirm/alert,
+   built from the same .modal/.modal-overlay styling the member-
+   editor modal already uses. Self-contained: builds its own
+   overlay and appends it to <body>, so it works on any page
+   without needing a #modalRoot element.
+------------------------------------------------------------------ */
+const Dialog = (() => {
+  const ICONS = {
+    lock: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg>`,
+    warning: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01M10.29 3.86L1.82 18a1.5 1.5 0 001.29 2.25h17.78a1.5 1.5 0 001.29-2.25L13.71 3.86a1.5 1.5 0 00-2.42 0z"/></svg>`,
+    info: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg>`,
+    discord: `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.32 4.37a19.8 19.8 0 00-4.9-1.52.07.07 0 00-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 00-5.48 0 12.6 12.6 0 00-.63-1.26.08.08 0 00-.08-.04 19.7 19.7 0 00-4.9 1.52.07.07 0 00-.03.03C1.24 9.05.47 13.58.83 18.06a.08.08 0 00.03.06 19.9 19.9 0 006 3.02.08.08 0 00.08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 00-.04-.11 13 13 0 01-1.88-.9.08.08 0 01-.01-.13c.13-.09.25-.19.37-.29a.07.07 0 01.08-.01c3.93 1.8 8.18 1.8 12.07 0a.08.08 0 01.08.01c.12.1.24.2.37.29a.08.08 0 010 .13c-.6.35-1.23.65-1.89.9a.08.08 0 00-.04.11c.37.7.78 1.37 1.23 2a.08.08 0 00.08.03 19.8 19.8 0 006.03-3.02.08.08 0 00.03-.06c.43-5.19-.72-9.68-3.05-13.66a.06.06 0 00-.03-.03zM8.52 15.3c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.17 1.1 2.15 2.43 0 1.33-.95 2.42-2.15 2.42zm6.98 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.17 1.1 2.15 2.43 0 1.33-.94 2.42-2.15 2.42z"/></svg>`
+  };
+
+  function el(html) {
+    const t = document.createElement("template");
+    t.innerHTML = html.trim();
+    return t.content.firstElementChild;
+  }
+
+  function shell({ kicker, title, message, bodyHtml, icon, cardColor }) {
+    return el(`
+      <div class="modal-overlay dialog-overlay">
+        <div class="modal" style="--card-color:${cardColor}">
+          <div class="modal-header">
+            <div class="modal-crest">${ICONS[icon] || ICONS.info}</div>
+            <div>
+              ${kicker ? `<div class="modal-kicker">${kicker}</div>` : ""}
+              <h3>${title}</h3>
+            </div>
+          </div>
+          ${message ? `<p class="dialog-message">${message}</p>` : ""}
+          ${bodyHtml || ""}
+        </div>
+      </div>
+    `);
+  }
+
+  function mount(overlay, { onCancel }) {
+    document.body.appendChild(overlay);
+    document.body.classList.add("dialog-open");
+
+    function cleanup() {
+      overlay.remove();
+      document.body.classList.remove("dialog-open");
+      document.removeEventListener("keydown", onKeydown);
+    }
+
+    function onKeydown(e) {
+      if (e.key === "Escape") {
+        cleanup();
+        onCancel();
+      }
+    }
+
+    overlay.addEventListener("click", (e) => {
+      if (e.target === overlay) {
+        cleanup();
+        onCancel();
+      }
+    });
+    document.addEventListener("keydown", onKeydown);
+
+    return cleanup;
+  }
+
+  function prompt({
+    title,
+    kicker = "",
+    message = "",
+    label = "",
+    placeholder = "",
+    value = "",
+    type = "text",
+    confirmText = "OK",
+    cancelText = "Cancel",
+    icon = "lock",
+    cardColor = "var(--gold, #d4af37)"
+  }) {
+    return new Promise((resolve) => {
+      const overlay = shell({
+        kicker,
+        title,
+        message,
+        icon,
+        cardColor,
+        bodyHtml: `
+          <div class="field">
+            ${label ? `<label>${label}</label>` : ""}
+            <div class="input-wrap">
+              ${ICONS[icon] || ICONS.lock}
+              <input id="dialogInput" type="${type}" placeholder="${placeholder}" value="${value}" autocomplete="off" />
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" id="dialogCancel">${cancelText}</button>
+            <button type="button" class="btn btn-primary" id="dialogConfirm">${confirmText}</button>
+          </div>
+        `
+      });
+
+      const cleanup = mount(overlay, { onCancel: () => resolve(null) });
+      const input = overlay.querySelector("#dialogInput");
+
+      function confirm() {
+        const val = input.value;
+        cleanup();
+        resolve(val);
+      }
+
+      overlay.querySelector("#dialogConfirm").onclick = confirm;
+      overlay.querySelector("#dialogCancel").onclick = () => {
+        cleanup();
+        resolve(null);
+      };
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") confirm();
+      });
+
+      input.focus();
+    });
+  }
+
+  function confirmDialog({
+    title,
+    kicker = "",
+    message = "",
+    confirmText = "Confirm",
+    cancelText = "Cancel",
+    danger = false,
+    icon = "warning",
+    cardColor
+  }) {
+    cardColor = cardColor || (danger ? "var(--red)" : "var(--gold, #d4af37)");
+    return new Promise((resolve) => {
+      const overlay = shell({
+        kicker,
+        title,
+        message,
+        icon,
+        cardColor,
+        bodyHtml: `
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" id="dialogCancel">${cancelText}</button>
+            <button type="button" class="btn ${danger ? "btn-danger-outline" : "btn-primary"}" id="dialogConfirm">${confirmText}</button>
+          </div>
+        `
+      });
+
+      const cleanup = mount(overlay, { onCancel: () => resolve(false) });
+      overlay.querySelector("#dialogConfirm").onclick = () => {
+        cleanup();
+        resolve(true);
+      };
+      overlay.querySelector("#dialogCancel").onclick = () => {
+        cleanup();
+        resolve(false);
+      };
+      overlay.querySelector("#dialogConfirm").focus();
+    });
+  }
+
+  function alertDialog({ title, kicker = "", message = "", okText = "OK", icon = "info", cardColor = "var(--gold, #d4af37)" }) {
+    return new Promise((resolve) => {
+      const overlay = shell({
+        kicker,
+        title,
+        message,
+        icon,
+        cardColor,
+        bodyHtml: `
+          <div class="modal-actions">
+            <button type="button" class="btn btn-primary" id="dialogOk">${okText}</button>
+          </div>
+        `
+      });
+
+      const cleanup = mount(overlay, { onCancel: () => resolve() });
+      overlay.querySelector("#dialogOk").onclick = () => {
+        cleanup();
+        resolve();
+      };
+      overlay.querySelector("#dialogOk").focus();
+    });
+  }
+
+  return { prompt, confirm: confirmDialog, alert: alertDialog };
+})();

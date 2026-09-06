@@ -54,7 +54,27 @@ const HOUSES = [
   { slug: "martell", name: "Martell", faction: "NEUTRAL", color: "#e0622f",
     tagline: "Unbowed, Unbent, Unbroken",
     description: "Rulers of Dorne, they stayed neutral through most of the Dance of the Dragons.",
-    locked: true, password: "sunspear", members: [] }
+    locked: true, password: "sunspear", members: [] },
+  { slug: "kingsguard", name: "Kingsguard", faction: "CROWN", color: "#e6e2d2",
+    tagline: "And I Shall Know No Fear",
+    description: "The seven sworn shields of the king, bound for life to protect the royal family above all else.",
+    locked: true, password: "whitecloak",
+    members: [
+      { id: "criston-cole", name: "Criston Cole", role: "Lord Commander", parentId: null },
+      { id: "harrold-westerling", name: "Harrold Westerling", role: "Ser", parentId: null }
+    ] },
+  { slug: "dragonguard", name: "Dragonguard", faction: "CROWN", color: "#c9622d",
+    tagline: "Blood of the Dragon, Guard of the Skies",
+    description: "An elite order once sworn to guard the Targaryen dragonriders themselves, its ranks scattered during the Dance.",
+    locked: true, password: "skyguard", members: [] },
+  { slug: "faith-militant", name: "Faith Militant", faction: "CROWN", color: "#9c7a3f",
+    tagline: "The Seven Protect",
+    description: "The Warrior's Sons and Poor Fellows — the martial arm of the Faith of the Seven, sworn to defend the realm's faithful.",
+    locked: true, password: "sevenpointed", members: [] },
+  { slug: "city-watch", name: "City Watch", faction: "CROWN", color: "#c9a227",
+    tagline: "Keepers of King's Landing",
+    description: "The gold-cloaked men who patrol King's Landing's streets and gates, keeping the king's peace.",
+    locked: true, password: "goldcloak", members: [] }
 ];
 
 async function seed(pool) {

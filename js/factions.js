@@ -1,7 +1,8 @@
-const FACTION_ORDER = ["ROYAL HOUSE", "BLACK FACTION", "GREEN FACTION", "LORDS OF HARRENHAL", "NEUTRAL"];
+const FACTION_ORDER = ["ROYAL HOUSE", "CROWN", "BLACK FACTION", "GREEN FACTION", "LORDS OF HARRENHAL", "NEUTRAL"];
 
 const FACTION_INFO = {
   "ROYAL HOUSE": { color: "#e0483e", blurb: "House Targaryen itself — the crown both sides were fighting to control." },
+  CROWN: { color: "#c7ae6b", blurb: "Sworn orders bound to the Iron Throne and the realm's peace, not to either side of the Dance." },
   "BLACK FACTION": { color: "#4a90d9", blurb: "Bannermen who backed Rhaenyra Targaryen's claim to the Iron Throne." },
   "GREEN FACTION": { color: "#d4af37", blurb: "Bannermen who backed Aegon II's claim to the Iron Throne." },
   "LORDS OF HARRENHAL": { color: "#b08d57", blurb: "Riverlands lords holding the ruined seat of Harrenhal, drawn into the war by their claim to it." },

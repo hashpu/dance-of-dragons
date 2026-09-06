@@ -2,6 +2,7 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const { pool } = require("../db");
 const { isLordOfHouse, isAdminRequest, getRequestDiscordUserId } = require("../discord");
+const { resolveRobloxUsername } = require("../roblox");
 const { postLog } = require("../logs");
 
 const router = express.Router();
@@ -30,6 +31,18 @@ function toHouseSummaryJson(row) {
     locked: row.locked,
     memberCount: Number(row.member_count)
   };
+}
+
+// Proves the caller knows this house's password for THIS request only — the
+// client only ever holds the password in page memory (see tree.js), never
+// persists it, and never sends it to unrelated houses. Used as an
+// alternative to Lord access so a correct password grants read/write access
+// without ever flipping the house's `locked` column — every fresh page
+// visit has to re-enter it.
+async function hasHousePassword(req, house) {
+  const password = req.get("x-house-password");
+  if (!password || !house.password_hash) return false;
+  return bcrypt.compare(password, house.password_hash);
 }
 
 function makeMemberId(name) {
@@ -73,8 +86,9 @@ router.get("/", async (req, res, next) => {
   }
 });
 
-// GET /api/houses/:slug — full detail; members omitted while locked, unless the
-// caller is signed in as this house's Discord "Lord"
+// GET /api/houses/:slug — full detail; members omitted while locked, unless
+// the caller is signed in as this house's Discord "Lord" or sends the
+// correct x-house-password header for this one request.
 router.get("/:slug", async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [req.params.slug]);
@@ -93,9 +107,9 @@ router.get("/:slug", async (req, res, next) => {
 
     if (house.locked) {
       const lordAccess = await isLordOfHouse(req, house);
-      if (!lordAccess) return res.json(base);
+      if (!lordAccess && !(await hasHousePassword(req, house))) return res.json(base);
       const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
-      return res.json({ ...base, lordAccess: true, members: membersRes.rows.map(toMemberJson) });
+      return res.json({ ...base, ...(lordAccess ? { lordAccess: true } : {}), members: membersRes.rows.map(toMemberJson) });
     }
 
     const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
@@ -105,7 +119,12 @@ router.get("/:slug", async (req, res, next) => {
   }
 });
 
-// POST /api/houses/:slug/unlock { password }
+// POST /api/houses/:slug/unlock { password } — verifies the password and
+// hands back the members for this one response. Deliberately doesn't touch
+// the `locked` column: unlocking only lasts for the current page visit (the
+// browser keeps the password in memory, see tree.js, and resends it on
+// later requests as x-house-password). Every fresh visit — for this visitor
+// or anyone else — is locked again and has to re-enter it.
 router.post("/:slug/unlock", async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [req.params.slug]);
@@ -117,7 +136,6 @@ router.post("/:slug/unlock", async (req, res, next) => {
     const matches = house.password_hash && (await bcrypt.compare(password || "", house.password_hash));
     if (!matches) return res.status(401).json({ error: "Wrong password." });
 
-    await pool.query("UPDATE houses SET locked = false WHERE slug = $1", [house.slug]);
     const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
     res.json({
       slug: house.slug,
@@ -126,7 +144,7 @@ router.post("/:slug/unlock", async (req, res, next) => {
       color: house.color,
       tagline: house.tagline,
       description: house.description,
-      locked: false,
+      locked: true,
       members: membersRes.rows.map(toMemberJson)
     });
   } catch (err) {
@@ -157,23 +175,20 @@ router.post("/:slug/lock", async (req, res, next) => {
 });
 
 // POST /api/houses/:slug/forgot-password — clears the lock without the password.
-// Allowed for the site admin, or for this house's own Discord Lord.
+// Admin-only: a house's Lord can view/edit while it's locked (see isLordOfHouse
+// below), but can't fully unlock it — only the site admin can do that.
 router.post("/:slug/forgot-password", async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [req.params.slug]);
     const house = rows[0];
     if (!house) return res.status(404).json({ error: "House not found." });
 
-    const admin = isAdminRequest(req);
-    const lord = !admin && (await isLordOfHouse(req, house));
-    if (!admin && !lord) {
-      return res.status(401).json({ error: "Not authorized to reset this house's lock." });
+    if (!isAdminRequest(req)) {
+      return res.status(401).json({ error: "Only the site admin can reset a house's lock." });
     }
 
     await pool.query("UPDATE houses SET locked = false, password_hash = NULL WHERE slug = $1", [house.slug]);
-
-    const actor = admin ? "the site admin" : `this house's Lord (Discord ID \`${await getRequestDiscordUserId(req)}\`)`;
-    await postLog("🔓 House lock reset", `**${house.name}**'s lock was reset by ${actor}.`, 0xd4af37);
+    await postLog("🔓 House lock reset", `**${house.name}**'s lock was reset by the site admin.`, 0xd4af37);
 
     res.json({ ok: true });
   } catch (err) {
@@ -181,35 +196,86 @@ router.post("/:slug/forgot-password", async (req, res, next) => {
   }
 });
 
-// POST /api/houses/:slug/lord-role { roleId } — admin-only: assigns which Discord
-// role can manage this house without its password
+// POST /api/houses/:slug/lord-role { roleId, robloxUsername } — admin-only: assigns
+// which Discord role AND which specific Roblox account together can manage this
+// house without its password. Both must match the same visitor — holding the
+// Discord role alone isn't enough.
 router.post("/:slug/lord-role", async (req, res, next) => {
   try {
     if (!isAdminRequest(req)) return res.status(401).json({ error: "Admin secret required." });
     const { rows } = await pool.query("SELECT name FROM houses WHERE slug = $1", [req.params.slug]);
     if (!rows[0]) return res.status(404).json({ error: "House not found." });
 
-    const { roleId } = req.body;
-    await pool.query("UPDATE houses SET lord_role_id = $2 WHERE slug = $1", [req.params.slug, roleId || null]);
+    const { roleId, robloxUsername } = req.body;
+
+    let robloxUserId = null;
+    let robloxDisplayName = null;
+    if (robloxUsername && robloxUsername.trim()) {
+      const match = await resolveRobloxUsername(robloxUsername.trim());
+      if (!match) return res.status(400).json({ error: `Could not find a Roblox account named "${robloxUsername}".` });
+      robloxUserId = match.id;
+      robloxDisplayName = match.username;
+    }
+
+    await pool.query("UPDATE houses SET lord_role_id = $2, lord_roblox_user_id = $3 WHERE slug = $1", [
+      req.params.slug,
+      roleId || null,
+      robloxUserId
+    ]);
 
     await postLog(
-      "🛡️ Lord role updated",
+      "🛡️ Lord updated",
       roleId
-        ? `**${rows[0].name}**'s Lord role was set to \`${roleId}\` by an admin.`
-        : `**${rows[0].name}**'s Lord role was cleared by an admin.`,
+        ? `**${rows[0].name}**'s Lord was set to Discord role \`${roleId}\`${robloxDisplayName ? ` + Roblox account **${robloxDisplayName}**` : " (no Roblox account required)"} by an admin.`
+        : `**${rows[0].name}**'s Lord was cleared by an admin.`,
       0xd4af37
     );
 
-    res.json({ ok: true });
+    res.json({ ok: true, robloxUserId, robloxUsername: robloxDisplayName });
   } catch (err) {
     next(err);
   }
 });
 
-// Unlocked, or the caller is signed in as this house's Discord Lord. When the
-// latter is how access was granted, that's logged by the caller as a
-// privileged edit (the house is otherwise locked to everyone else).
-async function authorizeEdit(req, res, slug) {
+// POST /api/houses/:slug/lord-discord { discordUserId } — admin-only: assigns
+// one exact Discord user ID that alone grants Lord access to this house, no
+// bot/guild role or Roblox account required. Leave discordUserId blank to
+// remove it.
+router.post("/:slug/lord-discord", async (req, res, next) => {
+  try {
+    if (!isAdminRequest(req)) return res.status(401).json({ error: "Admin secret required." });
+    const { rows } = await pool.query("SELECT name FROM houses WHERE slug = $1", [req.params.slug]);
+    if (!rows[0]) return res.status(404).json({ error: "House not found." });
+
+    const { discordUserId } = req.body;
+    const id = discordUserId && discordUserId.trim() ? discordUserId.trim() : null;
+
+    await pool.query("UPDATE houses SET lord_discord_user_id = $2 WHERE slug = $1", [req.params.slug, id]);
+
+    await postLog(
+      "🛡️ Lord updated",
+      id
+        ? `**${rows[0].name}**'s Lord was set to Discord ID \`${id}\` by an admin.`
+        : `**${rows[0].name}**'s Discord-ID Lord was cleared by an admin.`,
+      0xd4af37
+    );
+
+    res.json({ ok: true, discordUserId: id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Unlocked, or the caller is signed in as this house's Discord Lord, or sent
+// the correct x-house-password for this one request. Only the Lord case is
+// logged by the caller as a privileged edit (the house is otherwise locked
+// to everyone else).
+//
+// A Lord's bypass only ever covers adding new members (pass
+// allowLordBypass: false from the edit/remove routes) — they don't get to
+// change or delete people already in the tree without the house password,
+// same as anyone else.
+async function authorizeEdit(req, res, slug, { allowLordBypass = true } = {}) {
   const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [slug]);
   const house = rows[0];
   if (!house) {
@@ -218,11 +284,17 @@ async function authorizeEdit(req, res, slug) {
   }
   if (!house.locked) return { house, viaLordBypass: false };
 
-  if (!(await isLordOfHouse(req, house))) {
-    res.status(403).json({ error: "This house is locked." });
+  const isLord = await isLordOfHouse(req, house);
+  if (isLord && allowLordBypass) return { house, viaLordBypass: true };
+  if (await hasHousePassword(req, house)) return { house, viaLordBypass: false };
+
+  if (isLord) {
+    res.status(403).json({ error: "As this house's Lord you can add new members, but editing or removing existing ones needs the house password." });
     return null;
   }
-  return { house, viaLordBypass: true };
+
+  res.status(403).json({ error: "This house is locked." });
+  return null;
 }
 
 async function logLordEdit(req, house, action) {
@@ -260,7 +332,7 @@ router.post("/:slug/members", async (req, res, next) => {
 // PATCH /api/houses/:slug/members/:id — edit a member (including reparenting)
 router.patch("/:slug/members/:id", async (req, res, next) => {
   try {
-    const access = await authorizeEdit(req, res, req.params.slug);
+    const access = await authorizeEdit(req, res, req.params.slug, { allowLordBypass: false });
     if (!access) return;
 
     const { id } = req.params;
@@ -285,7 +357,6 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
        WHERE id=$8 AND house_slug=$9 RETURNING *`,
       [name.trim(), role || "", parentId || null, avatarUrl || "", buildLink || "", robloxProfile || "", note || "", id, req.params.slug]
     );
-    if (access.viaLordBypass) await logLordEdit(req, access.house, `edited member "${name.trim()}"`);
     res.json(toMemberJson(rows[0]));
   } catch (err) {
     next(err);
@@ -295,7 +366,7 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
 // DELETE /api/houses/:slug/members/:id — cascades to descendants
 router.delete("/:slug/members/:id", async (req, res, next) => {
   try {
-    const access = await authorizeEdit(req, res, req.params.slug);
+    const access = await authorizeEdit(req, res, req.params.slug, { allowLordBypass: false });
     if (!access) return;
 
     const { id } = req.params;
@@ -304,7 +375,6 @@ router.delete("/:slug/members/:id", async (req, res, next) => {
 
     const descendantIds = await getDescendantIds(req.params.slug, id);
     await pool.query("DELETE FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
-    if (access.viaLordBypass) await logLordEdit(req, access.house, `deleted member "${existing.rows[0].name}" (+${descendantIds.length} descendants)`);
     res.json({ ok: true, removedCount: descendantIds.length + 1 });
   } catch (err) {
     next(err);

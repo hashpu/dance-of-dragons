@@ -13,7 +13,7 @@
    redirects must be http/https. It works once the site is served
    (a local dev server for testing, or wherever you deploy it).
 ------------------------------------------------------------------ */
-const DISCORD_CLIENT_ID = "1543804550799163452";
+const DISCORD_CLIENT_ID = "1545917487063892150";
 const DISCORD_AUTH_STORAGE_KEY = "got-lore-discord-user";
 
 function getAuthRedirectUri() {

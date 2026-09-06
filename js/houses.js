@@ -1,5 +1,13 @@
 let memberIndex = []; // [{ member, house }] across all unlocked houses, cached for instant search
 
+// The main Houses grid only shows the great Houses of the Dance — crown
+// orders (Kingsguard, Dragonguard, etc.) live under their own section on
+// the Factions page instead.
+async function getGreatHouses() {
+  const all = await Api.getHouses();
+  return all.filter((h) => h.faction !== "CROWN");
+}
+
 
 const STAT_ICONS = {
   houses: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>`,
@@ -17,7 +25,7 @@ function renderStats(houses) {
 
 async function renderHouseGrid() {
   document.getElementById("houseGrid").innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join("");
-  const houses = await Api.getHouses();
+  const houses = await getGreatHouses();
   document.getElementById("houseGrid").innerHTML = houses.map(houseCardHtml).join("");
   scrollReveal(".house-card", document.getElementById("houseGrid"));
   renderStats(houses);
@@ -42,7 +50,7 @@ function matchesHouse(h, q) {
 }
 
 async function runSearch(query) {
-  const houses = await Api.getHouses();
+  const houses = await getGreatHouses();
   const q = query.trim().toLowerCase();
   const grid = document.getElementById("houseGrid");
   const results = document.getElementById("searchResults");
@@ -93,11 +101,23 @@ renderHouseGrid();
 document.getElementById("houseSearch").addEventListener("input", (e) => runSearch(e.target.value));
 
 document.getElementById("resetAllBtn").onclick = async () => {
-  const ok = window.confirm(
-    "Reset ALL houses to their default lore, locks, and members — for every visitor? This cannot be undone."
-  );
+  const ok = await Dialog.confirm({
+    kicker: "Admin only",
+    title: "Reset all houses?",
+    message: "This resets every house's lore, locks, and members back to default — for every visitor. This cannot be undone.",
+    confirmText: "Reset everything",
+    danger: true
+  });
   if (!ok) return;
-  const secret = window.prompt("Enter the admin secret:");
+  const secret = await Dialog.prompt({
+    kicker: "Admin only",
+    title: "Enter admin secret",
+    label: "Admin secret",
+    type: "password",
+    placeholder: "••••••••",
+    confirmText: "Reset everything",
+    icon: "lock"
+  });
   if (!secret) return;
   try {
     await Api.resetAll(secret);
@@ -105,6 +125,6 @@ document.getElementById("resetAllBtn").onclick = async () => {
     document.getElementById("searchResults").innerHTML = "";
     await renderHouseGrid();
   } catch (e) {
-    alert(e.message);
+    await Dialog.alert({ title: "Couldn't reset", message: e.message, icon: "warning", cardColor: "var(--red)" });
   }
 };

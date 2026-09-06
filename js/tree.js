@@ -3,6 +3,12 @@ const slug = params.get("h");
 
 let house = null;
 
+// Kept only in this page's memory — never in localStorage/sessionStorage —
+// so a locked house's password only grants access for the current page
+// visit. Reload, navigate away, or come back later and it's gone; the
+// house asks for the password again every time.
+let sessionPassword = null;
+
 function renderHeader() {
   document.title = `${house.name} — Family Tree`;
   document.getElementById("houseHeader").innerHTML = `
@@ -16,31 +22,115 @@ function renderHeader() {
 
 function renderAdminTools() {
   const el = document.getElementById("adminTools");
-  el.innerHTML = `<button class="btn-link" id="lordRoleBtn" style="margin:0 0 22px">Assign this house's Discord Lord role (admin)</button>`;
-  document.getElementById("lordRoleBtn").onclick = async () => {
-    const secret = window.prompt("Admin secret:");
+  el.innerHTML = `
+    <button class="btn-link" id="lordDiscordBtn" style="margin:0 0 8px">Assign this house's Lord by Discord ID (admin)</button>
+    <button class="btn-link" id="lordRoleBtn" style="margin:0 0 22px">Assign this house's Lord by Discord role + Roblox (admin)</button>
+  `;
+  document.getElementById("lordDiscordBtn").onclick = async () => {
+    const secret = await Dialog.prompt({
+      kicker: "Admin only",
+      title: "Enter admin secret",
+      label: "Admin secret",
+      type: "password",
+      placeholder: "••••••••",
+      confirmText: "Continue",
+      icon: "lock"
+    });
     if (!secret) return;
-    const roleId = window.prompt(
-      `Discord role ID for House ${house.name}'s Lord (anyone with this role can manage the house without its password). Leave blank to remove.`,
-      ""
-    );
-    if (roleId === null) return;
+
+    const discordUserId = await Dialog.prompt({
+      kicker: `House ${house.name}`,
+      title: "Assign Lord by Discord ID",
+      message: "Whoever signs in with this exact Discord account gets password-free access to manage the house. Leave blank to remove.",
+      label: "Discord user ID",
+      placeholder: "e.g. 123456789012345678",
+      confirmText: "Save",
+      icon: "discord"
+    });
+    if (discordUserId === null) return;
+
     try {
-      await Api.setLordRole(slug, roleId.trim(), secret);
-      alert(
-        roleId.trim()
-          ? `Saved. Anyone with that Discord role can now manage House ${house.name} without the password.`
-          : `Removed — House ${house.name} no longer has a Lord role assigned.`
-      );
+      await Api.setLordDiscordId(slug, discordUserId.trim(), secret);
+      await Dialog.alert({
+        kicker: `House ${house.name}`,
+        title: discordUserId.trim() ? "Lord assigned" : "Lord removed",
+        message: discordUserId.trim()
+          ? `Only the Discord account with ID ${discordUserId.trim()} can manage House ${house.name} without the password.`
+          : `House ${house.name} no longer has a Discord-ID Lord assigned.`,
+        icon: "discord"
+      });
     } catch (e) {
-      alert(e.message);
+      await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
+    }
+  };
+  document.getElementById("lordRoleBtn").onclick = async () => {
+    const secret = await Dialog.prompt({
+      kicker: "Admin only",
+      title: "Enter admin secret",
+      label: "Admin secret",
+      type: "password",
+      placeholder: "••••••••",
+      confirmText: "Continue",
+      icon: "lock"
+    });
+    if (!secret) return;
+
+    const roleId = await Dialog.prompt({
+      kicker: `House ${house.name}`,
+      title: "Assign Lord by Discord role",
+      message: "Leave blank to remove the Lord entirely.",
+      label: "Discord role ID",
+      placeholder: "e.g. 123456789012345678",
+      confirmText: "Next",
+      icon: "discord"
+    });
+    if (roleId === null) return;
+
+    let robloxUsername = "";
+    if (roleId.trim()) {
+      robloxUsername = await Dialog.prompt({
+        kicker: `House ${house.name}`,
+        title: "Match a Roblox account",
+        message: "They must be signed in as BOTH that Discord role and this exact Roblox account for Lord access to work.",
+        label: "Roblox username",
+        placeholder: "e.g. WinterfellKing",
+        confirmText: "Save",
+        icon: "lock"
+      });
+      if (robloxUsername === null) return;
+    }
+
+    try {
+      await Api.setLordRole(slug, roleId.trim(), robloxUsername.trim(), secret);
+      await Dialog.alert({
+        kicker: `House ${house.name}`,
+        title: roleId.trim() ? "Lord assigned" : "Lord removed",
+        message: roleId.trim()
+          ? `Only someone signed in with that Discord role AND that Roblox account can manage House ${house.name} without the password.`
+          : `House ${house.name} no longer has a Lord assigned.`,
+        icon: "discord"
+      });
+    } catch (e) {
+      await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
     }
   };
 }
 
 function renderStatus() {
   const el = document.getElementById("statusArea");
-  if (house.locked && !house.lordAccess) {
+  if (house.locked && sessionPassword) {
+    el.innerHTML = `
+      <div class="banner banner-lord">
+        <div class="banner-left"><span class="dot dot-lord"></span> Unlocked for this visit — you'll need House ${house.name}'s password again next time you come back.</div>
+      </div>
+    `;
+  } else if (house.locked && house.lordAccess) {
+    el.innerHTML = `
+      <div class="banner banner-lord">
+        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this house's Lord — locked for everyone else. You can add new members below, but editing or removing existing ones needs the house password.</div>
+      </div>
+    `;
+  } else if (house.locked) {
     el.innerHTML = `
       <div class="locked-card">
         <div class="lock-icon">🔒</div>
@@ -58,12 +148,6 @@ function renderStatus() {
       if (e.key === "Enter") tryUnlock();
     });
     document.getElementById("treeArea").innerHTML = "";
-  } else if (house.locked && house.lordAccess) {
-    el.innerHTML = `
-      <div class="banner banner-lord">
-        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this house's Lord — locked for everyone else, but you can add or remove members below.</div>
-      </div>
-    `;
   } else {
     el.innerHTML = `
       <div class="banner banner-unlocked">
@@ -76,7 +160,7 @@ function renderStatus() {
 }
 
 async function refresh() {
-  house = await Api.getHouse(slug);
+  house = await Api.getHouse(slug, sessionPassword);
   renderHeader();
   renderAdminTools();
   renderStatus();
@@ -98,6 +182,7 @@ async function tryUnlock() {
   const input = document.getElementById("unlockInput");
   try {
     house = await Api.unlockHouse(slug, input.value);
+    sessionPassword = input.value;
     renderHeader();
     renderStatus();
     renderTree();
@@ -113,12 +198,20 @@ async function lockHouse() {
   try {
     await Api.lockHouse(slug, null);
   } catch (e) {
-    const pw = window.prompt("Set a password to protect this house's tree:");
+    const pw = await Dialog.prompt({
+      kicker: `House ${house.name}`,
+      title: "Set a password",
+      message: "This password protects the family tree the first time it's locked.",
+      label: "House password",
+      type: "password",
+      placeholder: "••••••••",
+      confirmText: "Lock"
+    });
     if (!pw) return;
     try {
       await Api.lockHouse(slug, pw);
     } catch (e2) {
-      alert(e2.message);
+      await Dialog.alert({ title: "Couldn't lock", message: e2.message, icon: "warning", cardColor: "var(--red)" });
       return;
     }
   }
@@ -144,6 +237,11 @@ function escapeAttr(str) {
 
 const PENCIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5l3 3L7 20H4v-3z"/></svg>`;
 
+// A Lord recognized via Discord (no password) can only add new members —
+// editing or removing an existing one needs the house password, same as
+// anyone else. Set fresh each render from the current house/session state.
+let lordOnlyAccess = false;
+
 function nodeHtml(node) {
   const fallback = generatedAvatar(node.name, house.color);
   const avatar = node.avatarUrl || fallback;
@@ -160,10 +258,15 @@ function nodeHtml(node) {
   const childrenHtml = node.children.length
     ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c)}</li>`).join("")}</ul>`
     : "";
-  return `
-    <div class="node" data-member-id="${node.id}">
+  const editRemoveButtons = lordOnlyAccess
+    ? ""
+    : `
       <button class="node-edit" title="Edit" onclick="openEditModal('${node.id}')">${PENCIL_ICON}</button>
       <button class="node-remove" title="Remove" onclick="handleRemove('${node.id}')">✕</button>
+    `;
+  return `
+    <div class="node" data-member-id="${node.id}">
+      ${editRemoveButtons}
       ${avatarHtml}
       <div class="node-name"${nameTitle}>${node.name}</div>
       ${role}
@@ -176,7 +279,8 @@ function nodeHtml(node) {
 
 function renderTree() {
   const el = document.getElementById("treeArea");
-  if (house.locked && !house.lordAccess) return;
+  if (house.locked && !house.lordAccess && !sessionPassword) return;
+  lordOnlyAccess = house.locked && house.lordAccess && !sessionPassword;
 
   const forest = buildForest(house.members);
   const toolbar = `
@@ -224,16 +328,22 @@ async function handleRemove(memberId) {
   const descendants = getDescendantIds(memberId).size;
   const msg =
     descendants > 0
-      ? `Remove this member and their ${descendants} descendant${descendants > 1 ? "s" : ""}?`
-      : "Remove this member?";
-  if (!window.confirm(msg)) return;
+      ? `Remove this member and their ${descendants} descendant${descendants > 1 ? "s" : ""}? This can't be undone.`
+      : "Remove this member? This can't be undone.";
+  const ok = await Dialog.confirm({
+    title: "Remove member?",
+    message: msg,
+    confirmText: "Remove",
+    danger: true
+  });
+  if (!ok) return;
 
   try {
-    await Api.removeMember(slug, memberId);
+    await Api.removeMember(slug, memberId, sessionPassword);
     closeModal();
     await refresh();
   } catch (e) {
-    alert(e.message);
+    await Dialog.alert({ title: "Couldn't remove", message: e.message, icon: "warning", cardColor: "var(--red)" });
   }
 }
 
@@ -508,9 +618,9 @@ async function submitMember() {
 
   try {
     if (editingMemberId) {
-      await Api.updateMember(slug, editingMemberId, payload);
+      await Api.updateMember(slug, editingMemberId, payload, sessionPassword);
     } else {
-      await Api.addMember(slug, payload);
+      await Api.addMember(slug, payload, sessionPassword);
     }
     closeModal();
     await refresh();

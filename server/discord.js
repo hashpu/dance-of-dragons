@@ -1,17 +1,23 @@
-/* Verifies whether the signed-in Discord user making a request holds the
-   "Lord" role assigned to a given house, so they can manage it without
-   needing the house's shared password.
+/* Verifies whether the person making a request is a house's "Lord", so they
+   can manage it without needing the house's shared password.
 
-   Two-step, using the site's own Discord bot rather than asking every
-   visitor to grant extra permissions:
-   1. The visitor's OAuth token (plain "identify" scope) proves who they
-      really are — we call Discord's /users/@me with it to get their ID.
-   2. The bot token (full access to the server) looks up that verified
-      user's actual roles in the guild.
+   Two ways to grant this, checked in order:
 
-   Requires DISCORD_GUILD_ID and DISCORD_BOT_TOKEN — without either, this
-   always returns false and every house falls back to password-only access
-   (safe default; the bot also needs to actually be a member of that server). */
+   0. Direct Discord ID (lord_discord_user_id) — an admin assigns one exact
+      Discord user ID to the house. Whoever is signed in to Discord with
+      that account gets Lord access. No bot, guild, or Roblox setup needed.
+
+   1+2. Discord role + Roblox account (lord_role_id / lord_roblox_user_id) —
+      the visitor's Discord OAuth token (plain "identify" scope) proves who
+      they are via /users/@me, the site's bot looks up their roles in the
+      guild, AND their Roblox OAuth token (see roblox.js) must belong to the
+      exact Roblox account an admin assigned to this house. Requiring both
+      stops anyone who merely holds the Discord role (e.g. it was handed out
+      broadly, or leaked) from claiming Lord access on a house that isn't
+      theirs. Requires DISCORD_GUILD_ID and DISCORD_BOT_TOKEN — without
+      either, this path always returns false. */
+
+const { verifyRequestRobloxUserId } = require("./roblox");
 
 function getBearerToken(req) {
   const auth = req.get("authorization") || "";
@@ -55,14 +61,26 @@ async function getRequestDiscordUserId(req) {
 }
 
 async function isLordOfHouse(req, house) {
+  // Simple path: a specific Discord user ID was assigned directly — no bot,
+  // guild role lookup, or Roblox account needed.
+  if (house.lord_discord_user_id) {
+    const userId = await getRequestDiscordUserId(req);
+    if (userId && userId === house.lord_discord_user_id) return true;
+  }
+
   const guildId = process.env.DISCORD_GUILD_ID;
-  if (!guildId || !process.env.DISCORD_BOT_TOKEN || !house.lord_role_id) return false;
+  if (!guildId || !process.env.DISCORD_BOT_TOKEN || !house.lord_role_id || !house.lord_roblox_user_id) {
+    return false;
+  }
 
   const userId = await getRequestDiscordUserId(req);
   if (!userId) return false;
 
   const roles = await getGuildMemberRoles(userId, guildId);
-  return !!roles && roles.includes(house.lord_role_id);
+  if (!roles || !roles.includes(house.lord_role_id)) return false;
+
+  const robloxUserId = await verifyRequestRobloxUserId(req);
+  return robloxUserId === house.lord_roblox_user_id;
 }
 
 function isAdminRequest(req) {

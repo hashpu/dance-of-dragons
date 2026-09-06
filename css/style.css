@@ -14,6 +14,7 @@
   --muted: #9a9a9e;
   --red: #e0483e;
   --green: #3ecf8e;
+  --gold: #d4af37;
 }
 
 * { box-sizing: border-box; }
@@ -1376,3 +1377,13 @@ input:focus, select:focus, textarea:focus {
 }
 
 .error-text { color: var(--red); font-size: 13px; margin-top: 8px; }
+
+/* Dialog (themed prompt/confirm/alert) */
+.dialog-overlay .modal { max-width: 400px; }
+.dialog-message {
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.55;
+  margin: 0 0 20px;
+}
+body.dialog-open { overflow: hidden; }

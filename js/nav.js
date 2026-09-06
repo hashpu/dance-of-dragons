@@ -31,6 +31,19 @@ const NAV_ICONS = {
       </div>`
     : `<button class="btn btn-outline" onclick="beginDiscordLogin()">Sign in</button>`;
 
+  // Roblox linking only matters once signed in with Discord (Lord access needs
+  // both), so it's only offered then — keeps the topbar uncluttered otherwise.
+  const robloxUser = typeof getRobloxUser === "function" ? getRobloxUser() : null;
+  const robloxHtml = !user
+    ? ""
+    : robloxUser
+      ? `
+      <div class="user-chip" title="Linked Roblox account">
+        <span>🎮 ${robloxUser.username || robloxUser.id}</span>
+        <button class="btn-link" style="margin:0" onclick="signOutRoblox()">Unlink</button>
+      </div>`
+      : `<button class="btn btn-outline" onclick="beginRobloxLogin()">Link Roblox</button>`;
+
   el.innerHTML = `
     <a href="index.html" class="brand"><span class="brand-icon">${HOUSE_ICONS.targaryen}</span>Dungeons &amp; Dragons</a>
     <button class="nav-toggle" id="navToggle" aria-label="Menu" aria-expanded="false">
@@ -44,6 +57,7 @@ const NAV_ICONS = {
     </nav>
     <div class="topbar-actions">
       ${authHtml}
+      ${robloxHtml}
       <a class="btn btn-primary" href="${DISCORD_INVITE_URL || "#"}" target="_blank" rel="noopener">Join Discord</a>
     </div>
   `;

@@ -14,6 +14,19 @@ CREATE TABLE IF NOT EXISTS houses (
 -- (added after initial launch — IF NOT EXISTS keeps this safe to rerun on every boot)
 ALTER TABLE houses ADD COLUMN IF NOT EXISTS lord_role_id TEXT;
 
+-- The specific Roblox account (numeric user ID) that must ALSO be signed in,
+-- alongside the Discord role above, for Lord access to be granted. Requiring
+-- both stops anyone who merely holds the Discord role from claiming Lord
+-- access — they must be the exact person the admin assigned.
+ALTER TABLE houses ADD COLUMN IF NOT EXISTS lord_roblox_user_id TEXT;
+
+-- A specific Discord user ID that alone grants Lord access to this house —
+-- no Discord bot/guild role lookup and no Roblox account required. Simpler
+-- alternative to lord_role_id/lord_roblox_user_id above for admins who
+-- haven't set up a bot. Checked first; if unset, falls back to the
+-- role+Roblox check.
+ALTER TABLE houses ADD COLUMN IF NOT EXISTS lord_discord_user_id TEXT;
+
 CREATE TABLE IF NOT EXISTS members (
   id TEXT PRIMARY KEY,
   house_slug TEXT NOT NULL REFERENCES houses(slug) ON DELETE CASCADE,

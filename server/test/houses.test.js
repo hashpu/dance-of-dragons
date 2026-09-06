@@ -15,7 +15,7 @@ test.before(async () => {
 test("GET /api/houses lists all houses with correct member counts, in order", async () => {
   const res = await request.get("/api/houses");
   assert.equal(res.status, 200);
-  assert.equal(res.body.length, 10);
+  assert.equal(res.body.length, 14);
   assert.equal(res.body[0].slug, "targaryen");
   assert.equal(res.body[0].memberCount, 5);
   assert.equal(res.body[1].slug, "velaryon");
@@ -24,7 +24,7 @@ test("GET /api/houses lists all houses with correct member counts, in order", as
   assert.equal(res.body[2].memberCount, 0);
 });
 
-test("GET /api/houses/:slug hides members while locked, then unlocking reveals them", async () => {
+test("GET /api/houses/:slug hides members while locked, then unlocking reveals them for that response only", async () => {
   const before = await request.get("/api/houses/targaryen");
   assert.equal(before.status, 200);
   assert.equal(before.body.locked, true);
@@ -32,16 +32,20 @@ test("GET /api/houses/:slug hides members while locked, then unlocking reveals t
 
   const unlocked = await request.post("/api/houses/targaryen/unlock").send({ password: "dracarys" });
   assert.equal(unlocked.status, 200);
-  assert.equal(unlocked.body.locked, false);
+  assert.equal(unlocked.body.locked, true); // unlocking never persists — the house stays locked in the database
   assert.equal(unlocked.body.members.length, 5);
   const rhaenyra = unlocked.body.members.find((m) => m.id === "rhaenyra");
   assert.equal(rhaenyra.parentId, "viserys-i");
   assert.equal(rhaenyra.role, "Heir");
 
-  // shared state: a plain GET now also sees it unlocked (targaryen stays unlocked for later tests in this file)
+  // not shared: a plain GET with no password immediately after is locked again, for everyone
   const after = await request.get("/api/houses/targaryen");
-  assert.equal(after.body.locked, false);
-  assert.equal(after.body.members.length, 5);
+  assert.equal(after.body.locked, true);
+  assert.equal(after.body.members, undefined);
+
+  // but sending the password again (as the client does while it's held in page memory) still works
+  const withPassword = await request.get("/api/houses/targaryen").set("x-house-password", "dracarys");
+  assert.equal(withPassword.body.members.length, 5);
 });
 
 test("GET /api/houses/:slug hides members while locked", async () => {
@@ -56,53 +60,61 @@ test("unlocking with the wrong password fails", async () => {
   assert.equal(res.status, 401);
 });
 
-test("unlocking with the correct password succeeds and is shared", async () => {
+test("unlocking with the correct password succeeds but isn't shared with other visitors", async () => {
   const res = await request.post("/api/houses/velaryon/unlock").send({ password: "driftmark" });
   assert.equal(res.status, 200);
-  assert.equal(res.body.locked, false);
+  assert.equal(res.body.locked, true);
   assert.equal(res.body.members.length, 3);
 
-  // shared state: a plain GET now also sees it unlocked, no password needed
+  // not shared: a plain GET from anyone else is still locked
   const res2 = await request.get("/api/houses/velaryon");
-  assert.equal(res2.body.locked, false);
-  assert.equal(res2.body.members.length, 3);
+  assert.equal(res2.body.locked, true);
+  assert.equal(res2.body.members, undefined);
+});
+
+test("writes to a locked house require the password on every request; wrong/missing password is rejected", async () => {
+  const noPassword = await request.post("/api/houses/targaryen/members").send({ name: "Should Fail" });
+  assert.equal(noPassword.status, 403);
+
+  const wrongPassword = await request
+    .post("/api/houses/targaryen/members")
+    .set("x-house-password", "nope")
+    .send({ name: "Should Also Fail" });
+  assert.equal(wrongPassword.status, 403);
 });
 
 test("adding, editing, and reparent-loop protection on members", async () => {
-  const add = await request.post("/api/houses/targaryen/members").send({
-    name: "Baela Targaryen",
-    role: "",
-    parentId: "rhaenyra"
-  });
+  const add = await request
+    .post("/api/houses/targaryen/members")
+    .set("x-house-password", "dracarys")
+    .send({ name: "Baela Targaryen", role: "", parentId: "rhaenyra" });
   assert.equal(add.status, 201);
   const newId = add.body.id;
   assert.ok(newId);
   assert.equal(add.body.parentId, "rhaenyra");
 
-  const edit = await request.patch(`/api/houses/targaryen/members/${newId}`).send({
-    name: "Baela Targaryen",
-    role: "Rider of Moondancer",
-    parentId: "rhaenyra"
-  });
+  const edit = await request
+    .patch(`/api/houses/targaryen/members/${newId}`)
+    .set("x-house-password", "dracarys")
+    .send({ name: "Baela Targaryen", role: "Rider of Moondancer", parentId: "rhaenyra" });
   assert.equal(edit.status, 200);
   assert.equal(edit.body.role, "Rider of Moondancer");
 
   // rhaenyra can't become a child of her own new descendant (baela)
-  const loop = await request.patch("/api/houses/targaryen/members/rhaenyra").send({
-    name: "Rhaenyra",
-    role: "Heir",
-    parentId: newId
-  });
+  const loop = await request
+    .patch("/api/houses/targaryen/members/rhaenyra")
+    .set("x-house-password", "dracarys")
+    .send({ name: "Rhaenyra", role: "Heir", parentId: newId });
   assert.equal(loop.status, 400);
 });
 
 test("deleting a member cascades to descendants and reports the count", async () => {
   // rhaenyra has children jacaerys and (from the previous test) baela
-  const del = await request.delete("/api/houses/targaryen/members/rhaenyra");
+  const del = await request.delete("/api/houses/targaryen/members/rhaenyra").set("x-house-password", "dracarys");
   assert.equal(del.status, 200);
   assert.equal(del.body.removedCount, 3); // rhaenyra + jacaerys + baela
 
-  const check = await request.get("/api/houses/targaryen");
+  const check = await request.get("/api/houses/targaryen").set("x-house-password", "dracarys");
   const ids = check.body.members.map((m) => m.id);
   assert.ok(!ids.includes("rhaenyra"));
   assert.ok(!ids.includes("jacaerys"));
