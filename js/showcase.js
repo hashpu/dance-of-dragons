@@ -44,6 +44,7 @@ async function renderShowcase() {
     `
     )
     .join("");
+  scrollReveal(".build-card", container);
 }
 
 renderShowcase();

@@ -25,6 +25,7 @@ async function renderFactions() {
       </section>
     `;
   }).join("");
+  scrollReveal(".house-card", container);
 }
 
 renderFactions();

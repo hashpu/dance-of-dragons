@@ -9,7 +9,9 @@ function deptCardHtml(dept) {
 }
 
 function renderDeptGrid() {
-  document.getElementById("deptGrid").innerHTML = DEPARTMENTS.map(deptCardHtml).join("");
+  const grid = document.getElementById("deptGrid");
+  grid.innerHTML = DEPARTMENTS.map(deptCardHtml).join("");
+  scrollReveal(".house-card", grid);
 }
 
 function questionFieldHtml(q) {

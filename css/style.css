@@ -390,8 +390,11 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 
 .timeline-item { position: relative; padding-bottom: 28px; }
 .timeline-item:last-child { padding-bottom: 0; }
-.timeline-item.reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s ease; }
-.timeline-item.reveal.revealed { opacity: 1; transform: translateY(0); }
+.reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.reveal.revealed { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) {
+  .reveal, .reveal.revealed { opacity: 1; transform: none; transition: none; }
+}
 
 .timeline-dot {
   position: absolute;
@@ -518,9 +521,17 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   letter-spacing: 2px;
   line-height: 1.08;
   margin: 16px 0 18px;
-  text-shadow: 0 0 40px rgba(224, 72, 62, 0.5), 0 0 90px rgba(224, 72, 62, 0.25);
+  animation: heroGlow 5s ease-in-out infinite;
 }
 .hero-title span { color: var(--red); }
+
+@keyframes heroGlow {
+  0%, 100% { text-shadow: 0 0 40px rgba(224, 72, 62, 0.5), 0 0 90px rgba(224, 72, 62, 0.25); }
+  50% { text-shadow: 0 0 52px rgba(224, 72, 62, 0.68), 0 0 110px rgba(224, 72, 62, 0.36); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-title { animation: none; }
+}
 
 .hero-sub {
   color: var(--muted);
@@ -701,6 +712,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 
 .btn {
   position: relative;
+  overflow: hidden;
   border: none;
   border-radius: 0;
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
@@ -713,6 +725,16 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   font-family: inherit;
   transition: transform 0.12s ease-out, box-shadow 0.15s ease-out, background 0.15s;
 }
+.btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 35%, rgba(255, 255, 255, 0.35) 50%, transparent 65%);
+  transform: translateX(-140%);
+  transition: transform 0.55s ease;
+  pointer-events: none;
+}
+.btn:hover::before { transform: translateX(140%); }
 
 .btn-primary {
   color: #111;

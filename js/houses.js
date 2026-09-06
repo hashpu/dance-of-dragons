@@ -19,6 +19,7 @@ async function renderHouseGrid() {
   document.getElementById("houseGrid").innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join("");
   const houses = await Api.getHouses();
   document.getElementById("houseGrid").innerHTML = houses.map(houseCardHtml).join("");
+  scrollReveal(".house-card", document.getElementById("houseGrid"));
   renderStats(houses);
 
   const unlocked = houses.filter((h) => !h.locked && h.memberCount > 0);
