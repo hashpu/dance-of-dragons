@@ -44,6 +44,7 @@ async function renderPoll() {
   el.innerHTML = `
     <div class="poll-header">
       <h2 class="poll-title">Cast Your Vote</h2>
+      <p class="poll-subtitle">${total ? `${total.toLocaleString()} vote${total === 1 ? "" : "s"} cast. The realm is dividing.` : "Be the first to declare a side."}</p>
     </div>
     <div class="poll-bar">
       <div class="poll-bar-fill poll-bar-green" style="width:${greenPct}%"></div>
@@ -51,7 +52,7 @@ async function renderPoll() {
     </div>
     <div class="poll-teams">
       ${pollTeamHtml({ side: "green", label: "Team Green", pct: greenPct, count: data.green, myVote: data.myVote, canVote: !!user })}
-      <div class="poll-vs">VS</div>
+      <div class="poll-vs"><span>VS</span></div>
       ${pollTeamHtml({ side: "black", label: "Team Black", pct: blackPct, count: data.black, myVote: data.myVote, canVote: !!user })}
     </div>
     ${
