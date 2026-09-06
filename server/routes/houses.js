@@ -20,7 +20,7 @@ const avatarUpload = multer({
   }
 });
 
-function toMemberJson(row) {
+function toMemberJson(row, externalParent) {
   return {
     id: row.id,
     parentId: row.parent_id,
@@ -29,8 +29,35 @@ function toMemberJson(row) {
     avatarUrl: row.avatar_url,
     buildLink: row.build_link,
     robloxProfile: row.roblox_profile,
-    note: row.note
+    note: row.note,
+    ...(externalParent ? { externalParent } : {})
   };
+}
+
+// A member's parent can belong to a different house entirely (e.g. someone
+// married in from another dynasty) — parent_id has no house_slug scoping at
+// the database level. For any such "external" parent, look up their name
+// and house so the frontend can show who they are without fetching that
+// whole other house.
+async function toMemberJsonList(rows) {
+  const localIds = new Set(rows.map((r) => r.id));
+  const externalIds = [...new Set(rows.filter((r) => r.parent_id && !localIds.has(r.parent_id)).map((r) => r.parent_id))];
+
+  let externalParents = {};
+  if (externalIds.length) {
+    const placeholders = externalIds.map((_, i) => `$${i + 1}`).join(",");
+    const { rows: extRows } = await pool.query(
+      `SELECT m.id, m.name, h.slug AS house_slug, h.name AS house_name
+       FROM members m JOIN houses h ON h.slug = m.house_slug
+       WHERE m.id IN (${placeholders})`,
+      externalIds
+    );
+    extRows.forEach((r) => {
+      externalParents[r.id] = { name: r.name, houseSlug: r.house_slug, houseName: r.house_name };
+    });
+  }
+
+  return rows.map((row) => toMemberJson(row, externalParents[row.parent_id]));
 }
 
 function toHouseSummaryJson(row) {
@@ -122,11 +149,11 @@ router.get("/:slug", async (req, res, next) => {
       const lordAccess = await isLordOfHouse(req, house);
       if (!lordAccess && !(await hasHousePassword(req, house))) return res.json(base);
       const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
-      return res.json({ ...base, ...(lordAccess ? { lordAccess: true } : {}), members: membersRes.rows.map(toMemberJson) });
+      return res.json({ ...base, ...(lordAccess ? { lordAccess: true } : {}), members: await toMemberJsonList(membersRes.rows) });
     }
 
     const membersRes = await pool.query("SELECT * FROM members WHERE house_slug = $1", [house.slug]);
-    res.json({ ...base, members: membersRes.rows.map(toMemberJson) });
+    res.json({ ...base, members: await toMemberJsonList(membersRes.rows) });
   } catch (err) {
     next(err);
   }
@@ -353,8 +380,10 @@ router.post("/:slug/members", async (req, res, next) => {
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
 
     if (parentId) {
-      const parent = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [parentId, req.params.slug]);
-      if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found in this house." });
+      // Parents can belong to any house — someone can marry into this
+      // family from another dynasty's tree.
+      const parent = await pool.query("SELECT id FROM members WHERE id = $1", [parentId]);
+      if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found." });
     }
 
     const id = makeMemberId(name.trim());
@@ -389,8 +418,10 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
       if (descendantIds.includes(parentId)) {
         return res.status(400).json({ error: "Can't set a descendant as the parent. That would create a loop." });
       }
-      const parent = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [parentId, req.params.slug]);
-      if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found in this house." });
+      // Parents can belong to any house — someone can marry into this
+      // family from another dynasty's tree.
+      const parent = await pool.query("SELECT id FROM members WHERE id = $1", [parentId]);
+      if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found." });
     }
 
     const { rows } = await pool.query(

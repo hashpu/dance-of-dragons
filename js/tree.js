@@ -219,9 +219,13 @@ async function lockHouse() {
 }
 
 function buildForest(members) {
+  // A parentId that doesn't match anyone in this house's own list means the
+  // parent belongs to a different house (married in) — treat that member as
+  // a root here too, since there's no local node to nest them under.
+  const localIds = new Set(members.map((m) => m.id));
   const byParent = {};
   members.forEach((m) => {
-    const key = m.parentId || "root";
+    const key = m.parentId && localIds.has(m.parentId) ? m.parentId : "root";
     (byParent[key] = byParent[key] || []).push(m);
   });
   function attach(m) {
@@ -246,8 +250,9 @@ let lordOnlyAccess = false;
 // Staggers each node's entrance animation on render — reset per render pass.
 let nodeRenderIndex = 0;
 
-function nodeHtml(node, isRoot) {
+function nodeHtml(node) {
   const i = nodeRenderIndex++;
+  const isRoot = !node.parentId;
   const fallback = generatedAvatar(node.name, house.color);
   const avatar = node.avatarUrl || fallback;
   const avatarImg = `<img class="node-avatar" src="${avatar}" alt="${node.name}" onerror="this.onerror=null;this.src='${fallback}'" />`;
@@ -256,12 +261,15 @@ function nodeHtml(node, isRoot) {
     : avatarImg;
   const role = node.role ? `<div class="node-role">${node.role}</div>` : `<div class="node-role">&nbsp;</div>`;
   const nameTitle = node.note ? ` title="${escapeAttr(node.note)}"` : "";
+  const externalParentHtml = node.externalParent
+    ? `<a class="node-external-parent" href="house.html?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · House ${node.externalParent.houseName}</a>`
+    : "";
   const linksHtml = `
     ${node.buildLink ? `<a class="node-build-link" href="${escapeAttr(node.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
     ${node.robloxProfile ? `<a class="node-build-link" href="${escapeAttr(node.robloxProfile)}" target="_blank" rel="noopener">Roblox profile ↗</a>` : ""}
   `;
   const childrenHtml = node.children.length
-    ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c, false)}</li>`).join("")}</ul>`
+    ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c)}</li>`).join("")}</ul>`
     : "";
   const editRemoveButtons = lordOnlyAccess
     ? ""
@@ -276,6 +284,7 @@ function nodeHtml(node, isRoot) {
       ${avatarHtml}
       <div class="node-name"${nameTitle}>${node.name}</div>
       ${role}
+      ${externalParentHtml}
       ${linksHtml}
       <button class="btn btn-danger-outline" onclick="openAddModal('${node.id}')">+ add child</button>
     </div>
@@ -310,7 +319,7 @@ function renderTree() {
     ${toolbar}
     <div class="tree-panel" style="--card-color:${house.color}">
       <ul class="tree">
-        ${forest.map((n) => `<li>${nodeHtml(n, true)}</li>`).join("")}
+        ${forest.map((n) => `<li>${nodeHtml(n)}</li>`).join("")}
       </ul>
     </div>
   `;
@@ -442,6 +451,38 @@ const FIELD_ICONS = {
   chevronRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`
 };
 
+// The member list currently backing the "who is their parent" dropdown —
+// either this house's own members, or another house's, when the visitor
+// picks a different house to link a cross-house parent from (marrying in).
+let parentPickerMembers = [];
+let parentPickerHouses = [];
+
+async function loadParentPickerMembers(houseSlug) {
+  if (houseSlug === slug) return house.members;
+  try {
+    const data = await Api.getHouse(houseSlug);
+    return data.members || [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function excludedParentIds(houseSlug) {
+  // Reparent loops are only possible within this same house's own tree —
+  // a cross-house parent can never end up as one of this member's own
+  // descendants.
+  if (!editingMemberId || houseSlug !== slug) return new Set();
+  return new Set([editingMemberId, ...getDescendantIds(editingMemberId)]);
+}
+
+function personOptionsHtml(members, excluded, selectedId) {
+  const opts = [`<option value="">Nobody, they start a new branch</option>`];
+  members
+    .filter((m) => !excluded.has(m.id))
+    .forEach((m) => opts.push(`<option value="${m.id}"${m.id === selectedId ? " selected" : ""}>${m.name}</option>`));
+  return opts.join("");
+}
+
 function updateParentPreview() {
   const preview = document.getElementById("parentPreview");
   const val = document.getElementById("fParent").value;
@@ -450,38 +491,52 @@ function updateParentPreview() {
     preview.textContent = "Starts a new branch of House " + house.name;
     return;
   }
-  const m = house.members.find((x) => x.id === val);
+  const m = parentPickerMembers.find((x) => x.id === val);
   if (!m) return;
-  const fallback = generatedAvatar(m.name, house.color);
+  const houseSlugSel = document.getElementById("fParentHouse").value;
+  const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlugSel);
+  const fallback = generatedAvatar(m.name, pickedHouse ? pickedHouse.color : house.color);
   const avatar = m.avatarUrl || fallback;
+  const houseNote = houseSlugSel !== slug && pickedHouse ? ` (House ${pickedHouse.name})` : "";
   preview.className = "parent-preview";
-  preview.innerHTML = `<img src="${avatar}" alt="" onerror="this.onerror=null;this.src='${fallback}'" /> Child of <strong>${m.name}</strong>${m.role ? " · " + m.role : ""}`;
+  preview.innerHTML = `<img src="${avatar}" alt="" onerror="this.onerror=null;this.src='${fallback}'" /> Child of <strong>${m.name}</strong>${m.role ? " · " + m.role : ""}${houseNote}`;
+}
+
+async function refreshParentPersonSelect(houseSlug, selectedId) {
+  parentPickerMembers = await loadParentPickerMembers(houseSlug);
+  const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlug);
+  const personSelect = document.getElementById("fParent");
+  personSelect.innerHTML = personOptionsHtml(parentPickerMembers, excludedParentIds(houseSlug), selectedId || "");
+  const lockedHint = document.getElementById("parentHouseLockedHint");
+  lockedHint.hidden = !(pickedHouse && pickedHouse.locked && !parentPickerMembers.length && pickedHouse.memberCount > 0);
+  updateParentPreview();
 }
 
 let editingMemberId = null;
 
-function openAddModal(parentId) {
+async function openAddModal(parentId) {
   editingMemberId = null;
-  openMemberModal({ parentId, member: null });
+  await openMemberModal({ parentId, member: null });
 }
 
-function openEditModal(memberId) {
+async function openEditModal(memberId) {
   editingMemberId = memberId;
   const member = house.members.find((m) => m.id === memberId);
   if (!member) return;
-  openMemberModal({ parentId: member.parentId, member });
+  await openMemberModal({ parentId: member.parentId, member });
 }
 
-function openMemberModal({ parentId, member }) {
+async function openMemberModal({ parentId, member }) {
   const isEdit = !!member;
-  const excluded = isEdit ? new Set([member.id, ...getDescendantIds(member.id)]) : new Set();
-  const options = [`<option value="">Nobody, they start a new branch</option>`]
-    .concat(
-      house.members
-        .filter((m) => !excluded.has(m.id))
-        .map((m) => `<option value="${m.id}" ${m.id === parentId ? "selected" : ""}>${m.name}</option>`)
-    )
+  parentPickerHouses = await Api.getHouses();
+  const initialHouseSlug = isEdit && member.externalParent ? member.externalParent.houseSlug : slug;
+  parentPickerMembers = await loadParentPickerMembers(initialHouseSlug);
+
+  const houseOptions = parentPickerHouses
+    .map((h) => `<option value="${h.slug}"${h.slug === initialHouseSlug ? " selected" : ""}>${h.name}</option>`)
     .join("");
+  const initialHouse = parentPickerHouses.find((h) => h.slug === initialHouseSlug);
+  const showLockedHint = initialHouse && initialHouse.locked && !parentPickerMembers.length && initialHouse.memberCount > 0;
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
@@ -504,16 +559,26 @@ function openMemberModal({ parentId, member }) {
 
         <div class="more-grid">
           <div class="field">
-            <label>Who is their parent?</label>
+            <label>Parent's house <span class="hint">(pick another house to link a relative who married in)</span></label>
             <div class="input-wrap">
               ${FIELD_ICONS.tree}
-              <select id="fParent">${options}</select>
+              <select id="fParentHouse">${houseOptions}</select>
               <span class="chevron">${FIELD_ICONS.chevron}</span>
             </div>
-            <div class="parent-preview" id="parentPreview"></div>
           </div>
 
           ${roleFieldHtml(isEdit ? member.role || "" : "")}
+        </div>
+
+        <div class="field">
+          <label>Who is their parent?</label>
+          <div class="input-wrap">
+            ${FIELD_ICONS.user}
+            <select id="fParent">${personOptionsHtml(parentPickerMembers, excludedParentIds(initialHouseSlug), parentId)}</select>
+            <span class="chevron">${FIELD_ICONS.chevron}</span>
+          </div>
+          <p class="hint" id="parentHouseLockedHint"${showLockedHint ? "" : " hidden"}>This house is locked, so its members aren't available to pick from.</p>
+          <div class="parent-preview" id="parentPreview"></div>
         </div>
 
         <details class="more-options"${isEdit && (member.buildLink || member.robloxProfile || member.avatarUrl || member.note) ? " open" : ""}>
@@ -573,6 +638,9 @@ function openMemberModal({ parentId, member }) {
     if (e.target.id === "modalOverlay") closeModal();
   });
   document.getElementById("fParent").addEventListener("change", updateParentPreview);
+  document.getElementById("fParentHouse").addEventListener("change", (e) => {
+    refreshParentPersonSelect(e.target.value, "");
+  });
   updateParentPreview();
 
   document.getElementById("fRoleSelect").addEventListener("change", (e) => {

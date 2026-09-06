@@ -103,6 +103,24 @@ test("avatar upload requires access, accepts an image, and rejects a disallowed 
   assert.match(ok.body.url, /^\/uploads\/avatars\/.+\.gif$/);
 });
 
+test("a member's parent can belong to a different house, and the API reports who they are", async () => {
+  const add = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Jacaerys Velaryon", role: "", parentId: "rhaenyra" });
+  assert.equal(add.status, 201);
+  assert.equal(add.body.parentId, "rhaenyra");
+
+  const check = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  const child = check.body.members.find((m) => m.name === "Jacaerys Velaryon");
+  assert.ok(child);
+  assert.deepEqual(child.externalParent, { name: "Rhaenyra", houseSlug: "targaryen", houseName: "Targaryen" });
+
+  // members with a purely local parent don't get an externalParent
+  const laenor = check.body.members.find((m) => m.id === "laenor");
+  assert.equal(laenor.externalParent, undefined);
+});
+
 test("adding, editing, and reparent-loop protection on members", async () => {
   const add = await request
     .post("/api/houses/targaryen/members")
