@@ -1009,7 +1009,8 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 /* Tree panel */
 .tree-panel {
-  background: var(--panel);
+  position: relative;
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, color-mix(in srgb, var(--card-color, var(--red)) 7%, transparent), transparent 70%), var(--panel);
   border: 1px solid #3a3a3d;
   border-radius: 4px;
   padding: 40px 20px;
@@ -1020,6 +1021,26 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 @media (max-width: 560px) {
   .tree-panel { padding: 28px 14px; }
+}
+
+.tree-watermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(60%, 420px);
+  height: min(60%, 420px);
+  transform: translate(-50%, -50%);
+  color: var(--card-color, var(--red));
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+.tree-watermark svg { width: 100%; height: 100%; }
+
+.tree-panel > .tree,
+.tree-panel > .empty-tree {
+  position: relative;
+  z-index: 1;
 }
 
 .panel-toolbar {
@@ -1064,6 +1085,7 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   width: 50%;
   height: 28px;
   border-top: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 45%, transparent));
 }
 .tree li::after { right: auto; left: 50%; border-left: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent); }
 .tree li:only-child::before, .tree li:only-child::after { display: none; }
@@ -1086,6 +1108,15 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   width: 0;
   height: 28px;
   border-left: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent);
+  filter: drop-shadow(0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 45%, transparent));
+}
+
+@keyframes nodeFadeIn {
+  from { opacity: 0; transform: translateY(14px) scale(0.96); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .node { animation: none !important; }
 }
 
 .node {
@@ -1098,10 +1129,28 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   text-align: center;
   box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.6);
   transition: box-shadow 0.2s ease, transform 0.15s ease-out, border-color 0.2s ease;
+  animation: nodeFadeIn 0.45s ease both;
+  animation-delay: calc(var(--node-i, 0) * 70ms);
   --tilt-rx: 0deg;
   --tilt-ry: 0deg;
   --tilt-mx: 50%;
   --tilt-my: 50%;
+}
+
+.node-root {
+  border-color: color-mix(in srgb, var(--card-color, var(--red)) 65%, var(--panel-border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--card-color, var(--red)) 22%, transparent), 0 6px 18px -8px color-mix(in srgb, var(--card-color, var(--red)) 50%, transparent);
+}
+
+.node-crown-badge {
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 20px;
+  height: 20px;
+  color: var(--card-color, var(--red));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
 }
 
 /* Not clipped with overflow:hidden — the edit/remove badges intentionally
@@ -1194,6 +1243,13 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .node a:has(.node-avatar):hover .node-avatar {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 35%, transparent);
   border-color: var(--card-color, var(--red));
+}
+
+.node-root .node-avatar {
+  width: 72px;
+  height: 72px;
+  border-color: var(--card-color, var(--red));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--card-color, var(--red)) 20%, transparent);
 }
 
 .node-name { font-family: "Cinzel", serif; font-weight: 700; font-size: 14px; }

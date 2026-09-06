@@ -236,13 +236,18 @@ function escapeAttr(str) {
 }
 
 const PENCIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5l3 3L7 20H4v-3z"/></svg>`;
+const CROWN_BADGE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l4.5 3L12 4l4.5 7L21 8l-2 11H5L3 8zm4 12h10v1.5H7V20z"/></svg>`;
 
 // A Lord recognized via Discord (no password) can only add new members —
 // editing or removing an existing one needs the house password, same as
 // anyone else. Set fresh each render from the current house/session state.
 let lordOnlyAccess = false;
 
-function nodeHtml(node) {
+// Staggers each node's entrance animation on render — reset per render pass.
+let nodeRenderIndex = 0;
+
+function nodeHtml(node, isRoot) {
+  const i = nodeRenderIndex++;
   const fallback = generatedAvatar(node.name, house.color);
   const avatar = node.avatarUrl || fallback;
   const avatarImg = `<img class="node-avatar" src="${avatar}" alt="${node.name}" onerror="this.onerror=null;this.src='${fallback}'" />`;
@@ -256,7 +261,7 @@ function nodeHtml(node) {
     ${node.robloxProfile ? `<a class="node-build-link" href="${escapeAttr(node.robloxProfile)}" target="_blank" rel="noopener">Roblox profile ↗</a>` : ""}
   `;
   const childrenHtml = node.children.length
-    ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c)}</li>`).join("")}</ul>`
+    ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c, false)}</li>`).join("")}</ul>`
     : "";
   const editRemoveButtons = lordOnlyAccess
     ? ""
@@ -265,7 +270,8 @@ function nodeHtml(node) {
       <button class="node-remove" title="Remove" onclick="handleRemove('${node.id}')">✕</button>
     `;
   return `
-    <div class="node" data-member-id="${node.id}">
+    <div class="node${isRoot ? " node-root" : ""}" data-member-id="${node.id}" style="--node-i:${i}">
+      ${isRoot ? `<div class="node-crown-badge" title="Head of House">${CROWN_BADGE_ICON}</div>` : ""}
       ${editRemoveButtons}
       ${avatarHtml}
       <div class="node-name"${nameTitle}>${node.name}</div>
@@ -281,6 +287,7 @@ function renderTree() {
   const el = document.getElementById("treeArea");
   if (house.locked && !house.lordAccess && !sessionPassword) return;
   lordOnlyAccess = house.locked && house.lordAccess && !sessionPassword;
+  nodeRenderIndex = 0;
 
   const forest = buildForest(house.members);
   const toolbar = `
@@ -288,11 +295,13 @@ function renderTree() {
       <button class="btn btn-primary" onclick="openAddModal(null)">+ Add family member</button>
     </div>
   `;
+  const watermark = `<div class="tree-watermark">${HOUSE_ICONS[house.slug]}</div>`;
 
   if (!forest.length) {
     el.innerHTML = `
       ${toolbar}
       <div class="tree-panel" style="--card-color:${house.color}">
+        ${watermark}
         <div class="empty-tree">No members yet. Be the first to add one to House ${house.name}.</div>
       </div>
     `;
@@ -302,8 +311,9 @@ function renderTree() {
   el.innerHTML = `
     ${toolbar}
     <div class="tree-panel" style="--card-color:${house.color}">
+      ${watermark}
       <ul class="tree">
-        ${forest.map((n) => `<li>${nodeHtml(n)}</li>`).join("")}
+        ${forest.map((n) => `<li>${nodeHtml(n, true)}</li>`).join("")}
       </ul>
     </div>
   `;
