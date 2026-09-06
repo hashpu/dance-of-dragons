@@ -700,6 +700,8 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 }
 
 .btn {
+  position: relative;
+  isolation: isolate;
   border: none;
   border-radius: 0;
   clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
@@ -710,35 +712,60 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   text-transform: uppercase;
   cursor: pointer;
   font-family: inherit;
-  transition: background-color 0.15s, border-color 0.15s, transform 0.15s, box-shadow 0.15s;
+  transition: background-color 0.15s, border-color 0.15s, transform 0.12s ease-out, box-shadow 0.15s;
+}
+/* The solid "underside" of the button — same cut-corner shape, offset down and
+   behind the face, so pressing/hovering can move the face toward or away from
+   it to fake a chunky 3D block instead of a flat rectangle. */
+.btn::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  z-index: -1;
+  transform: translateY(6px);
+  transition: transform 0.12s ease-out;
 }
 
-.btn-primary { background: #fff; color: #111; box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35); }
-.btn-primary:hover { background: #e6e6e6; }
-.btn-primary:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.btn-primary {
+  background: #fff;
+  color: #111;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), inset 0 -2px 0 rgba(0, 0, 0, 0.08);
+}
+.btn-primary::after { background: #8f8f8f; }
+.btn-primary:hover { background: #f4f4f4; transform: translateY(-3px); }
+.btn-primary:hover::after { transform: translateY(9px); }
+.btn-primary:active { transform: translateY(5px); }
+.btn-primary:active::after { transform: translateY(5px); }
 
 .btn-outline {
-  background: #1a1a1c;
+  background: #232326;
   border: 1px solid #3a3a3d;
   color: var(--text);
-  box-shadow: 0 3px 0 rgba(0, 0, 0, 0.35);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
-.btn-outline:hover { border-color: #666; }
-.btn-outline:active { transform: translateY(2px); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.35); }
+.btn-outline::after { background: #030304; }
+.btn-outline:hover { border-color: #666; transform: translateY(-3px); }
+.btn-outline:hover::after { transform: translateY(9px); }
+.btn-outline:active { transform: translateY(5px); }
+.btn-outline:active::after { transform: translateY(5px); }
 
-.topbar-actions .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 8px 22px -8px rgba(255, 255, 255, 0.4); }
+.topbar-actions .btn-primary:hover { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 22px -8px rgba(255, 255, 255, 0.4); }
 .topbar-actions .btn-outline:hover {
-  transform: translateY(-1px);
   border-color: var(--red);
-  box-shadow: 0 0 14px -3px rgba(224, 72, 62, 0.6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 0 14px -3px rgba(224, 72, 62, 0.6);
 }
 
 .btn-danger-outline {
-  background: rgba(224, 72, 62, 0.08);
+  background: rgba(224, 72, 62, 0.12);
   border: 1px solid rgba(224, 72, 62, 0.5);
   color: var(--red);
 }
-.btn-danger-outline:hover { background: rgba(224, 72, 62, 0.18); }
+.btn-danger-outline::after { background: #3d0f0c; }
+.btn-danger-outline:hover { background: rgba(224, 72, 62, 0.2); transform: translateY(-3px); }
+.btn-danger-outline:hover::after { transform: translateY(9px); }
+.btn-danger-outline:active { transform: translateY(5px); }
+.btn-danger-outline:active::after { transform: translateY(5px); }
 
 .btn-block { width: 100%; text-align: center; margin-top: 4px; }
 
