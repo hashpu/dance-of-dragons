@@ -107,9 +107,4 @@ async function isLordOfHouse(req, house) {
   return robloxUserId === house.lord_roblox_user_id;
 }
 
-function isAdminRequest(req) {
-  const secret = process.env.ADMIN_SECRET;
-  return !!secret && req.get("x-admin-secret") === secret;
-}
-
-module.exports = { isLordOfHouse, isAdminRequest, getRequestDiscordUserId, getRequestOwnerDiscordUser };
+module.exports = { isLordOfHouse, getRequestDiscordUserId, getRequestOwnerDiscordUser };

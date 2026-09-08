@@ -227,6 +227,17 @@ test("a Discord account listed in OWNER_DISCORD_USER_IDS gets full owner access 
     // owner-only actions work too, no admin secret required
     const staffList = await request.get("/api/admin/staff").set("Authorization", "Bearer owner-token");
     assert.equal(staffList.status, 200);
+
+    // and so do the older house-level owner actions that predate Discord-owner
+    // login (these used to only accept the raw ADMIN_SECRET)
+    const reset = await request
+      .post("/api/admin/houses/tully/reset-password")
+      .set("Authorization", "Bearer owner-token")
+      .send({ password: "newpass" });
+    assert.equal(reset.status, 200);
+
+    const forgot = await request.post("/api/houses/tully/forgot-password").set("Authorization", "Bearer owner-token");
+    assert.equal(forgot.status, 200);
   } finally {
     delete process.env.OWNER_DISCORD_USER_IDS;
   }

@@ -114,6 +114,27 @@ router.get("/houses", requireAdmin, async (req, res, next) => {
   }
 });
 
+// POST /api/admin/houses/:slug/reset-password { password } — owner only:
+// directly sets a house's password to a new value the owner chooses, in one
+// step (unlike /lock, which only accepts a password the first time a house
+// is ever locked). The old password stops working immediately.
+router.post("/houses/:slug/reset-password", requireOwner, async (req, res, next) => {
+  try {
+    const password = req.body.password || "";
+    if (!password) return res.status(400).json({ error: "A password is required." });
+
+    const hash = await bcrypt.hash(password, 10);
+    const { rows } = await pool.query("UPDATE houses SET locked = true, password_hash = $2 WHERE slug = $1 RETURNING slug", [
+      req.params.slug,
+      hash
+    ]);
+    if (!rows[0]) return res.status(404).json({ error: "House not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // DELETE /api/admin/houses/:slug — removes one house and its members
 // entirely (e.g. to clean up a house added with the wrong slug/name).
 // Only ever touches the named house. Owner only.

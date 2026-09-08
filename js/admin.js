@@ -153,7 +153,8 @@ function houseTableRowHtml(h) {
         <div class="admin-table-actions">
           ${
             currentAdmin && currentAdmin.role === "owner"
-              ? `${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
+              ? `<button class="a-link" data-action="reset-password" data-slug="${h.slug}">Reset password</button>
+                 ${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
                  <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">Set ${leaderTitle(h)} (ID)</button>
                  <button class="a-link" data-action="set-lord-role" data-slug="${h.slug}">Set ${leaderTitle(h)} (Role)</button>
                  <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
@@ -177,6 +178,31 @@ function renderHouseTable() {
 }
 
 function bindHouseActions() {
+  document.querySelectorAll('[data-action="reset-password"]').forEach((btn) => {
+    btn.onclick = async () => {
+      const slug = btn.dataset.slug;
+      const label = entityLabel(allHouses.find((x) => x.slug === slug) || { slug, name: slug });
+      const password = await Dialog.prompt({
+        kicker: "Admin only",
+        title: `Reset ${label}'s password`,
+        message: "This immediately replaces the current password, whatever it was. Anyone who knew the old one loses access.",
+        label: "New password",
+        type: "password",
+        placeholder: "••••••••",
+        confirmText: "Reset password",
+        icon: "lock"
+      });
+      if (!password) return;
+      try {
+        await Api.adminResetHousePassword(slug, password, adminSecret);
+        await refreshHouses();
+        await Dialog.alert({ kicker: "Admin only", title: "Password reset", message: `${label}'s password has been changed.` });
+      } catch (e) {
+        await Dialog.alert({ title: "Couldn't reset", message: e.message, icon: "warning", cardColor: "var(--red)" });
+      }
+    };
+  });
+
   document.querySelectorAll('[data-action="clear-lock"]').forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;

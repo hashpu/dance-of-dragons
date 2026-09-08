@@ -2,12 +2,21 @@ const express = require("express");
 const bcrypt = require("bcrypt");
 const multer = require("multer");
 const { pool } = require("../db");
-const { isLordOfHouse, isAdminRequest, getRequestDiscordUserId } = require("../discord");
+const { isLordOfHouse, getRequestDiscordUserId } = require("../discord");
+const { identifyAdmin } = require("../middleware/requireAdmin");
 const { resolveRobloxUsername } = require("../roblox");
 const { postLog } = require("../logs");
 const { saveUpload } = require("../uploads");
 
 const router = express.Router();
+
+// Same owner check the admin dashboard itself uses (matches ADMIN_SECRET, or
+// is signed in with Discord as one of OWNER_DISCORD_USER_IDS) — a staff
+// account is not enough for these, only the owner.
+async function isOwnerRequest(req) {
+  const admin = await identifyAdmin(req);
+  return !!admin && admin.role === "owner";
+}
 
 // Crown Orders aren't "Houses" and don't have "Lords" — each has its own
 // title for the person recognized via Discord ID/role.
@@ -229,7 +238,7 @@ router.post("/:slug/forgot-password", async (req, res, next) => {
     const house = rows[0];
     if (!house) return res.status(404).json({ error: "House not found." });
 
-    if (!isAdminRequest(req)) {
+    if (!(await isOwnerRequest(req))) {
       return res.status(401).json({ error: "Only the site admin can reset a house's lock." });
     }
 
@@ -248,7 +257,7 @@ router.post("/:slug/forgot-password", async (req, res, next) => {
 // Discord role alone isn't enough.
 router.post("/:slug/lord-role", async (req, res, next) => {
   try {
-    if (!isAdminRequest(req)) return res.status(401).json({ error: "Admin secret required." });
+    if (!(await isOwnerRequest(req))) return res.status(401).json({ error: "Admin secret required." });
     const { rows } = await pool.query("SELECT name FROM houses WHERE slug = $1", [req.params.slug]);
     if (!rows[0]) return res.status(404).json({ error: "House not found." });
 
@@ -290,7 +299,7 @@ router.post("/:slug/lord-role", async (req, res, next) => {
 // remove it.
 router.post("/:slug/lord-discord", async (req, res, next) => {
   try {
-    if (!isAdminRequest(req)) return res.status(401).json({ error: "Admin secret required." });
+    if (!(await isOwnerRequest(req))) return res.status(401).json({ error: "Admin secret required." });
     const { rows } = await pool.query("SELECT name FROM houses WHERE slug = $1", [req.params.slug]);
     if (!rows[0]) return res.status(404).json({ error: "House not found." });
 

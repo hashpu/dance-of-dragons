@@ -268,6 +268,36 @@ test("seed-missing adds only houses that don't exist yet, and never touches an e
   assert.deepEqual(again.body.added, []);
 });
 
+test("admin can reset a house's password directly, in one step, without knowing the old one", async () => {
+  const noAuth = await request.post("/api/admin/houses/arryn/reset-password").send({ password: "newpass" });
+  assert.equal(noAuth.status, 401);
+
+  // regular /lock refuses to change an existing password...
+  const lockAttempt = await request.post("/api/houses/arryn/lock").send({ password: "ignored" });
+  assert.equal(lockAttempt.status, 200);
+  const stillOld = await request.post("/api/houses/arryn/unlock").send({ password: "eyrie" });
+  assert.equal(stillOld.status, 200);
+
+  const missing = await request.post("/api/admin/houses/does-not-exist/reset-password").set("x-admin-secret", "test-secret").send({ password: "x" });
+  assert.equal(missing.status, 404);
+
+  const noPassword = await request.post("/api/admin/houses/arryn/reset-password").set("x-admin-secret", "test-secret").send({});
+  assert.equal(noPassword.status, 400);
+
+  // ...but the admin endpoint does, in one step
+  const reset = await request
+    .post("/api/admin/houses/arryn/reset-password")
+    .set("x-admin-secret", "test-secret")
+    .send({ password: "newpass" });
+  assert.equal(reset.status, 200);
+
+  const oldFails = await request.post("/api/houses/arryn/unlock").send({ password: "eyrie" });
+  assert.equal(oldFails.status, 401);
+
+  const newWorks = await request.post("/api/houses/arryn/unlock").send({ password: "newpass" });
+  assert.equal(newWorks.status, 200);
+});
+
 test("admin can delete a single house, and only that house", async () => {
   const noAuth = await request.delete("/api/admin/houses/redwyne");
   assert.equal(noAuth.status, 401);

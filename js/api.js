@@ -54,6 +54,8 @@ const Api = {
   seedMissingHouses: (secret) => apiFetch("/admin/seed-missing", { method: "POST", headers: { "x-admin-secret": secret } }),
   adminGetHouses: (secret) => apiFetch("/admin/houses", { headers: { "x-admin-secret": secret } }),
   adminDeleteHouse: (slug, secret) => apiFetch(`/admin/houses/${slug}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
+  adminResetHousePassword: (slug, password, secret) =>
+    apiFetch(`/admin/houses/${slug}/reset-password`, { method: "POST", body: { password }, headers: { "x-admin-secret": secret } }),
   getApplications: (secret) => apiFetch("/applications", { headers: { "x-admin-secret": secret } }),
   deleteApplication: (id, secret) => apiFetch(`/applications/${id}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
   whoami: (secret) => apiFetch("/admin/whoami", { headers: { "x-admin-secret": secret } }),
