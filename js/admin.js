@@ -9,6 +9,8 @@
    persist sensitive things" pattern.
 ------------------------------------------------------------------ */
 let adminSecret = null;
+let allHouses = [];
+let allApplications = [];
 
 // Applications hold fully public, unauthenticated free text (anyone can
 // submit one) that ends up rendered inside a privileged admin session that
@@ -20,18 +22,32 @@ function escapeHtml(str) {
 }
 
 const CHEVRON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
+const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg>`;
+
+function adminHeaderHtml() {
+  return `
+    <div class="admin-header">
+      <div>
+        <div class="admin-kicker">Internal tool</div>
+        <h1>Admin dashboard</h1>
+        <p>House locks and Lord assignments, submitted applications, and site maintenance. Not linked from the public site.</p>
+      </div>
+    </div>
+  `;
+}
 
 function renderGate(errorMessage) {
   document.getElementById("adminRoot").innerHTML = `
-    <div class="locked-card">
-      <div class="lock-icon">🔒</div>
-      <h3>Admin access required</h3>
+    ${adminHeaderHtml()}
+    <div class="admin-gate">
+      <div class="admin-gate-icon">${LOCK_ICON}</div>
+      <h2>Admin access required</h2>
       <p>Enter the admin secret to view house locks and submitted applications.</p>
-      <div class="unlock-row">
-        <input type="password" id="adminSecretInput" placeholder="Admin secret" autocomplete="off" />
-        <button class="btn btn-primary" id="adminUnlockBtn">Unlock</button>
+      <div class="admin-gate-row">
+        <input type="password" id="adminSecretInput" class="admin-search" placeholder="Admin secret" autocomplete="off" />
+        <button class="a-btn a-btn-primary" id="adminUnlockBtn">Unlock</button>
       </div>
-      <p class="error-text" id="adminGateError" style="${errorMessage ? "" : "display:none"}">${escapeHtml(errorMessage || "")}</p>
+      ${errorMessage ? `<p class="admin-gate-error">${escapeHtml(errorMessage)}</p>` : ""}
     </div>
   `;
   const input = document.getElementById("adminSecretInput");
@@ -48,48 +64,71 @@ async function attemptUnlock(secret) {
   try {
     const [houses, applications] = await Promise.all([Api.adminGetHouses(secret), Api.getApplications(secret)]);
     adminSecret = secret;
-    renderDashboard(houses, applications);
+    allHouses = houses;
+    allApplications = applications;
+    renderDashboard();
   } catch (e) {
     renderGate(e.message);
   }
 }
 
 async function refreshHouses() {
-  const houses = await Api.adminGetHouses(adminSecret);
-  document.getElementById("adminHousesList").innerHTML = `<div class="admin-houses-grid">${houses.map(houseAdminRowHtml).join("")}</div>`;
-  bindHouseActions();
+  allHouses = await Api.adminGetHouses(adminSecret);
+  renderHouseTable();
+  renderStats();
+  updateTabCounts();
 }
 
 async function refreshApplications() {
-  const applications = await Api.getApplications(adminSecret);
-  renderTickets(applications);
+  allApplications = await Api.getApplications(adminSecret);
+  renderTickets();
+  renderStats();
+  updateTabCounts();
 }
 
 function lordSummary(h) {
-  if (h.lordDiscordUserId) return "Lord: Discord ID";
-  if (h.lordRoleId) return "Lord: role + Roblox";
-  return "No Lord assigned";
+  if (h.lordDiscordUserId) return "Discord ID";
+  if (h.lordRoleId) return "Role + Roblox";
+  return null;
 }
 
-function houseAdminRowHtml(h) {
-  const isLordSet = Boolean(h.lordDiscordUserId || h.lordRoleId);
+function houseTableRowHtml(h) {
+  const lord = lordSummary(h);
   return `
-    <div class="admin-house-row">
-      <div class="admin-house-main">${escapeHtml(h.name)}</div>
-      <div class="admin-house-status">
-        <span class="status-pill ${h.locked ? "status-pill-locked" : "status-pill-unlocked"}">
-          <span class="dot"></span>${h.locked ? "Locked" : "Unlocked"}
-        </span>
-        <span class="status-pill">${h.hasPassword ? "Password set" : "No password"}</span>
-        <span class="status-pill ${isLordSet ? "status-pill-lord" : ""}">${lordSummary(h)}</span>
-        <span class="status-pill">${h.memberCount} member${h.memberCount === 1 ? "" : "s"}</span>
-      </div>
-      <div class="admin-house-actions">
-        ${h.locked ? `<button class="btn-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
-        <button class="btn-link admin-danger-link" data-action="delete-house" data-slug="${h.slug}">Delete house</button>
-      </div>
-    </div>
+    <tr data-slug="${h.slug}">
+      <td>
+        <div class="admin-table-name">${escapeHtml(h.name)}</div>
+        <div class="admin-table-faction">${escapeHtml(h.faction)}</div>
+      </td>
+      <td>
+        <span class="a-badge ${h.locked ? "a-badge-locked" : "a-badge-unlocked"}"><span class="dot"></span>${h.locked ? "Locked" : "Unlocked"}</span>
+      </td>
+      <td>
+        <span class="a-badge a-badge-neutral">${h.hasPassword ? "Set" : "None"}</span>
+      </td>
+      <td>
+        ${lord ? `<span class="a-badge a-badge-lord">${lord}</span>` : `<span class="a-badge a-badge-neutral">None</span>`}
+      </td>
+      <td>${h.memberCount}</td>
+      <td>
+        <div class="admin-table-actions">
+          ${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
+          <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>
+        </div>
+      </td>
+    </tr>
   `;
+}
+
+function renderHouseTable() {
+  const query = (document.getElementById("houseSearchInput")?.value || "").trim().toLowerCase();
+  const filtered = query ? allHouses.filter((h) => h.name.toLowerCase().includes(query) || h.faction.toLowerCase().includes(query)) : allHouses;
+
+  document.getElementById("adminHousesTableBody").innerHTML = filtered.length
+    ? filtered.map(houseTableRowHtml).join("")
+    : `<tr class="admin-empty-row"><td colspan="6">No houses match "${escapeHtml(query)}".</td></tr>`;
+
+  bindHouseActions();
 }
 
 function bindHouseActions() {
@@ -127,7 +166,9 @@ function bindHouseActions() {
 }
 
 function ticketAnswersHtml(dept, answers) {
-  const entries = dept ? dept.questions.map((q) => [q.label, answers[q.id], q.type === "textarea"]) : Object.entries(answers).map(([k, v]) => [k, v, String(v || "").length > 60]);
+  const entries = dept
+    ? dept.questions.map((q) => [q.label, answers[q.id], q.type === "textarea"])
+    : Object.entries(answers).map(([k, v]) => [k, v, String(v || "").length > 60]);
 
   return entries
     .map(
@@ -142,7 +183,7 @@ function ticketAnswersHtml(dept, answers) {
 
 function ticketHtml(app) {
   const dept = DEPARTMENTS.find((d) => d.key === app.department);
-  const color = dept ? dept.color : "var(--muted)";
+  const color = dept ? dept.color : "var(--a-muted)";
   let answers = app.answers || {};
   if (typeof answers === "string") {
     try {
@@ -184,18 +225,25 @@ function ticketHtml(app) {
             : ""
         }
         <div class="modal-actions" style="justify-content:flex-start; margin-top:6px">
-          <button class="btn btn-danger-outline" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
+          <button class="a-btn a-btn-danger" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
         </div>
       </div>
     </details>
   `;
 }
 
-function renderTickets(applications) {
+function renderTickets() {
+  const query = (document.getElementById("appSearchInput")?.value || "").trim().toLowerCase();
+  const deptFilter = document.getElementById("appDeptFilter")?.value || "";
+
+  const filtered = allApplications.filter((app) => {
+    const matchesQuery = !query || app.roblox_username.toLowerCase().includes(query) || app.discord_username.toLowerCase().includes(query);
+    const matchesDept = !deptFilter || app.department === deptFilter;
+    return matchesQuery && matchesDept;
+  });
+
   const el = document.getElementById("adminTicketsList");
-  el.innerHTML = applications.length
-    ? applications.map(ticketHtml).join("")
-    : `<p class="empty-state">No applications submitted yet.</p>`;
+  el.innerHTML = filtered.length ? filtered.map(ticketHtml).join("") : `<p class="empty-state">No applications match.</p>`;
 
   el.querySelectorAll('[data-action="dismiss-ticket"]').forEach((btn) => {
     btn.onclick = async (e) => {
@@ -215,35 +263,85 @@ function renderTickets(applications) {
   });
 }
 
-function renderDashboard(houses, applications) {
+function renderStats() {
+  const locked = allHouses.filter((h) => h.locked).length;
+  const totalMembers = allHouses.reduce((sum, h) => sum + h.memberCount, 0);
+  document.getElementById("adminStats").innerHTML = `
+    <div class="admin-stat admin-stat-accent"><div class="admin-stat-value">${allHouses.length}</div><div class="admin-stat-label">Houses</div></div>
+    <div class="admin-stat admin-stat-danger"><div class="admin-stat-value">${locked}</div><div class="admin-stat-label">Locked</div></div>
+    <div class="admin-stat admin-stat-success"><div class="admin-stat-value">${allHouses.length - locked}</div><div class="admin-stat-label">Unlocked</div></div>
+    <div class="admin-stat"><div class="admin-stat-value">${totalMembers}</div><div class="admin-stat-label">Family tree members</div></div>
+    <div class="admin-stat admin-stat-accent"><div class="admin-stat-value">${allApplications.length}</div><div class="admin-stat-label">Applications</div></div>
+  `;
+}
+
+function updateTabCounts() {
+  document.getElementById("housesTabCount").textContent = allHouses.length;
+  document.getElementById("appsTabCount").textContent = allApplications.length;
+}
+
+function switchTab(name) {
+  document.querySelectorAll(".admin-tab").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === name));
+  document.querySelectorAll(".admin-panel").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === name));
+}
+
+function renderDashboard() {
+  const deptOptions = DEPARTMENTS.map((d) => `<option value="${d.key}">${escapeHtml(d.name)}</option>`).join("");
+
   document.getElementById("adminRoot").innerHTML = `
-    <section class="admin-section">
-      <h2 class="admin-section-title">Houses &amp; locks</h2>
-      <p class="admin-section-desc">
-        Passwords are only ever stored as one-way hashes, so even here there's nothing to reveal, just
-        whether one is set. Clearing a lock removes it entirely; the house can then be locked again with
-        a new password.
-      </p>
-      <div id="adminHousesList"><div class="admin-houses-grid">${houses.map(houseAdminRowHtml).join("")}</div></div>
-    </section>
+    ${adminHeaderHtml()}
+    <div class="admin-stats" id="adminStats"></div>
 
-    <section class="admin-section">
-      <h2 class="admin-section-title">Applications</h2>
-      <p class="admin-section-desc">Every submitted application, newest first. Expand one to see its full answers.</p>
-      <div id="adminTicketsList"></div>
-    </section>
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="houses">Houses <span class="count" id="housesTabCount">0</span></button>
+      <button class="admin-tab" data-tab="applications">Applications <span class="count" id="appsTabCount">0</span></button>
+      <button class="admin-tab" data-tab="maintenance">Maintenance</button>
+    </div>
 
-    <details class="admin-tools">
-      <summary><span class="chev">${CHEVRON_ICON}</span> Site maintenance</summary>
-      <div class="admin-tools-actions">
-        <button class="btn-link" id="adminSeedMissingBtn">Add any new houses (safe, doesn't touch existing data)</button>
-        <button class="btn-link admin-danger-link" id="adminResetAllBtn">Reset all house data to defaults</button>
+    <div class="admin-panel active" data-panel="houses">
+      <div class="admin-toolbar">
+        <input type="text" id="houseSearchInput" class="admin-search" placeholder="Search houses by name or faction..." />
       </div>
-    </details>
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead>
+            <tr><th>House</th><th>Status</th><th>Password</th><th>Lord</th><th>Members</th><th></th></tr>
+          </thead>
+          <tbody id="adminHousesTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="admin-panel" data-panel="applications">
+      <div class="admin-toolbar">
+        <input type="text" id="appSearchInput" class="admin-search" placeholder="Search by Roblox or Discord username..." />
+        <select id="appDeptFilter" class="admin-filter-select">
+          <option value="">All departments</option>
+          ${deptOptions}
+        </select>
+      </div>
+      <div id="adminTicketsList"></div>
+    </div>
+
+    <div class="admin-panel" data-panel="maintenance">
+      <div class="admin-danger-zone">
+        <h3>Danger zone</h3>
+        <p>These affect every visitor's data. Only use them deliberately.</p>
+        <div class="admin-danger-actions">
+          <button class="a-btn" id="adminSeedMissingBtn">Add any new houses (safe)</button>
+          <button class="a-btn a-btn-danger" id="adminResetAllBtn">Reset all house data to defaults</button>
+        </div>
+      </div>
+    </div>
   `;
 
-  renderTickets(applications);
-  bindHouseActions();
+  document.querySelectorAll(".admin-tab").forEach((btn) => {
+    btn.onclick = () => switchTab(btn.dataset.tab);
+  });
+
+  document.getElementById("houseSearchInput").addEventListener("input", renderHouseTable);
+  document.getElementById("appSearchInput").addEventListener("input", renderTickets);
+  document.getElementById("appDeptFilter").addEventListener("change", renderTickets);
 
   document.getElementById("adminSeedMissingBtn").onclick = async () => {
     const { added } = await Api.seedMissingHouses(adminSecret);
@@ -267,6 +365,11 @@ function renderDashboard(houses, applications) {
     await refreshHouses();
     await refreshApplications();
   };
+
+  renderStats();
+  updateTabCounts();
+  renderHouseTable();
+  renderTickets();
 }
 
 renderGate();
