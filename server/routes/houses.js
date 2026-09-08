@@ -9,6 +9,13 @@ const { saveUpload } = require("../uploads");
 
 const router = express.Router();
 
+// Crown Orders aren't "Houses" and don't have "Lords" — each has its own
+// title for the person recognized via Discord ID/role.
+const LEADER_TITLES = { "faith-militant": "High Septon", "city-watch": "Lord Commander", kingsguard: "Lord Commander", dragonguard: "Lord Commander" };
+function leaderTitle(slug) {
+  return LEADER_TITLES[slug] || "Lord";
+}
+
 const ALLOWED_AVATAR_TYPES = new Set(["image/png", "image/jpeg", "image/gif", "image/webp"]);
 const avatarUpload = multer({
   storage: multer.memoryStorage(),
@@ -46,13 +53,13 @@ async function toMemberJsonList(rows) {
   if (externalIds.length) {
     const placeholders = externalIds.map((_, i) => `$${i + 1}`).join(",");
     const { rows: extRows } = await pool.query(
-      `SELECT m.id, m.name, h.slug AS house_slug, h.name AS house_name
+      `SELECT m.id, m.name, h.slug AS house_slug, h.name AS house_name, h.faction
        FROM members m JOIN houses h ON h.slug = m.house_slug
        WHERE m.id IN (${placeholders})`,
       externalIds
     );
     extRows.forEach((r) => {
-      externalParents[r.id] = { name: r.name, houseSlug: r.house_slug, houseName: r.house_name };
+      externalParents[r.id] = { name: r.name, houseSlug: r.house_slug, houseName: r.house_name, houseFaction: r.faction };
     });
   }
 
@@ -262,11 +269,12 @@ router.post("/:slug/lord-role", async (req, res, next) => {
       robloxUserId
     ]);
 
+    const title = leaderTitle(req.params.slug);
     await postLog(
-      "🛡️ Lord updated",
+      "🛡️ Leadership updated",
       roleId
-        ? `**${rows[0].name}**'s Lord was set to Discord role \`${roleId}\`${robloxDisplayName ? ` + Roblox account **${robloxDisplayName}**` : " (no Roblox account required)"} by an admin.`
-        : `**${rows[0].name}**'s Lord was cleared by an admin.`,
+        ? `**${rows[0].name}**'s ${title} was set to Discord role \`${roleId}\`${robloxDisplayName ? ` + Roblox account **${robloxDisplayName}**` : " (no Roblox account required)"} by an admin.`
+        : `**${rows[0].name}**'s ${title} was cleared by an admin.`,
       0xd4af37
     );
 
@@ -291,11 +299,12 @@ router.post("/:slug/lord-discord", async (req, res, next) => {
 
     await pool.query("UPDATE houses SET lord_discord_user_id = $2 WHERE slug = $1", [req.params.slug, id]);
 
+    const title = leaderTitle(req.params.slug);
     await postLog(
-      "🛡️ Lord updated",
+      "🛡️ Leadership updated",
       id
-        ? `**${rows[0].name}**'s Lord was set to Discord ID \`${id}\` by an admin.`
-        : `**${rows[0].name}**'s Discord-ID Lord was cleared by an admin.`,
+        ? `**${rows[0].name}**'s ${title} was set to Discord ID \`${id}\` by an admin.`
+        : `**${rows[0].name}**'s Discord-ID ${title} was cleared by an admin.`,
       0xd4af37
     );
 
@@ -328,7 +337,7 @@ async function authorizeEdit(req, res, slug, { allowLordBypass = true } = {}) {
   if (await hasHousePassword(req, house)) return { house, viaLordBypass: false };
 
   if (isLord) {
-    res.status(403).json({ error: "As this house's Lord you can add new members, but editing or removing existing ones needs the house password." });
+    res.status(403).json({ error: `As this house's ${leaderTitle(house.slug)} you can add new members, but editing or removing existing ones needs the house password.` });
     return null;
   }
 
@@ -338,7 +347,7 @@ async function authorizeEdit(req, res, slug, { allowLordBypass = true } = {}) {
 
 async function logLordEdit(req, house, action) {
   const userId = await getRequestDiscordUserId(req);
-  await postLog("✍️ Lord edited a locked house", `**${house.name}**: ${action} by Discord ID \`${userId}\`.`, 0xd4af37);
+  await postLog(`✍️ ${leaderTitle(house.slug)} edited a locked house`, `**${house.name}**: ${action} by Discord ID \`${userId}\`.`, 0xd4af37);
 }
 
 // POST /api/houses/:slug/avatar { avatar: <file> } — uploads a member photo/GIF

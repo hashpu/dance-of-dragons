@@ -3,6 +3,17 @@ const slug = params.get("h");
 
 let house = null;
 
+// Crown Orders aren't "Houses" and don't have "Lords" — each has its own
+// title for the person recognized via Discord ID/role. Real noble houses
+// keep the default "Lord".
+const LEADER_TITLES = { "faith-militant": "High Septon", "city-watch": "Lord Commander", kingsguard: "Lord Commander", dragonguard: "Lord Commander" };
+function leaderTitle(h) {
+  return LEADER_TITLES[h.slug] || "Lord";
+}
+function entityLabel(h) {
+  return h.faction === "CROWN" ? h.name : `House ${h.name}`;
+}
+
 // Kept only in this page's memory — never in localStorage/sessionStorage —
 // so a locked house's password only grants access for the current page
 // visit. Reload, navigate away, or come back later and it's gone; the
@@ -14,7 +25,7 @@ function renderHeader() {
   document.getElementById("houseHeader").innerHTML = `
     <div class="house-banner" style="--card-color:${house.color}">
       <div class="house-icon house-icon-lg" style="background:color-mix(in srgb, ${house.color} 18%, transparent); border-color:color-mix(in srgb, ${house.color} 45%, transparent);">${HOUSE_ICONS[house.slug]}</div>
-      <h1>House ${house.name}</h1>
+      <h1>${entityLabel(house)}</h1>
       <p class="house-tagline">${house.tagline}</p>
     </div>
   `;
@@ -25,13 +36,13 @@ function renderStatus() {
   if (house.locked && sessionPassword) {
     el.innerHTML = `
       <div class="banner banner-lord">
-        <div class="banner-left"><span class="dot dot-lord"></span> Unlocked for this visit. You'll need House ${house.name}'s password again next time you come back.</div>
+        <div class="banner-left"><span class="dot dot-lord"></span> Unlocked for this visit. You'll need ${entityLabel(house)}'s password again next time you come back.</div>
       </div>
     `;
   } else if (house.locked && house.lordAccess) {
     el.innerHTML = `
       <div class="banner banner-lord">
-        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this house's Lord, locked for everyone else. You can add new members below, but editing or removing existing ones needs the house password.</div>
+        <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this ${house.faction === "CROWN" ? "order's" : "house's"} ${leaderTitle(house)}, locked for everyone else. You can add new members below, but editing or removing existing ones needs the house password.</div>
       </div>
     `;
   } else if (house.locked) {
@@ -39,7 +50,7 @@ function renderStatus() {
       <div class="locked-card">
         <div class="lock-icon">🔒</div>
         <h3>This tree is locked</h3>
-        <p>Enter House ${house.name}'s password to view its family tree.</p>
+        <p>Enter ${entityLabel(house)}'s password to view its family tree.</p>
         <div class="unlock-row">
           <input type="password" id="unlockInput" placeholder="House password" />
           <button class="btn btn-primary" id="unlockBtn">Unlock</button>
@@ -102,7 +113,7 @@ async function lockHouse() {
     await Api.lockHouse(slug, null);
   } catch (e) {
     const pw = await Dialog.prompt({
-      kicker: `House ${house.name}`,
+      kicker: entityLabel(house),
       title: "Set a password",
       message: "This password protects the family tree the first time it's locked.",
       label: "House password",
@@ -165,7 +176,7 @@ function nodeHtml(node) {
   const role = node.role ? `<div class="node-role">${node.role}</div>` : `<div class="node-role">&nbsp;</div>`;
   const nameTitle = node.note ? ` title="${escapeAttr(node.note)}"` : "";
   const externalParentHtml = node.externalParent
-    ? `<a class="node-external-parent" href="/house?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · House ${node.externalParent.houseName}</a>`
+    ? `<a class="node-external-parent" href="/house?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · ${entityLabel({ name: node.externalParent.houseName, faction: node.externalParent.houseFaction })}</a>`
     : "";
   const linksHtml = `
     ${node.buildLink ? `<a class="node-build-link" href="${escapeAttr(node.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
@@ -213,7 +224,7 @@ function renderTree() {
     el.innerHTML = `
       ${toolbar}
       <div class="tree-panel" style="--card-color:${house.color}">
-        <div class="empty-tree">No members yet. Be the first to add one to House ${house.name}.</div>
+        <div class="empty-tree">No members yet. Be the first to add one to ${entityLabel(house)}.</div>
       </div>
     `;
     return;
@@ -393,7 +404,7 @@ function updateParentPreview() {
   const val = document.getElementById("fParent").value;
   if (!val) {
     preview.className = "parent-preview empty";
-    preview.textContent = "Starts a new branch of House " + house.name;
+    preview.textContent = "Starts a new branch of " + entityLabel(house);
     return;
   }
   const m = parentPickerMembers.find((x) => x.id === val);
@@ -402,7 +413,7 @@ function updateParentPreview() {
   const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlugSel);
   const fallback = generatedAvatar(m.name, pickedHouse ? pickedHouse.color : house.color);
   const avatar = m.avatarUrl || fallback;
-  const houseNote = houseSlugSel !== slug && pickedHouse ? ` (House ${pickedHouse.name})` : "";
+  const houseNote = houseSlugSel !== slug && pickedHouse ? ` (${entityLabel(pickedHouse)})` : "";
   preview.className = "parent-preview";
   preview.innerHTML = `<img src="${avatar}" alt="" onerror="this.onerror=null;this.src='${fallback}'" /> Child of <strong>${m.name}</strong>${m.role ? " · " + m.role : ""}${houseNote}`;
 }
@@ -449,7 +460,7 @@ async function openMemberModal({ parentId, member }) {
         <div class="modal-header">
           <div class="modal-crest">${HOUSE_ICONS[house.slug]}</div>
           <div>
-            <div class="modal-kicker">House ${house.name}</div>
+            <div class="modal-kicker">${entityLabel(house)}</div>
             <h3>${isEdit ? `Edit ${member.name}` : "Add a Family Member"}</h3>
           </div>
         </div>

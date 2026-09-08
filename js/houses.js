@@ -87,7 +87,7 @@ async function runSearch(query) {
             <img src="${avatar}" alt="" onerror="this.onerror=null;this.src='${fallback}'" />
             <div>
               <div class="member-hit-name">${member.name}${member.role ? ` · ${member.role}` : ""}</div>
-              <div class="member-hit-house" style="color:${house.color}">House ${house.name}</div>
+              <div class="member-hit-house" style="color:${house.color}">${house.faction === "CROWN" ? house.name : "House " + house.name}</div>
             </div>
           </a>`;
         })

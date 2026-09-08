@@ -123,7 +123,7 @@ test("a member's parent can belong to a different house, and the API reports who
   const check = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
   const child = check.body.members.find((m) => m.name === "Jacaerys Velaryon");
   assert.ok(child);
-  assert.deepEqual(child.externalParent, { name: "Rhaenyra", houseSlug: "targaryen", houseName: "Targaryen" });
+  assert.deepEqual(child.externalParent, { name: "Rhaenyra", houseSlug: "targaryen", houseName: "Targaryen", houseFaction: "ROYAL HOUSE" });
 
   // members with a purely local parent don't get an externalParent
   const laenor = check.body.members.find((m) => m.id === "laenor");

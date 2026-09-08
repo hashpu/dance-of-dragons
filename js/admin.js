@@ -26,13 +26,24 @@ function escapeHtml(str) {
 const CHEVRON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
 const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg>`;
 
+// Crown Orders aren't "Houses" and don't have "Lords" — each has its own
+// title for the person recognized via Discord ID/role. Real noble houses
+// keep the default "Lord".
+const LEADER_TITLES = { "faith-militant": "High Septon", "city-watch": "Lord Commander", kingsguard: "Lord Commander", dragonguard: "Lord Commander" };
+function leaderTitle(h) {
+  return LEADER_TITLES[h.slug] || "Lord";
+}
+function entityLabel(h) {
+  return h.faction === "CROWN" ? h.name : `House ${h.name}`;
+}
+
 function adminHeaderHtml() {
   return `
     <div class="admin-header">
       <div>
         <div class="admin-kicker">Internal tool</div>
         <h1>Admin dashboard</h1>
-        <p>House locks and Lord assignments, submitted applications, and site maintenance. Not linked from the public site.</p>
+        <p>House locks and leadership assignments, submitted applications, and site maintenance. Not linked from the public site.</p>
       </div>
       ${
         currentAdmin
@@ -115,8 +126,8 @@ async function refreshApplications() {
 }
 
 function lordSummary(h) {
-  if (h.lordDiscordUserId) return "Discord ID";
-  if (h.lordRoleId) return "Role + Roblox";
+  if (h.lordDiscordUserId) return `${leaderTitle(h)} (Discord ID)`;
+  if (h.lordRoleId) return `${leaderTitle(h)} (Role + Roblox)`;
   return null;
 }
 
@@ -143,8 +154,8 @@ function houseTableRowHtml(h) {
           ${
             currentAdmin && currentAdmin.role === "owner"
               ? `${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
-                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">Set Lord (ID)</button>
-                 <button class="a-link" data-action="set-lord-role" data-slug="${h.slug}">Set Lord (Role)</button>
+                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">Set ${leaderTitle(h)} (ID)</button>
+                 <button class="a-link" data-action="set-lord-role" data-slug="${h.slug}">Set ${leaderTitle(h)} (Role)</button>
                  <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
               : ""
           }
@@ -169,9 +180,10 @@ function bindHouseActions() {
   document.querySelectorAll('[data-action="clear-lock"]').forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;
+      const label = entityLabel(allHouses.find((x) => x.slug === slug) || { slug, name: slug });
       const ok = await Dialog.confirm({
         kicker: "Admin only",
-        title: `Clear ${slug}'s lock?`,
+        title: `Clear ${label}'s lock?`,
         message: "This removes its password entirely; anyone can then lock it again with a new one.",
         confirmText: "Clear lock",
         danger: true
@@ -185,9 +197,10 @@ function bindHouseActions() {
   document.querySelectorAll('[data-action="delete-house"]').forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;
+      const label = entityLabel(allHouses.find((x) => x.slug === slug) || { slug, name: slug });
       const ok = await Dialog.confirm({
         kicker: "Admin only",
-        title: `Delete House ${slug}?`,
+        title: `Delete ${label}?`,
         message: "This permanently removes the house and every member in its family tree. This cannot be undone.",
         confirmText: "Delete permanently",
         danger: true
@@ -201,11 +214,14 @@ function bindHouseActions() {
   document.querySelectorAll('[data-action="set-lord-discord"]').forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;
-      const houseName = (allHouses.find((h) => h.slug === slug) || {}).name || slug;
+      const h = allHouses.find((x) => x.slug === slug) || { slug, name: slug };
+      const title = leaderTitle(h);
+      const label = entityLabel(h);
+      const noun = h.faction === "CROWN" ? "order" : "house";
       const discordUserId = await Dialog.prompt({
-        kicker: `House ${houseName}`,
-        title: "Assign Lord by Discord ID",
-        message: "Whoever signs in with this exact Discord account gets password-free access to manage the house. Leave blank to remove.",
+        kicker: label,
+        title: `Assign ${title} by Discord ID`,
+        message: `Whoever signs in with this exact Discord account gets password-free access to manage the ${noun}. Leave blank to remove.`,
         label: "Discord user ID",
         placeholder: "e.g. 123456789012345678",
         confirmText: "Save",
@@ -217,11 +233,11 @@ function bindHouseActions() {
         await Api.setLordDiscordId(slug, discordUserId.trim(), adminSecret);
         await refreshHouses();
         await Dialog.alert({
-          kicker: `House ${houseName}`,
-          title: discordUserId.trim() ? "Lord assigned" : "Lord removed",
+          kicker: label,
+          title: discordUserId.trim() ? `${title} assigned` : `${title} removed`,
           message: discordUserId.trim()
-            ? `Only the Discord account with ID ${discordUserId.trim()} can manage House ${houseName} without the password.`
-            : `House ${houseName} no longer has a Discord-ID Lord assigned.`,
+            ? `Only the Discord account with ID ${discordUserId.trim()} can manage ${label} without the password.`
+            : `${label} no longer has a Discord-ID ${title} assigned.`,
           icon: "discord"
         });
       } catch (e) {
@@ -233,11 +249,13 @@ function bindHouseActions() {
   document.querySelectorAll('[data-action="set-lord-role"]').forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;
-      const houseName = (allHouses.find((h) => h.slug === slug) || {}).name || slug;
+      const h = allHouses.find((x) => x.slug === slug) || { slug, name: slug };
+      const title = leaderTitle(h);
+      const label = entityLabel(h);
       const roleId = await Dialog.prompt({
-        kicker: `House ${houseName}`,
-        title: "Assign Lord by Discord role",
-        message: "Leave blank to remove the Lord entirely.",
+        kicker: label,
+        title: `Assign ${title} by Discord role`,
+        message: `Leave blank to remove the ${title} entirely.`,
         label: "Discord role ID",
         placeholder: "e.g. 123456789012345678",
         confirmText: "Next",
@@ -248,9 +266,9 @@ function bindHouseActions() {
       let robloxUsername = "";
       if (roleId.trim()) {
         robloxUsername = await Dialog.prompt({
-          kicker: `House ${houseName}`,
+          kicker: label,
           title: "Match a Roblox account",
-          message: "They must be signed in as BOTH that Discord role and this exact Roblox account for Lord access to work.",
+          message: `They must be signed in as BOTH that Discord role and this exact Roblox account for ${title} access to work.`,
           label: "Roblox username",
           placeholder: "e.g. WinterfellKing",
           confirmText: "Save",
@@ -263,11 +281,11 @@ function bindHouseActions() {
         await Api.setLordRole(slug, roleId.trim(), robloxUsername.trim(), adminSecret);
         await refreshHouses();
         await Dialog.alert({
-          kicker: `House ${houseName}`,
-          title: roleId.trim() ? "Lord assigned" : "Lord removed",
+          kicker: label,
+          title: roleId.trim() ? `${title} assigned` : `${title} removed`,
           message: roleId.trim()
-            ? `Only someone signed in with that Discord role AND that Roblox account can manage House ${houseName} without the password.`
-            : `House ${houseName} no longer has a Lord assigned.`,
+            ? `Only someone signed in with that Discord role AND that Roblox account can manage ${label} without the password.`
+            : `${label} no longer has a ${title} assigned.`,
           icon: "discord"
         });
       } catch (e) {
@@ -468,7 +486,7 @@ function renderDashboard() {
       <div class="admin-table-wrap">
         <table class="admin-table">
           <thead>
-            <tr><th>House</th><th>Status</th><th>Password</th><th>Lord</th><th>Members</th><th></th></tr>
+            <tr><th>House</th><th>Status</th><th>Password</th><th>Leader</th><th>Members</th><th></th></tr>
           </thead>
           <tbody id="adminHousesTableBody"></tbody>
         </table>
