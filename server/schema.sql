@@ -68,6 +68,18 @@ CREATE TABLE IF NOT EXISTS votes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Named staff accounts the owner (whoever knows ADMIN_SECRET) can create,
+-- each with its own password, for delegated access to the admin dashboard.
+-- Staff can view houses/applications but not the owner-only destructive
+-- actions (reset all data, delete a house, manage staff accounts) — see
+-- middleware/requireAdmin.js's requireOwner.
+CREATE TABLE IF NOT EXISTS staff_accounts (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  password_hash TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,
   department TEXT NOT NULL,

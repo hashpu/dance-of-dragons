@@ -285,3 +285,63 @@ test("admin can delete a single house, and only that house", async () => {
   const targaryen = await request.get("/api/houses/targaryen");
   assert.equal(targaryen.status, 200);
 });
+
+test("GET /api/admin/whoami reports owner vs staff", async () => {
+  const owner = await request.get("/api/admin/whoami").set("x-admin-secret", "test-secret");
+  assert.equal(owner.status, 200);
+  assert.equal(owner.body.role, "owner");
+});
+
+test("staff accounts: owner can create/list/delete them, and a staff password grants dashboard access but not owner-only actions", async () => {
+  const noAuth = await request.post("/api/admin/staff").send({ name: "Jake", password: "hunter22" });
+  assert.equal(noAuth.status, 401);
+
+  const tooShort = await request
+    .post("/api/admin/staff")
+    .set("x-admin-secret", "test-secret")
+    .send({ name: "Jake", password: "abc" });
+  assert.equal(tooShort.status, 400);
+
+  const created = await request
+    .post("/api/admin/staff")
+    .set("x-admin-secret", "test-secret")
+    .send({ name: "Jake", password: "hunter22" });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.name, "Jake");
+  const staffId = created.body.id;
+
+  const list = await request.get("/api/admin/staff").set("x-admin-secret", "test-secret");
+  assert.equal(list.status, 200);
+  assert.ok(list.body.some((s) => s.id === staffId && s.name === "Jake"));
+  assert.equal(list.body[0].password, undefined);
+  assert.equal(list.body[0].passwordHash, undefined);
+
+  // the staff password works like an admin secret for read/light actions...
+  const asStaff = await request.get("/api/admin/houses").set("x-admin-secret", "hunter22");
+  assert.equal(asStaff.status, 200);
+
+  const whoami = await request.get("/api/admin/whoami").set("x-admin-secret", "hunter22");
+  assert.equal(whoami.status, 200);
+  assert.equal(whoami.body.role, "staff");
+  assert.equal(whoami.body.name, "Jake");
+
+  // ...but not for owner-only destructive actions
+  const staffReset = await request.post("/api/admin/reset").set("x-admin-secret", "hunter22");
+  assert.equal(staffReset.status, 401);
+
+  const staffDeleteHouse = await request.delete("/api/admin/houses/hightower").set("x-admin-secret", "hunter22");
+  assert.equal(staffDeleteHouse.status, 401);
+
+  const staffCreatesStaff = await request
+    .post("/api/admin/staff")
+    .set("x-admin-secret", "hunter22")
+    .send({ name: "Nobody", password: "shouldfail" });
+  assert.equal(staffCreatesStaff.status, 401);
+
+  // owner revokes the staff account
+  const del = await request.delete(`/api/admin/staff/${staffId}`).set("x-admin-secret", "test-secret");
+  assert.equal(del.status, 200);
+
+  const afterRevoke = await request.get("/api/admin/houses").set("x-admin-secret", "hunter22");
+  assert.equal(afterRevoke.status, 401);
+});

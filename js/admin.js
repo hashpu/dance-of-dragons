@@ -9,8 +9,10 @@
    persist sensitive things" pattern.
 ------------------------------------------------------------------ */
 let adminSecret = null;
+let currentAdmin = null;
 let allHouses = [];
 let allApplications = [];
+let allStaff = [];
 
 // Applications hold fully public, unauthenticated free text (anyone can
 // submit one) that ends up rendered inside a privileged admin session that
@@ -32,6 +34,11 @@ function adminHeaderHtml() {
         <h1>Admin dashboard</h1>
         <p>House locks and Lord assignments, submitted applications, and site maintenance. Not linked from the public site.</p>
       </div>
+      ${
+        currentAdmin
+          ? `<span class="a-badge ${currentAdmin.role === "owner" ? "a-badge-lord" : "a-badge-neutral"}">Signed in as ${escapeHtml(currentAdmin.name)}${currentAdmin.role === "owner" ? " (Owner)" : ""}</span>`
+          : ""
+      }
     </div>
   `;
 }
@@ -62,10 +69,12 @@ function renderGate(errorMessage) {
 async function attemptUnlock(secret) {
   if (!secret) return;
   try {
-    const [houses, applications] = await Promise.all([Api.adminGetHouses(secret), Api.getApplications(secret)]);
+    const [houses, applications, admin] = await Promise.all([Api.adminGetHouses(secret), Api.getApplications(secret), Api.whoami(secret)]);
     adminSecret = secret;
     allHouses = houses;
     allApplications = applications;
+    currentAdmin = admin;
+    allStaff = admin.role === "owner" ? await Api.getStaff(secret) : [];
     renderDashboard();
   } catch (e) {
     renderGate(e.message);
@@ -112,8 +121,12 @@ function houseTableRowHtml(h) {
       <td>${h.memberCount}</td>
       <td>
         <div class="admin-table-actions">
-          ${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
-          <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>
+          ${
+            currentAdmin && currentAdmin.role === "owner"
+              ? `${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
+                 <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
+              : ""
+          }
         </div>
       </td>
     </tr>
@@ -278,6 +291,55 @@ function renderStats() {
 function updateTabCounts() {
   document.getElementById("housesTabCount").textContent = allHouses.length;
   document.getElementById("appsTabCount").textContent = allApplications.length;
+  const staffCount = document.getElementById("staffTabCount");
+  if (staffCount) staffCount.textContent = allStaff.length;
+}
+
+function staffRowHtml(s) {
+  const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
+  return `
+    <tr data-id="${s.id}">
+      <td class="admin-table-name">${escapeHtml(s.name)}</td>
+      <td>${created}</td>
+      <td><button class="a-link a-link-danger" data-action="delete-staff" data-id="${s.id}">Revoke</button></td>
+    </tr>
+  `;
+}
+
+function renderStaffList() {
+  const el = document.getElementById("adminStaffList");
+  if (!el) return;
+  el.innerHTML = allStaff.length
+    ? `
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Name</th><th>Added</th><th></th></tr></thead>
+          <tbody>${allStaff.map(staffRowHtml).join("")}</tbody>
+        </table>
+      </div>`
+    : `<p class="empty-state">No staff accounts yet.</p>`;
+
+  el.querySelectorAll('[data-action="delete-staff"]').forEach((btn) => {
+    btn.onclick = async () => {
+      const staff = allStaff.find((s) => s.id === btn.dataset.id);
+      const ok = await Dialog.confirm({
+        kicker: "Admin only",
+        title: `Revoke ${staff ? staff.name : "this account"}'s access?`,
+        message: "They'll immediately lose access to the admin dashboard.",
+        confirmText: "Revoke access",
+        danger: true
+      });
+      if (!ok) return;
+      await Api.deleteStaff(btn.dataset.id, adminSecret);
+      await refreshStaff();
+    };
+  });
+}
+
+async function refreshStaff() {
+  allStaff = await Api.getStaff(adminSecret);
+  renderStaffList();
+  updateTabCounts();
 }
 
 function switchTab(name) {
@@ -286,6 +348,7 @@ function switchTab(name) {
 }
 
 function renderDashboard() {
+  const isOwner = currentAdmin && currentAdmin.role === "owner";
   const deptOptions = DEPARTMENTS.map((d) => `<option value="${d.key}">${escapeHtml(d.name)}</option>`).join("");
 
   document.getElementById("adminRoot").innerHTML = `
@@ -295,7 +358,8 @@ function renderDashboard() {
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="houses">Houses <span class="count" id="housesTabCount">0</span></button>
       <button class="admin-tab" data-tab="applications">Applications <span class="count" id="appsTabCount">0</span></button>
-      <button class="admin-tab" data-tab="maintenance">Maintenance</button>
+      ${isOwner ? `<button class="admin-tab" data-tab="staff">Staff <span class="count" id="staffTabCount">0</span></button>` : ""}
+      ${isOwner ? `<button class="admin-tab" data-tab="maintenance">Maintenance</button>` : ""}
     </div>
 
     <div class="admin-panel active" data-panel="houses">
@@ -323,6 +387,29 @@ function renderDashboard() {
       <div id="adminTicketsList"></div>
     </div>
 
+    ${
+      isOwner
+        ? `
+    <div class="admin-panel" data-panel="staff">
+      <p class="admin-section-desc">
+        Give someone their own login to this dashboard without sharing the real admin secret. Staff can view
+        houses and applications and dismiss tickets, but can't clear locks, delete houses, manage staff, or
+        reset data.
+      </p>
+      <div class="admin-staff-form">
+        <input type="text" id="staffNameInput" class="admin-search" placeholder="Name" />
+        <input type="text" id="staffPasswordInput" class="admin-search" placeholder="Password (min 4 characters)" />
+        <button class="a-btn a-btn-primary" id="addStaffBtn">Add staff</button>
+      </div>
+      <p class="error-text" id="staffFormError" style="display:none"></p>
+      <div id="adminStaffList"></div>
+    </div>`
+        : ""
+    }
+
+    ${
+      isOwner
+        ? `
     <div class="admin-panel" data-panel="maintenance">
       <div class="admin-danger-zone">
         <h3>Danger zone</h3>
@@ -332,7 +419,9 @@ function renderDashboard() {
           <button class="a-btn a-btn-danger" id="adminResetAllBtn">Reset all house data to defaults</button>
         </div>
       </div>
-    </div>
+    </div>`
+        : ""
+    }
   `;
 
   document.querySelectorAll(".admin-tab").forEach((btn) => {
@@ -343,28 +432,48 @@ function renderDashboard() {
   document.getElementById("appSearchInput").addEventListener("input", renderTickets);
   document.getElementById("appDeptFilter").addEventListener("change", renderTickets);
 
-  document.getElementById("adminSeedMissingBtn").onclick = async () => {
-    const { added } = await Api.seedMissingHouses(adminSecret);
-    await refreshHouses();
-    await Dialog.alert({
-      title: added.length ? "Houses added" : "Nothing to add",
-      message: added.length ? `Added: ${added.join(", ")}.` : "Every house in the list already exists here."
-    });
-  };
+  if (isOwner) {
+    document.getElementById("adminSeedMissingBtn").onclick = async () => {
+      const { added } = await Api.seedMissingHouses(adminSecret);
+      await refreshHouses();
+      await Dialog.alert({
+        title: added.length ? "Houses added" : "Nothing to add",
+        message: added.length ? `Added: ${added.join(", ")}.` : "Every house in the list already exists here."
+      });
+    };
 
-  document.getElementById("adminResetAllBtn").onclick = async () => {
-    const ok = await Dialog.confirm({
-      kicker: "Admin only",
-      title: "Reset all houses?",
-      message: "This resets every house's lore, locks, and members back to default, for every visitor. This cannot be undone.",
-      confirmText: "Reset everything",
-      danger: true
-    });
-    if (!ok) return;
-    await Api.resetAll(adminSecret);
-    await refreshHouses();
-    await refreshApplications();
-  };
+    document.getElementById("adminResetAllBtn").onclick = async () => {
+      const ok = await Dialog.confirm({
+        kicker: "Admin only",
+        title: "Reset all houses?",
+        message: "This resets every house's lore, locks, and members back to default, for every visitor. This cannot be undone.",
+        confirmText: "Reset everything",
+        danger: true
+      });
+      if (!ok) return;
+      await Api.resetAll(adminSecret);
+      await refreshHouses();
+      await refreshApplications();
+    };
+
+    document.getElementById("addStaffBtn").onclick = async () => {
+      const nameInput = document.getElementById("staffNameInput");
+      const passwordInput = document.getElementById("staffPasswordInput");
+      const err = document.getElementById("staffFormError");
+      err.style.display = "none";
+      try {
+        await Api.createStaff(nameInput.value.trim(), passwordInput.value, adminSecret);
+        nameInput.value = "";
+        passwordInput.value = "";
+        await refreshStaff();
+      } catch (e) {
+        err.textContent = e.message;
+        err.style.display = "block";
+      }
+    };
+
+    renderStaffList();
+  }
 
   renderStats();
   updateTabCounts();

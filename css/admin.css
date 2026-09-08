@@ -102,6 +102,11 @@
 .admin-panel { display: none; }
 .admin-panel.active { display: block; }
 
+.admin-section-desc { font-size: 13.5px; color: var(--a-muted); margin: 0 0 18px; max-width: 620px; line-height: 1.6; }
+
+.admin-staff-form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+.admin-staff-form .admin-search { flex: 1; min-width: 160px; }
+
 /* Toolbar */
 .admin-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .admin-search, .admin-filter-select {
