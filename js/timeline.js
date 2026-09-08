@@ -17,29 +17,45 @@ function timelineCardHtml(ev, color) {
   `;
 }
 
-const rows = [];
-let lastYear = null;
-let sideIndex = 0;
-
+// Grouped by year so each year marker can be sticky within its own group —
+// it stays pinned near the top while you scroll through that year's events,
+// then gets pushed out by the next group's marker.
+const groups = [];
 TIMELINE_EVENTS.forEach((ev) => {
-  if (ev.year !== lastYear) {
-    rows.push(`<div class="timeline-year-marker"><span>${ev.year}</span></div>`);
-    lastYear = ev.year;
+  const last = groups[groups.length - 1];
+  if (last && last.year === ev.year) {
+    last.events.push(ev);
+  } else {
+    groups.push({ year: ev.year, events: [ev] });
   }
-
-  const color = TAG_COLORS[ev.tag];
-  const side = sideIndex % 2 === 0 ? "left" : "right";
-  sideIndex++;
-
-  rows.push(`
-    <div class="timeline-row timeline-row-${side} reveal" style="--tag-color:${color}">
-      ${timelineCardHtml(ev, color)}
-      <div class="timeline-dot">${TYPE_ICONS[ev.type] || TYPE_ICONS.event}</div>
-    </div>
-  `);
 });
 
-document.getElementById("timelineList").innerHTML = rows.join("");
+let sideIndex = 0;
+const groupsHtml = groups
+  .map((group) => {
+    const rowsHtml = group.events
+      .map((ev) => {
+        const color = TAG_COLORS[ev.tag];
+        const side = sideIndex % 2 === 0 ? "left" : "right";
+        sideIndex++;
+        return `
+          <div class="timeline-row timeline-row-${side} reveal" style="--tag-color:${color}">
+            ${timelineCardHtml(ev, color)}
+            <div class="timeline-dot">${TYPE_ICONS[ev.type] || TYPE_ICONS.event}</div>
+          </div>
+        `;
+      })
+      .join("");
+    return `
+      <div class="timeline-year-group">
+        <div class="timeline-year-marker"><span>${group.year}</span></div>
+        ${rowsHtml}
+      </div>
+    `;
+  })
+  .join("");
+
+document.getElementById("timelineList").innerHTML = groupsHtml;
 
 const revealItems = document.querySelectorAll(".timeline-row");
 if ("IntersectionObserver" in window) {

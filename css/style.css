@@ -341,9 +341,15 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 }
 
 /* Timeline — alternating left/right cards along a central spine, with a
-   type icon (death/battle/event) in each dot and a year marker whenever
-   the year changes. Collapses to a single left-aligned column on mobile. */
-.timeline-spine { position: relative; max-width: 920px; margin: 0 auto; }
+   type icon (death/battle/event) in each dot and a sticky year marker per
+   group of events. Collapses to a single left-aligned column on mobile. */
+.timeline-spine {
+  position: relative;
+  max-width: 920px;
+  margin: 0 auto;
+  padding: 10px 0 0;
+  background: radial-gradient(ellipse 70% 40% at 50% 0%, rgba(224, 72, 62, 0.08), transparent 70%);
+}
 .timeline-spine::before {
   content: "";
   position: absolute;
@@ -358,6 +364,9 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   .timeline-spine::before { left: 17px; }
 }
 
+.timeline-year-group { margin-top: 44px; }
+.timeline-year-group:first-child { margin-top: 0; }
+
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s ease; }
 .timeline-row-left.reveal { transform: translateX(-24px); }
 .timeline-row-right.reveal { transform: translateX(24px); }
@@ -368,15 +377,16 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 }
 
 .timeline-year-marker {
-  position: relative;
+  position: sticky;
+  top: 14px;
+  z-index: 3;
   display: flex;
   justify-content: center;
-  margin: 40px 0 30px;
+  margin: 0 0 30px;
+  pointer-events: none;
 }
-.timeline-year-marker:first-child { margin-top: 0; }
 .timeline-year-marker span {
-  position: relative;
-  z-index: 1;
+  pointer-events: auto;
   background: var(--bg);
   border: 1px solid var(--panel-border);
   padding: 7px 24px;
@@ -419,8 +429,15 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   justify-content: center;
   box-shadow: 0 0 0 5px var(--bg), 0 0 18px -4px var(--tag-color, var(--red));
   z-index: 1;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
 }
 .timeline-dot svg { width: 16px; height: 16px; }
+.timeline-row:hover .timeline-dot {
+  transform: scale(1.15);
+  background: var(--tag-color, var(--red));
+  color: var(--bg);
+  box-shadow: 0 0 0 5px var(--bg), 0 0 26px -2px var(--tag-color, var(--red));
+}
 @media (max-width: 760px) {
   .timeline-dot { grid-column: 1; width: 30px; height: 30px; }
   .timeline-dot svg { width: 14px; height: 14px; }
