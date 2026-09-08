@@ -23,6 +23,9 @@ const NAV_ICONS = {
   ];
 
   const user = typeof getDiscordUser === "function" ? getDiscordUser() : null;
+  const robloxUser = typeof getRobloxUser === "function" ? getRobloxUser() : null;
+  const memberSince = user && typeof discordAccountCreatedAt === "function" ? discordAccountCreatedAt(user) : null;
+
   const authHtml = user
     ? `
       <div class="profile-menu" id="profileMenu">
@@ -30,35 +33,29 @@ const NAV_ICONS = {
           <img src="${discordAvatarUrl(user)}" alt="" />
           <span>${user.username}</span>
         </button>
-        <div class="profile-card" id="profileCard" hidden>
+        <div class="profile-card" id="profileCard" hidden style="--profile-accent:${discordAccentColorCss(user) || "var(--red)"}">
           <div class="profile-banner" style="${discordProfileBannerCss(user)}"></div>
           <div class="profile-body">
             <img class="profile-avatar" src="${discordAvatarUrl(user)}" alt="" />
             <div class="profile-name">${user.username}</div>
+            ${memberSince ? `<div class="profile-meta">Discord member since ${memberSince.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</div>` : ""}
             <div class="profile-badges">
               <span class="profile-badge profile-badge-verified">✓ Verified via Discord</span>
               ${discordBadges(user)
                 .map(([, emoji, label]) => `<span class="profile-badge profile-badge-flag" title="${label}">${emoji} ${label}</span>`)
                 .join("")}
             </div>
+            ${robloxUser
+              ? `
+            <div class="profile-divider"></div>
+            <div class="profile-roblox-header"><span>🎮 ${robloxUser.username || robloxUser.id}</span><button class="btn-link" style="margin:0" onclick="signOutRoblox()">Unlink</button></div>
+            <div class="profile-badges" id="profileRobloxBadges"></div>`
+              : ""}
             <button class="btn btn-outline btn-block" onclick="signOutDiscord()">Sign out</button>
           </div>
         </div>
       </div>`
     : `<button class="btn btn-outline" onclick="beginDiscordLogin()">Sign in</button>`;
-
-  // Roblox linking only matters once signed in with Discord (Lord access needs
-  // both), so it's only offered then — keeps the topbar uncluttered otherwise.
-  const robloxUser = typeof getRobloxUser === "function" ? getRobloxUser() : null;
-  const robloxHtml = !user
-    ? ""
-    : robloxUser
-      ? `
-      <div class="user-chip" title="Linked Roblox account">
-        <span>🎮 ${robloxUser.username || robloxUser.id}</span>
-        <button class="btn-link" style="margin:0" onclick="signOutRoblox()">Unlink</button>
-      </div>`
-      : `<button class="btn btn-outline" onclick="beginRobloxLogin()">Link Roblox</button>`;
 
   el.innerHTML = `
     <a href="index.html" class="brand"><span class="brand-icon">${HOUSE_ICONS.targaryen}</span>Dungeons &amp; Dragons</a>
@@ -73,7 +70,6 @@ const NAV_ICONS = {
     </nav>
     <div class="topbar-actions">
       ${authHtml}
-      ${robloxHtml}
       <a class="btn btn-primary" href="${DISCORD_INVITE_URL || "#"}" target="_blank" rel="noopener">Join Discord</a>
     </div>
   `;
@@ -99,6 +95,22 @@ const NAV_ICONS = {
         profileTrigger.setAttribute("aria-expanded", "false");
       }
     });
+  }
+
+  const robloxBadgesEl = document.getElementById("profileRobloxBadges");
+  if (robloxBadgesEl && robloxUser) {
+    fetch(`/api/roblox/badges/${robloxUser.id}`)
+      .then((res) => (res.ok ? res.json() : { badges: [] }))
+      .then(({ badges }) => {
+        robloxBadgesEl.innerHTML = (badges || [])
+          .slice(0, 6)
+          .map(
+            (b) =>
+              `<span class="profile-badge profile-badge-roblox" title="${b.name}">${b.iconUrl ? `<img src="${b.iconUrl}" alt="" />` : "🏅"} ${b.name}</span>`
+          )
+          .join("");
+      })
+      .catch(() => {});
   }
 
   document.body.insertAdjacentHTML(

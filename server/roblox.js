@@ -62,6 +62,26 @@ async function resolveRobloxUsername(username) {
   }
 }
 
+// Public data (no token needed) — used to show a linked account's in-game
+// badges on their profile card. Roblox's badge API doesn't allow browser
+// CORS requests, so this has to be proxied through the server.
+async function getRobloxUserBadges(userId) {
+  const res = await fetch(`https://badges.roblox.com/v1/users/${userId}/badges?limit=10&sortOrder=Desc`);
+  if (!res.ok) return [];
+  const data = await res.json();
+  const badges = data.data || [];
+  if (!badges.length) return [];
+
+  const ids = badges.map((b) => b.id).join(",");
+  const iconRes = await fetch(
+    `https://thumbnails.roblox.com/v1/badges/icons?badgeIds=${ids}&size=150x150&format=Png&isCircular=false`
+  );
+  const icons = iconRes.ok ? (await iconRes.json()).data || [] : [];
+  const iconByBadgeId = new Map(icons.map((i) => [i.targetId, i.imageUrl]));
+
+  return badges.map((b) => ({ id: b.id, name: b.displayName || b.name, iconUrl: iconByBadgeId.get(b.id) || null }));
+}
+
 function getRobloxBearerToken(req) {
   const header = req.get("x-roblox-token") || "";
   return header.trim() || null;
@@ -75,4 +95,10 @@ async function verifyRequestRobloxUserId(req) {
   return info ? info.id : null;
 }
 
-module.exports = { exchangeRobloxCode, getRobloxUserInfo, resolveRobloxUsername, verifyRequestRobloxUserId };
+module.exports = {
+  exchangeRobloxCode,
+  getRobloxUserInfo,
+  getRobloxUserBadges,
+  resolveRobloxUsername,
+  verifyRequestRobloxUserId
+};

@@ -1,7 +1,19 @@
 const express = require("express");
-const { exchangeRobloxCode, getRobloxUserInfo } = require("../roblox");
+const { exchangeRobloxCode, getRobloxUserInfo, getRobloxUserBadges } = require("../roblox");
 
 const router = express.Router();
+
+// GET /api/roblox/badges/:userId — public in-game badges for a linked
+// account's profile card. No auth required; this is all public Roblox data.
+router.get("/badges/:userId", async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.userId)) return res.status(400).json({ error: "Invalid Roblox user ID." });
+    const badges = await getRobloxUserBadges(req.params.userId);
+    res.json({ badges });
+  } catch (err) {
+    next(err);
+  }
+});
 
 // POST /api/roblox/exchange { code, redirectUri, codeVerifier } — completes the
 // PKCE authorization-code flow server-side (needs the client secret, which the

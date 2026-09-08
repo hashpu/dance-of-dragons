@@ -185,16 +185,17 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .user-chip span { font-weight: 600; }
 
 .profile-card {
+  --profile-accent: var(--red);
   position: absolute;
   top: calc(100% + 10px);
   right: 0;
-  width: 250px;
+  width: 260px;
   max-width: calc(100vw - 40px);
   background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
+  border: 1px solid color-mix(in srgb, var(--profile-accent) 35%, var(--panel-border));
+  border-radius: 10px;
   overflow: hidden;
-  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.75), 0 0 30px -18px var(--profile-accent);
   z-index: 50;
   animation: profileCardIn 0.16s ease;
 }
@@ -204,23 +205,45 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 }
 
 .profile-banner {
-  height: 64px;
+  height: 68px;
   background: linear-gradient(135deg, var(--red), #3a0f0d);
+  position: relative;
+}
+.profile-banner::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent 55%, var(--panel) 100%);
 }
 
 .profile-body { padding: 0 16px 16px; text-align: center; }
 
 .profile-avatar {
-  width: 64px;
-  height: 64px;
+  width: 68px;
+  height: 68px;
   border-radius: 50%;
   border: 3px solid var(--panel);
   display: block;
-  margin: -32px auto 10px;
+  margin: -34px auto 8px;
   background: var(--panel);
+  position: relative;
+  z-index: 1;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--profile-accent) 60%, transparent), 0 0 20px -4px var(--profile-accent);
 }
 
-.profile-name { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+.profile-name { font-weight: 700; font-size: 15px; }
+.profile-meta { font-size: 11px; color: var(--muted); margin-top: 2px; margin-bottom: 10px; }
+
+.profile-divider { height: 1px; background: var(--panel-border); margin: 2px 0 12px; }
+
+.profile-roblox-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 10px;
+}
 
 .profile-badges {
   display: flex;
@@ -230,6 +253,9 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   margin-bottom: 14px;
 }
 .profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   font-size: 11px;
   padding: 3px 9px;
   border-radius: 20px;
@@ -243,6 +269,12 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   border-color: var(--panel-border);
   color: var(--muted);
 }
+.profile-badge-roblox {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--panel-border);
+  color: var(--text);
+}
+.profile-badge-roblox img { width: 14px; height: 14px; border-radius: 2px; }
 
 .profile-card .btn-block { width: 100%; }
 

@@ -133,6 +133,17 @@ function discordAccentColorCss(user) {
   return typeof user.accentColor === "number" ? "#" + user.accentColor.toString(16).padStart(6, "0") : null;
 }
 
+// Discord IDs are snowflakes: the top bits encode the creation timestamp
+// relative to the Discord epoch (2015-01-01), so no extra API call is needed.
+function discordAccountCreatedAt(user) {
+  try {
+    const timestampMs = Number(BigInt(user.id) >> 22n) + 1420070400000;
+    return new Date(timestampMs);
+  } catch (e) {
+    return null;
+  }
+}
+
 // CSS for the banner strip on the profile card: their real banner image if
 // they have one, else their accent color as a gradient, else the site's own
 // red as a last resort so the card still looks intentional.
