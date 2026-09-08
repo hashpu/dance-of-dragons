@@ -28,16 +28,27 @@ function questionFieldHtml(q) {
 }
 
 // Questions can share an optional `section` label (e.g. "Lore Knowledge")
-// to group them under a heading instead of one flat list of fields.
+// to group them under a heading instead of one flat list of fields. Two
+// consecutive short (non-textarea) questions in the same section sit side
+// by side instead of stacking, to keep long forms from feeling endless.
 function questionsHtml(questions) {
   let lastSection = null;
-  return questions
-    .map((q) => {
-      const heading = q.section && q.section !== lastSection ? `<div class="form-section-heading">${q.section}</div>` : "";
-      lastSection = q.section || lastSection;
-      return heading + questionFieldHtml(q);
-    })
-    .join("");
+  let html = "";
+  for (let i = 0; i < questions.length; i++) {
+    const q = questions[i];
+    const heading = q.section && q.section !== lastSection ? `<div class="form-section-heading">${q.section}</div>` : "";
+    lastSection = q.section || lastSection;
+
+    const next = questions[i + 1];
+    const canPair = q.type !== "textarea" && next && next.type !== "textarea" && next.section === q.section;
+    if (canPair) {
+      html += heading + `<div class="more-grid">${questionFieldHtml(q)}${questionFieldHtml(next)}</div>`;
+      i++;
+      continue;
+    }
+    html += heading + questionFieldHtml(q);
+  }
+  return html;
 }
 
 function openApplyModal(deptKey) {
@@ -46,7 +57,7 @@ function openApplyModal(deptKey) {
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal" style="--card-color:${dept.color}">
+      <div class="modal modal-wide" style="--card-color:${dept.color}">
         <div class="modal-header">
           <div class="modal-crest">${DEPT_ICONS[dept.icon]}</div>
           <div>
@@ -56,13 +67,15 @@ function openApplyModal(deptKey) {
         </div>
 
         <div id="applyFormArea">
-          <div class="field">
-            <label>Roblox username</label>
-            <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
-          </div>
-          <div class="field">
-            <label>Discord username</label>
-            <div class="input-wrap">${DEPT_ICONS.chat}<input id="q_discord" placeholder="e.g. yourname" /></div>
+          <div class="more-grid">
+            <div class="field">
+              <label>Roblox username</label>
+              <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
+            </div>
+            <div class="field">
+              <label>Discord username</label>
+              <div class="input-wrap">${DEPT_ICONS.chat}<input id="q_discord" placeholder="e.g. yourname" /></div>
+            </div>
           </div>
           <div class="field">
             <label>Availability <span class="hint">(hours/week, timezone)</span></label>
