@@ -406,16 +406,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   text-transform: uppercase;
 }
 
-.eyebrow::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  background: var(--red);
-  box-shadow: 0 0 8px var(--red);
-  transform: rotate(45deg);
-  flex-shrink: 0;
-}
-
 .page-title {
   font-family: "Game of Thrones", "Cinzel", serif;
   font-weight: 400;
@@ -794,9 +784,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   flex-wrap: wrap;
 }
 
-/* Ornamental section divider — echoes the small rotated diamond already
-   used in .eyebrow, so a "hard cut" between two sections gets a punctuation
-   mark that matches the site's own visual language instead of a plain rule. */
+/* Section divider: a single line that fades in from both ends. */
 .ornament-divider {
   display: flex;
   align-items: center;
@@ -812,15 +800,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   background: linear-gradient(90deg, transparent, var(--panel-border));
 }
 .ornament-divider::after { background: linear-gradient(90deg, var(--panel-border), transparent); }
-.ornament-divider span {
-  width: 7px;
-  height: 7px;
-  margin: 0 14px;
-  background: var(--red);
-  box-shadow: 0 0 10px var(--red);
-  transform: rotate(45deg);
-  flex-shrink: 0;
-}
+.ornament-divider span { display: none; }
 
 /* Poll — Team Green (real green) vs Team Black (red, matching the actual
    red dragon sigil art — literal black would be invisible here anyway). */
