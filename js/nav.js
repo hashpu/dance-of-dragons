@@ -9,9 +9,10 @@ const NAV_ICONS = {
   apply: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-6 0-13 4-15 12l-1 4 4-1C16 17 20 10 20 4z"/><path d="M9.5 14.5L4 20"/></svg>`
 };
 
-(function () {
+(async function () {
   const el = document.getElementById("topbar");
   if (!el) return;
+  if (typeof consumeAuthRedirectHash === "function") await consumeAuthRedirectHash();
   const active = el.dataset.active || "";
   const links = [
     { href: "index.html", label: "Houses", icon: "houses" },

@@ -118,8 +118,8 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   display: none;
   align-items: center;
   justify-content: center;
-  width: 40px;
-  height: 40px;
+  width: 44px;
+  height: 44px;
   background: transparent;
   border: 1px solid var(--panel-border);
   border-radius: 3px;
@@ -303,7 +303,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .page-title {
   font-family: "Game of Thrones", "Cinzel", serif;
   font-weight: 400;
-  font-size: 44px;
+  font-size: clamp(32px, 8vw, 44px);
   letter-spacing: 1.5px;
   margin: 8px 0 12px;
 }
@@ -378,7 +378,9 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 
 .timeline-year-marker {
   position: sticky;
-  top: 14px;
+  /* Clears the sticky topbar (~64-68px tall) so the pill rests just below
+     it instead of sticking underneath and getting covered. */
+  top: 76px;
   z-index: 3;
   display: flex;
   justify-content: center;
@@ -617,6 +619,10 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   box-shadow: 0 20px 50px -30px rgba(0, 0, 0, 0.8);
 }
 .poll-widget:empty { display: none; }
+
+@media (max-width: 480px) {
+  .poll-widget { padding: 32px 18px 28px; }
+}
 
 .poll-title {
   font-family: "Game of Thrones", "Cinzel", serif;
@@ -1191,6 +1197,12 @@ input, select, textarea {
   font-family: inherit;
 }
 
+/* iOS Safari auto-zooms the page when a focused field's font-size is under
+   16px, so phones get a bump here while desktop keeps the tighter 14px. */
+@media (max-width: 760px) {
+  input, select, textarea { font-size: 16px; }
+}
+
 input::placeholder, textarea::placeholder { color: #6d6d70; }
 
 input[type="file"] { padding: 7px 10px; font-size: 13px; color: var(--muted); }
@@ -1207,7 +1219,7 @@ input[type="file"]::file-selector-button {
 }
 input[type="file"]::file-selector-button:hover { background: #333335; }
 
-.unlock-row input { width: 240px; }
+.unlock-row input { width: 100%; max-width: 240px; }
 
 .btn-link {
   display: block;
@@ -1416,6 +1428,17 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .node-edit svg { width: 13px; height: 13px; }
 .node-edit:hover { color: var(--text); border-color: #555; }
 
+@media (max-width: 560px) {
+  .node-edit, .node-remove {
+    width: 30px;
+    height: 30px;
+    top: -12px;
+  }
+  .node-remove { right: -12px; font-size: 15px; }
+  .node-edit { left: -12px; }
+  .node-edit svg { width: 15px; height: 15px; }
+}
+
 @keyframes nodeHighlightPulse {
   0%, 100% { box-shadow: 0 0 0 2px var(--card-color, var(--red)), 0 0 26px color-mix(in srgb, var(--card-color, var(--red)) 65%, transparent); }
   50% { box-shadow: 0 0 0 2px var(--card-color, var(--red)), 0 0 8px color-mix(in srgb, var(--card-color, var(--red)) 30%, transparent); }
@@ -1535,6 +1558,12 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 }
 @media (max-width: 760px) {
   .modal-wide { max-width: 460px; padding: 30px; }
+}
+/* Wins the cascade over the .modal-wide rule above (same specificity, but
+   this comes later in source) so wide modals actually get the smaller
+   phone padding instead of the 760px breakpoint's 30px. */
+@media (max-width: 560px) {
+  .modal-wide { padding: 22px; }
 }
 
 .modal::before {
@@ -1717,8 +1746,15 @@ input:focus, select:focus, textarea:focus {
   .more-grid { grid-template-columns: 1fr; }
 }
 
+@media (max-width: 420px) {
+  .field-clear { width: 32px; height: 32px; }
+  .field-clear svg { width: 14px; height: 14px; }
+  .avatar-field-row { flex-wrap: wrap; }
+}
+
 .modal-actions {
   display: flex;
+  flex-wrap: wrap;
   justify-content: flex-end;
   gap: 10px;
   margin-top: 22px;

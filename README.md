@@ -75,12 +75,14 @@ See `server/.env.example` for the full list. The important ones:
 ## Discord sign-in
 
 `js/auth.js` implements Discord OAuth2 (implicit grant, client-side only — no
-server session). It needs the site's own `auth-callback.html` URL registered
-as a valid OAuth2 redirect in the
-[Discord Developer Portal](https://discord.com/developers/applications) for
-this app (Discord allows multiple redirects, so this can sit alongside any
-existing one). It won't work opened as a local file — OAuth redirects require
-http/https.
+server session). It needs the site's own root URL (e.g.
+`https://your-site.onrender.com/`) registered as a valid OAuth2 redirect in
+the [Discord Developer Portal](https://discord.com/developers/applications)
+for this app (Discord allows multiple redirects, so this can sit alongside
+any existing one). The redirect always lands back at the root; `js/nav.js`
+picks the token up from there and returns the user to whichever page they
+started sign-in from. It won't work opened as a local file — OAuth redirects
+require http/https.
 
 ## Deploying
 
