@@ -40,8 +40,9 @@ const DEPARTMENTS = [
                 { id: "ideas", label: "Ideas for community events or initiatives", required: true },
                 { id: "reengage", label: "How would you re-engage a community that's gone quiet?", required: true }] },
   { key: "afl", name: "AFL Team", color: "#8b8bf5",
-    questions: [{ id: "experience", label: "Relevant experience for this team", required: true },
-                { id: "motivation", label: "What interests you about the AFL Team specifically?", required: true },
+    questions: [{ id: "experience", label: "Experience with sales, marketing, or running a shop/storefront (in Roblox or elsewhere)", required: true },
+                { id: "motivation", label: "What interests you about running the AFL Team's shop specifically?", required: true },
+                { id: "pricingScenario", label: "A new item isn't selling well. How would you reprice or promote it to turn that around?", required: true },
                 { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", required: true }] }
 ];
 

@@ -100,12 +100,13 @@ const DEPARTMENTS = [
     key: "afl",
     name: "AFL Team",
     color: "#8b8bf5",
-    icon: "star",
-    blurb: "Join the AFL team and help support its day-to-day operations.",
+    icon: "cart",
+    blurb: "Run the group's shop: pricing, promoting, and selling merch and in-game items to the community.",
     questions: [
-      { id: "experience", label: "Relevant experience for this team", type: "textarea", required: true, section: "Background" },
-      { id: "motivation", label: "What interests you about the AFL Team specifically?", type: "textarea", required: true, section: "Background" },
-      { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", type: "text", required: true, section: "Background" }
+      { id: "experience", label: "Experience with sales, marketing, or running a shop/storefront (in Roblox or elsewhere)", type: "textarea", required: true, section: "Background" },
+      { id: "motivation", label: "What interests you about running the AFL Team's shop specifically?", type: "textarea", required: true, section: "Background" },
+      { id: "pricingScenario", label: "A new item isn't selling well. How would you reprice or promote it to turn that around?", type: "textarea", required: true, section: "Selling" },
+      { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", type: "text", required: true, section: "Selling" }
     ]
   }
 ];
