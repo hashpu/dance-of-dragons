@@ -521,6 +521,40 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .rally-cta-text p { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 15px; color: var(--muted); }
 .rally-cta .btn { flex-shrink: 0; }
 
+/* Rules page: reuses .rally-tier's card look for each numbered section,
+   but stacked full-width (one per row) instead of side by side, since
+   these hold paragraphs of rule text rather than short house names. */
+.rules-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin: 24px 0 40px;
+}
+.rules-stack .rally-tier:hover { transform: none; }
+
+.rule-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 16px;
+  line-height: 1.7;
+}
+.rule-list li { position: relative; padding-left: 20px; }
+.rule-list li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 10px;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--tier-color, var(--red));
+}
+
 .page-desc {
   font-family: "Cormorant Garamond", Georgia, serif;
   font-size: 18px;
