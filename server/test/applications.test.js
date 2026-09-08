@@ -29,8 +29,6 @@ test("accepts a complete application and stores it", async () => {
     .field(
       "answers",
       JSON.stringify({
-        discordId: "123456789012345678",
-        robloxProfile: "https://www.roblox.com/users/1/profile",
         experience: "Wrote lore for a few Roblox groups before.",
         readBooks: "Yes, all five published novels.",
         viserysQuestion: "He'd promised the lords his word as king, and undoing it risked civil war either way.",

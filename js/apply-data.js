@@ -33,8 +33,6 @@ const DEPARTMENTS = [
     icon: "quill",
     blurb: "Research and write the in-universe history, houses, and storylines that give the game its world.",
     questions: [
-      { id: "discordId", label: "Discord user ID (right-click your name in Discord, Copy User ID; enable Developer Mode if you don't see that option)", type: "text", required: true, section: "Your Details" },
-      { id: "robloxProfile", label: "Roblox profile link or numeric user ID", type: "text", required: true, section: "Your Details" },
       { id: "experience", label: "What prior experience do you have with lore writing or worldbuilding?", type: "textarea", required: true, section: "Background" },
       { id: "readBooks", label: "Have you read the A Song of Ice and Fire novels? If so, which ones?", type: "text", required: true, section: "Background" },
       { id: "viserysQuestion", label: "Why did King Viserys I name Rhaenyra his heir, and why did that choice remain so contested even after he had sons?", type: "textarea", required: true, section: "Lore Knowledge" },
