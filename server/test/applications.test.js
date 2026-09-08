@@ -53,6 +53,41 @@ test("GET /api/applications requires the admin secret", async () => {
   assert.equal(res.status, 401);
 });
 
+test("DELETE /api/applications/:id requires the admin secret and removes just that ticket", async () => {
+  const created = await request
+    .post("/api/applications")
+    .field("department", "lore")
+    .field("robloxUsername", "ToDelete")
+    .field("discordUsername", "todelete")
+    .field("why", "Testing deletion")
+    .field(
+      "answers",
+      JSON.stringify({
+        experience: "N/A",
+        readBooks: "N/A",
+        viserysQuestion: "N/A",
+        dorneQuestion: "N/A",
+        northQuestion: "N/A",
+        acDescription: "N/A",
+        creativeStory: "N/A"
+      })
+    );
+  assert.equal(created.status, 201);
+  const id = created.body.id;
+
+  const noAuth = await request.delete(`/api/applications/${id}`);
+  assert.equal(noAuth.status, 401);
+
+  const missing = await request.delete("/api/applications/999999").set("x-admin-secret", "test-secret");
+  assert.equal(missing.status, 404);
+
+  const del = await request.delete(`/api/applications/${id}`).set("x-admin-secret", "test-secret");
+  assert.equal(del.status, 200);
+
+  const list = await request.get("/api/applications").set("x-admin-secret", "test-secret");
+  assert.ok(!list.body.some((a) => a.id === id));
+});
+
 test("rejects an unknown department", async () => {
   const res = await request
     .post("/api/applications")

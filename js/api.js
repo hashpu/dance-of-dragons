@@ -52,6 +52,10 @@ const Api = {
   },
   resetAll: (secret) => apiFetch("/admin/reset", { method: "POST", headers: { "x-admin-secret": secret } }),
   seedMissingHouses: (secret) => apiFetch("/admin/seed-missing", { method: "POST", headers: { "x-admin-secret": secret } }),
+  adminGetHouses: (secret) => apiFetch("/admin/houses", { headers: { "x-admin-secret": secret } }),
+  adminDeleteHouse: (slug, secret) => apiFetch(`/admin/houses/${slug}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
+  getApplications: (secret) => apiFetch("/applications", { headers: { "x-admin-secret": secret } }),
+  deleteApplication: (id, secret) => apiFetch(`/applications/${id}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
   setLordRole: (slug, roleId, robloxUsername, secret) =>
     apiFetch(`/houses/${slug}/lord-role`, {
       method: "POST",

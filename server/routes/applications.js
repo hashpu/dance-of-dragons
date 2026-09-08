@@ -134,4 +134,16 @@ router.get("/", requireAdmin, async (req, res, next) => {
   }
 });
 
+// DELETE /api/applications/:id — admin only, dismisses one reviewed ticket.
+router.delete("/:id", requireAdmin, async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: "Invalid application ID." });
+    const { rows } = await pool.query("DELETE FROM applications WHERE id = $1 RETURNING id", [req.params.id]);
+    if (!rows[0]) return res.status(404).json({ error: "Application not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 module.exports = router;

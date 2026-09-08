@@ -220,6 +220,21 @@ test("admin reset requires the correct secret and restores default data", async 
   assert.equal(unlocked.body.members.length, 5);
 });
 
+test("GET /api/admin/houses gives the admin lock/lord status for every house, but never a password", async () => {
+  const noAuth = await request.get("/api/admin/houses");
+  assert.equal(noAuth.status, 401);
+
+  const res = await request.get("/api/admin/houses").set("x-admin-secret", "test-secret");
+  assert.equal(res.status, 200);
+  assert.equal(res.body.length, 28);
+
+  const targaryen = res.body.find((h) => h.slug === "targaryen");
+  assert.equal(targaryen.locked, true); // every house starts locked in the default seed
+  assert.equal(targaryen.hasPassword, true);
+  assert.equal(targaryen.password, undefined); // never exposed, even to the admin — only bcrypt hashes exist
+  assert.equal(targaryen.passwordHash, undefined);
+});
+
 test("seed-missing adds only houses that don't exist yet, and never touches an existing house's members", async () => {
   const noAuth = await request.post("/api/admin/seed-missing");
   assert.equal(noAuth.status, 401);
