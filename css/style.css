@@ -340,35 +340,100 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   max-width: 620px;
 }
 
-/* Timeline */
-.timeline { position: relative; padding-left: 36px; max-width: 640px; }
-.timeline::before {
+/* Timeline — alternating left/right cards along a central spine, with a
+   type icon (death/battle/event) in each dot and a year marker whenever
+   the year changes. Collapses to a single left-aligned column on mobile. */
+.timeline-spine { position: relative; max-width: 920px; margin: 0 auto; }
+.timeline-spine::before {
   content: "";
   position: absolute;
-  left: 7px;
-  top: 4px;
-  bottom: 4px;
+  left: 50%;
+  top: 6px;
+  bottom: 6px;
   width: 2px;
-  background: var(--panel-border);
+  background: linear-gradient(180deg, transparent, var(--panel-border) 3%, var(--panel-border) 97%, transparent);
+  transform: translateX(-50%);
+}
+@media (max-width: 760px) {
+  .timeline-spine::before { left: 17px; }
 }
 
-.timeline-item { position: relative; padding-bottom: 28px; }
-.timeline-item:last-child { padding-bottom: 0; }
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s ease; }
+.timeline-row-left.reveal { transform: translateX(-24px); }
+.timeline-row-right.reveal { transform: translateX(24px); }
 .reveal.revealed { opacity: 1; transform: translateY(0); }
+.timeline-row.reveal.revealed { transform: translateX(0); }
 @media (prefers-reduced-motion: reduce) {
-  .reveal, .reveal.revealed { opacity: 1; transform: none; transition: none; }
+  .reveal, .reveal.revealed, .timeline-row-left.reveal, .timeline-row-right.reveal { opacity: 1; transform: none; transition: none; }
+}
+
+.timeline-year-marker {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin: 40px 0 30px;
+}
+.timeline-year-marker:first-child { margin-top: 0; }
+.timeline-year-marker span {
+  position: relative;
+  z-index: 1;
+  background: var(--bg);
+  border: 1px solid var(--panel-border);
+  padding: 7px 24px;
+  border-radius: 20px;
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 13px;
+  letter-spacing: 2px;
+  color: var(--text);
+  box-shadow: 0 0 24px -10px rgba(224, 72, 62, 0.4);
+}
+@media (max-width: 760px) {
+  .timeline-year-marker { justify-content: flex-start; }
+  .timeline-year-marker span { margin-left: 0; }
+}
+
+.timeline-row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1fr 56px 1fr;
+  align-items: start;
+  margin-bottom: 30px;
+}
+.timeline-row:last-child { margin-bottom: 0; }
+@media (max-width: 760px) {
+  .timeline-row { grid-template-columns: 34px 1fr; }
 }
 
 .timeline-dot {
-  position: absolute;
-  left: -36px;
-  top: 3px;
-  width: 16px;
-  height: 16px;
+  grid-column: 2;
+  justify-self: center;
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
   background: var(--bg);
-  border: 3px solid var(--tag-color, var(--red));
+  border: 2px solid var(--tag-color, var(--red));
+  color: var(--tag-color, var(--red));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 0 5px var(--bg), 0 0 18px -4px var(--tag-color, var(--red));
+  z-index: 1;
+}
+.timeline-dot svg { width: 16px; height: 16px; }
+@media (max-width: 760px) {
+  .timeline-dot { grid-column: 1; width: 30px; height: 30px; }
+  .timeline-dot svg { width: 14px; height: 14px; }
+}
+
+.timeline-row-left .timeline-card { grid-column: 1; text-align: right; }
+.timeline-row-right .timeline-card { grid-column: 3; text-align: left; }
+@media (max-width: 760px) {
+  .timeline-row-left .timeline-card, .timeline-row-right .timeline-card {
+    grid-column: 2;
+    text-align: left;
+    padding-left: 16px;
+  }
 }
 
 .timeline-card {
@@ -402,15 +467,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   box-shadow: 0 16px 32px -18px var(--tag-color, var(--red));
 }
 .timeline-card:hover::after { opacity: 1; }
-
-.timeline-year {
-  font-family: "Cinzel", serif;
-  font-weight: 700;
-  font-size: 12px;
-  letter-spacing: 1px;
-  color: var(--tag-color, var(--red));
-  margin-bottom: 6px;
-}
 
 .timeline-title { font-family: "Cinzel", serif; font-size: 18px; font-weight: 700; margin-bottom: 8px; letter-spacing: 0.3px; }
 .timeline-desc {
