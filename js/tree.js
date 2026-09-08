@@ -165,7 +165,7 @@ function nodeHtml(node) {
   const role = node.role ? `<div class="node-role">${node.role}</div>` : `<div class="node-role">&nbsp;</div>`;
   const nameTitle = node.note ? ` title="${escapeAttr(node.note)}"` : "";
   const externalParentHtml = node.externalParent
-    ? `<a class="node-external-parent" href="house.html?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · House ${node.externalParent.houseName}</a>`
+    ? `<a class="node-external-parent" href="/house?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · House ${node.externalParent.houseName}</a>`
     : "";
   const linksHtml = `
     ${node.buildLink ? `<a class="node-build-link" href="${escapeAttr(node.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
@@ -659,5 +659,5 @@ document.getElementById("treeArea").innerHTML = '<div class="tree-panel"><div cl
 
 refresh().catch(() => {
   document.querySelector("main").innerHTML =
-    '<p style="color:#9a9a9e">House not found. <a href="index.html" style="color:#e0483e">Go back</a>.</p>';
+    '<p style="color:#9a9a9e">House not found. <a href="/" style="color:#e0483e">Go back</a>.</p>';
 });

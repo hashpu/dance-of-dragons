@@ -25,9 +25,19 @@ app.use("/api/votes", votesRouter);
 
 app.get("/api/health", (req, res) => res.json({ ok: true }));
 
+// Clean URLs: anyone hitting a raw *.html path (an old link, a bookmark, or
+// just typing it) gets redirected to the extension-less version, which is
+// what every page now links to internally. index.html goes to the bare root.
+app.get(/\.html$/, (req, res) => {
+  const clean = req.path.replace(/\.html$/, "");
+  const target = clean === "/index" ? "/" : clean;
+  res.redirect(301, target + req.url.slice(req.path.length));
+});
+
 // Serve the static frontend from the project root, one origin for everything.
+// extensions:["html"] lets /admin resolve to admin.html on disk.
 const ROOT = path.join(__dirname, "..");
-app.use(express.static(ROOT));
+app.use(express.static(ROOT, { extensions: ["html"] }));
 
 // Nothing above matched. An unknown API route gets a JSON 404 (so API
 // consumers don't have to parse HTML); anything else gets the themed page.

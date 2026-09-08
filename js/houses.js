@@ -83,7 +83,7 @@ async function runSearch(query) {
           const fallback = generatedAvatar(member.name, house.color);
           const avatar = member.avatarUrl || fallback;
           return `
-          <a class="member-hit" href="house.html?h=${house.slug}&highlight=${member.id}">
+          <a class="member-hit" href="/house?h=${house.slug}&highlight=${member.id}">
             <img src="${avatar}" alt="" onerror="this.onerror=null;this.src='${fallback}'" />
             <div>
               <div class="member-hit-name">${member.name}${member.role ? ` · ${member.role}` : ""}</div>

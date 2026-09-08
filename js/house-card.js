@@ -10,6 +10,6 @@ function houseCardHtml(h) {
     <h3 class="house-name">${h.name}</h3>
     <p class="house-desc">${h.description}</p>
     ${badge}
-    <a class="btn btn-primary btn-block" href="house.html?h=${h.slug}">View tree →</a>
+    <a class="btn btn-primary btn-block" href="/house?h=${h.slug}">View tree →</a>
   </div>`;
 }

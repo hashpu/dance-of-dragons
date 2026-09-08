@@ -41,7 +41,7 @@
       tokenExpiresAt: data.expiresIn ? Date.now() + data.expiresIn * 1000 : null
     });
 
-    const returnTo = sessionStorage.getItem("postAuthReturnTo") || "index.html";
+    const returnTo = sessionStorage.getItem("postAuthReturnTo") || "/";
     sessionStorage.removeItem("postAuthReturnTo");
     location.href = returnTo;
   } catch (e) {
