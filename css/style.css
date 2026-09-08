@@ -1363,22 +1363,29 @@ div.poll-team:hover { transform: none; }
   max-width: 640px;
 }
 
+.admin-houses-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 12px;
+}
+
 .admin-house-row {
   display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 14px 18px;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 4px;
-  margin-bottom: 10px;
 }
-.admin-house-main { min-width: 140px; font-weight: 600; }
-.admin-house-status { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
-.admin-house-actions { display: flex; gap: 16px; flex-wrap: wrap; }
+.admin-house-main { font-weight: 600; }
+.admin-house-status { display: flex; flex-wrap: wrap; gap: 8px; }
+.admin-house-actions { display: flex; gap: 16px; flex-wrap: wrap; padding-top: 8px; border-top: 1px solid var(--panel-border); }
 .admin-danger-link { color: var(--red); }
+
+@media (max-width: 700px) {
+  .admin-houses-grid { grid-template-columns: 1fr; }
+}
 
 .status-pill {
   display: inline-flex;
@@ -1444,7 +1451,6 @@ div.poll-team:hover { transform: none; }
 .ticket-image { max-width: 220px; border-radius: 4px; margin-top: 14px; display: block; }
 
 @media (max-width: 560px) {
-  .admin-house-row { flex-direction: column; align-items: stretch; }
   .ticket-summary { gap: 6px 12px; }
   .ticket-date { order: 3; width: 100%; }
 }

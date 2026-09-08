@@ -56,7 +56,7 @@ async function attemptUnlock(secret) {
 
 async function refreshHouses() {
   const houses = await Api.adminGetHouses(adminSecret);
-  document.getElementById("adminHousesList").innerHTML = houses.map(houseAdminRowHtml).join("");
+  document.getElementById("adminHousesList").innerHTML = `<div class="admin-houses-grid">${houses.map(houseAdminRowHtml).join("")}</div>`;
   bindHouseActions();
 }
 
@@ -203,7 +203,7 @@ function renderDashboard(houses, applications) {
         whether one is set. Clearing a lock removes it entirely; the house can then be locked again with
         a new password.
       </p>
-      <div id="adminHousesList">${houses.map(houseAdminRowHtml).join("")}</div>
+      <div id="adminHousesList"><div class="admin-houses-grid">${houses.map(houseAdminRowHtml).join("")}</div></div>
     </section>
 
     <section class="admin-section">
