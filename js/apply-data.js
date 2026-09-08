@@ -11,8 +11,10 @@ const DEPARTMENTS = [
     icon: "wrench",
     blurb: "Build and script the systems that power the game: combat, UI, tools, and more.",
     questions: [
-      { id: "experience", label: "Scripting experience: languages/tools, how long, notable projects", type: "textarea", required: true },
-      { id: "portfolio", label: "Portfolio / GitHub / example script link", type: "text", placeholder: "https://...", required: false }
+      { id: "experience", label: "Scripting experience: languages/tools, how long, notable projects", type: "textarea", required: true, section: "Background" },
+      { id: "portfolio", label: "Portfolio / GitHub / example script link", type: "text", placeholder: "https://...", required: false, section: "Background" },
+      { id: "languages", label: "Which languages and tools are you comfortable with? (Lua/Luau, Roblox Studio, Git, etc.)", type: "text", required: true, section: "Technical" },
+      { id: "debugScenario", label: "A script is causing lag for players in a busy server. How would you go about diagnosing and fixing it?", type: "textarea", required: true, section: "Technical" }
     ]
   },
   {
@@ -22,8 +24,10 @@ const DEPARTMENTS = [
     icon: "sword",
     blurb: "Plan and run large-scale in-game battles and events, and help balance combat systems.",
     questions: [
-      { id: "experience", label: "Experience hosting or leading large in-game battles/events", type: "textarea", required: true },
-      { id: "combatKnowledge", label: "Your understanding of the group's combat or military systems", type: "textarea", required: true }
+      { id: "experience", label: "Experience hosting or leading large in-game battles/events", type: "textarea", required: true, section: "Background" },
+      { id: "combatKnowledge", label: "Your understanding of the group's combat or military systems", type: "textarea", required: true, section: "Background" },
+      { id: "battleDesign", label: "How would you design a large-scale battle event so it stays fair and fun for both sides?", type: "textarea", required: true, section: "Combat Design" },
+      { id: "disputeHandling", label: "A player disputes a battle's outcome, claiming they were killed unfairly. How do you handle it?", type: "textarea", required: true, section: "Combat Design" }
     ]
   },
   {
@@ -49,8 +53,10 @@ const DEPARTMENTS = [
     icon: "globe",
     blurb: "Represent and grow the community across different regions and languages.",
     questions: [
-      { id: "regionLang", label: "Region & languages you speak", type: "text", required: true },
-      { id: "experience", label: "Experience managing a regional community or server", type: "textarea", required: true }
+      { id: "regionLang", label: "Region & languages you speak", type: "text", required: true, section: "Background" },
+      { id: "experience", label: "Experience managing a regional community or server", type: "textarea", required: true, section: "Background" },
+      { id: "growthPlan", label: "One of your assigned regions has gone quiet. What would you do to re-engage it?", type: "textarea", required: true, section: "Growing the Region" },
+      { id: "conflict", label: "How would you resolve a disagreement between two active members from your region?", type: "textarea", required: true, section: "Growing the Region" }
     ]
   },
   {
@@ -60,8 +66,9 @@ const DEPARTMENTS = [
     icon: "camera",
     blurb: "Create thumbnails, trailers, GFX, and other visual content for the group.",
     questions: [
-      { id: "software", label: "Software you use (Blender, Photoshop, Premiere, etc.)", type: "text", required: true },
-      { id: "portfolio", label: "Portfolio / example work link", type: "text", placeholder: "https://...", required: true }
+      { id: "software", label: "Software you use (Blender, Photoshop, Premiere, etc.)", type: "text", required: true, section: "Background" },
+      { id: "portfolio", label: "Portfolio / example work link", type: "text", placeholder: "https://...", required: true, section: "Background" },
+      { id: "process", label: "Walk through how you'd approach making a thumbnail or trailer meant to grab attention fast.", type: "textarea", required: true, section: "Creative Process" }
     ]
   },
   {
@@ -71,8 +78,10 @@ const DEPARTMENTS = [
     icon: "shield",
     blurb: "Keep the community safe and the rules enforced across our servers and game.",
     questions: [
-      { id: "modExperience", label: "Prior moderation experience (Discord/Roblox/other)", type: "textarea", required: true },
-      { id: "scenario", label: "How would you handle a member breaking rules but claiming it was a joke?", type: "textarea", required: true }
+      { id: "modExperience", label: "Prior moderation experience (Discord/Roblox/other)", type: "textarea", required: true, section: "Background" },
+      { id: "scenario", label: "How would you handle a member breaking rules but claiming it was a joke?", type: "textarea", required: true, section: "Judgment Calls" },
+      { id: "friendScenario", label: "A close friend of yours breaks a rule. How do you handle it?", type: "textarea", required: true, section: "Judgment Calls" },
+      { id: "disagreement", label: "You disagree with another moderator's decision, made publicly. What do you do?", type: "textarea", required: true, section: "Judgment Calls" }
     ]
   },
   {
@@ -82,8 +91,9 @@ const DEPARTMENTS = [
     icon: "megaphone",
     blurb: "Plan events, contests, and initiatives that keep the community active and welcoming.",
     questions: [
-      { id: "ideas", label: "Ideas for community events or initiatives", type: "textarea", required: true },
-      { id: "eventExperience", label: "Experience organizing events or contests", type: "textarea", required: false }
+      { id: "eventExperience", label: "Experience organizing events or contests", type: "textarea", required: false, section: "Background" },
+      { id: "ideas", label: "Ideas for community events or initiatives", type: "textarea", required: true, section: "Ideas" },
+      { id: "reengage", label: "How would you re-engage a community that's gone quiet?", type: "textarea", required: true, section: "Ideas" }
     ]
   },
   {
@@ -93,8 +103,9 @@ const DEPARTMENTS = [
     icon: "star",
     blurb: "Join the AFL team and help support its day-to-day operations.",
     questions: [
-      { id: "experience", label: "Relevant experience for this team", type: "textarea", required: true },
-      { id: "motivation", label: "What interests you about the AFL Team specifically?", type: "textarea", required: true }
+      { id: "experience", label: "Relevant experience for this team", type: "textarea", required: true, section: "Background" },
+      { id: "motivation", label: "What interests you about the AFL Team specifically?", type: "textarea", required: true, section: "Background" },
+      { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", type: "text", required: true, section: "Background" }
     ]
   }
 ];
