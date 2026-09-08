@@ -55,6 +55,9 @@ async function consumeAuthRedirectHash() {
       username: me.username,
       discriminator: me.discriminator,
       avatar: me.avatar,
+      banner: me.banner,
+      accentColor: me.accent_color,
+      publicFlags: me.public_flags || 0,
       accessToken: token,
       tokenExpiresAt: expiresIn ? Date.now() + expiresIn * 1000 : null
     });
@@ -118,4 +121,47 @@ function discordAvatarUrl(user) {
   }
   const idx = user.discriminator && user.discriminator !== "0" ? Number(user.discriminator) % 5 : 0;
   return `https://cdn.discordapp.com/embed/avatars/${idx}.png`;
+}
+
+function discordBannerUrl(user) {
+  if (!user.banner) return null;
+  const ext = user.banner.startsWith("a_") ? "gif" : "png";
+  return `https://cdn.discordapp.com/banners/${user.id}/${user.banner}.${ext}?size=480`;
+}
+
+function discordAccentColorCss(user) {
+  return typeof user.accentColor === "number" ? "#" + user.accentColor.toString(16).padStart(6, "0") : null;
+}
+
+// CSS for the banner strip on the profile card: their real banner image if
+// they have one, else their accent color as a gradient, else the site's own
+// red as a last resort so the card still looks intentional.
+function discordProfileBannerCss(user) {
+  const bannerUrl = discordBannerUrl(user);
+  if (bannerUrl) return `background-image:url('${bannerUrl}'); background-size:cover; background-position:center;`;
+  const accent = discordAccentColorCss(user);
+  if (accent) return `background:linear-gradient(135deg, ${accent}, #000);`;
+  return "";
+}
+
+// Only Discord's small set of special-status public flags (Nitro/boosting
+// aren't part of this bitfield and can't be shown from the identify scope).
+const DISCORD_BADGE_FLAGS = [
+  [1 << 0, "🛡️", "Discord Staff"],
+  [1 << 1, "🤝", "Partnered Server Owner"],
+  [1 << 2, "🎉", "HypeSquad Events"],
+  [1 << 3, "🐛", "Bug Hunter"],
+  [1 << 6, "💪", "HypeSquad Bravery"],
+  [1 << 7, "🧠", "HypeSquad Brilliance"],
+  [1 << 8, "⚖️", "HypeSquad Balance"],
+  [1 << 9, "🌱", "Early Supporter"],
+  [1 << 14, "🐜", "Bug Hunter II"],
+  [1 << 17, "🤖", "Early Verified Bot Developer"],
+  [1 << 18, "🛠️", "Moderator Programs Alumni"],
+  [1 << 22, "💻", "Active Developer"]
+];
+
+function discordBadges(user) {
+  const flags = user.publicFlags || 0;
+  return DISCORD_BADGE_FLAGS.filter(([bit]) => (flags & bit) !== 0);
 }

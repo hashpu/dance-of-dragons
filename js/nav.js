@@ -25,10 +25,25 @@ const NAV_ICONS = {
   const user = typeof getDiscordUser === "function" ? getDiscordUser() : null;
   const authHtml = user
     ? `
-      <div class="user-chip">
-        <img src="${discordAvatarUrl(user)}" alt="" />
-        <span>${user.username}</span>
-        <button class="btn-link" style="margin:0" onclick="signOutDiscord()">Sign out</button>
+      <div class="profile-menu" id="profileMenu">
+        <button class="user-chip" id="profileTrigger" type="button" aria-expanded="false">
+          <img src="${discordAvatarUrl(user)}" alt="" />
+          <span>${user.username}</span>
+        </button>
+        <div class="profile-card" id="profileCard" hidden>
+          <div class="profile-banner" style="${discordProfileBannerCss(user)}"></div>
+          <div class="profile-body">
+            <img class="profile-avatar" src="${discordAvatarUrl(user)}" alt="" />
+            <div class="profile-name">${user.username}</div>
+            <div class="profile-badges">
+              <span class="profile-badge profile-badge-verified">✓ Verified via Discord</span>
+              ${discordBadges(user)
+                .map(([, emoji, label]) => `<span class="profile-badge profile-badge-flag" title="${label}">${emoji} ${label}</span>`)
+                .join("")}
+            </div>
+            <button class="btn btn-outline btn-block" onclick="signOutDiscord()">Sign out</button>
+          </div>
+        </div>
       </div>`
     : `<button class="btn btn-outline" onclick="beginDiscordLogin()">Sign in</button>`;
 
@@ -68,6 +83,23 @@ const NAV_ICONS = {
     const isOpen = el.classList.toggle("menu-open");
     toggle.setAttribute("aria-expanded", String(isOpen));
   });
+
+  const profileTrigger = document.getElementById("profileTrigger");
+  if (profileTrigger) {
+    const profileCard = document.getElementById("profileCard");
+    profileTrigger.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const isOpen = profileCard.hidden;
+      profileCard.hidden = !isOpen;
+      profileTrigger.setAttribute("aria-expanded", String(isOpen));
+    });
+    document.addEventListener("click", (e) => {
+      if (!profileCard.hidden && !e.target.closest("#profileMenu")) {
+        profileCard.hidden = true;
+        profileTrigger.setAttribute("aria-expanded", "false");
+      }
+    });
+  }
 
   document.body.insertAdjacentHTML(
     "beforeend",

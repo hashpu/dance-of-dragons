@@ -165,14 +165,86 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   flex-shrink: 0;
 }
 
+.profile-menu { position: relative; }
+
 .user-chip {
   display: flex;
   align-items: center;
   gap: 8px;
   font-size: 13px;
+  background: transparent;
+  border: none;
+  color: var(--text);
+  font-family: inherit;
+  cursor: pointer;
+  padding: 4px 6px;
+  border-radius: 4px;
 }
+.user-chip:hover { background: rgba(255, 255, 255, 0.06); }
 .user-chip img { width: 26px; height: 26px; border-radius: 50%; }
 .user-chip span { font-weight: 600; }
+
+.profile-card {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  width: 250px;
+  max-width: calc(100vw - 40px);
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 16px 40px -14px rgba(0, 0, 0, 0.75);
+  z-index: 50;
+  animation: profileCardIn 0.16s ease;
+}
+@keyframes profileCardIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: none; }
+}
+
+.profile-banner {
+  height: 64px;
+  background: linear-gradient(135deg, var(--red), #3a0f0d);
+}
+
+.profile-body { padding: 0 16px 16px; text-align: center; }
+
+.profile-avatar {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 3px solid var(--panel);
+  display: block;
+  margin: -32px auto 10px;
+  background: var(--panel);
+}
+
+.profile-name { font-weight: 700; font-size: 15px; margin-bottom: 10px; }
+
+.profile-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+.profile-badge {
+  font-size: 11px;
+  padding: 3px 9px;
+  border-radius: 20px;
+  background: rgba(224, 72, 62, 0.14);
+  border: 1px solid rgba(224, 72, 62, 0.4);
+  color: var(--red);
+  white-space: nowrap;
+}
+.profile-badge-flag {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: var(--panel-border);
+  color: var(--muted);
+}
+
+.profile-card .btn-block { width: 100%; }
 
 .brand-icon {
   width: 22px;
@@ -264,7 +336,8 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
     margin-top: 14px;
   }
   .topbar-actions .btn { width: 100%; text-align: center; }
-  .user-chip { justify-content: space-between; }
+  .user-chip { width: 100%; justify-content: space-between; }
+  .profile-card { right: auto; left: 0; }
 }
 
 .container {
