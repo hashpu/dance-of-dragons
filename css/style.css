@@ -530,29 +530,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   margin-bottom: 36px;
 }
 
-/* Factions */
-.faction-section { margin-bottom: 48px; }
-.faction-header {
-  border-left: 3px solid var(--card-color, var(--red));
-  padding-left: 16px;
-  margin-bottom: 20px;
-}
-.faction-name {
-  font-family: "Cinzel", serif;
-  font-weight: 700;
-  font-size: 20px;
-  color: var(--card-color, var(--red));
-  letter-spacing: 0.5px;
-}
-.faction-blurb {
-  font-family: "Cormorant Garamond", Georgia, serif;
-  color: var(--muted);
-  font-size: 17px;
-  line-height: 1.6;
-  margin: 4px 0 0;
-  max-width: 620px;
-}
-
 /* Timeline — alternating left/right cards along a central spine, with a
    type icon (death/battle/event) in each dot and a sticky year marker per
    group of events. Collapses to a single left-aligned column on mobile. */
@@ -575,6 +552,30 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 }
 @media (max-width: 760px) {
   .timeline-spine::before { left: 17px; }
+}
+
+.timeline-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px 20px;
+  margin: -10px 0 34px;
+}
+.timeline-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.timeline-legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 8px currentColor;
 }
 
 .timeline-year-group { margin-top: 44px; }
@@ -824,6 +825,22 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   gap: 14px;
   flex-wrap: wrap;
 }
+
+.notfound-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px 24px;
+  margin-top: 26px;
+}
+.notfound-links a {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: 0.3px;
+  transition: color 0.15s;
+}
+.notfound-links a:hover { color: var(--text); }
 
 /* Section divider: a single line that fades in from both ends. */
 .ornament-divider {
@@ -1513,6 +1530,31 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   text-align: center;
   color: var(--muted);
   padding: 40px 0;
+}
+
+.success-state {
+  text-align: center;
+  padding: 26px 10px 6px;
+}
+.success-icon {
+  width: 52px;
+  height: 52px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  background: rgba(62, 207, 142, 0.12);
+  border: 1px solid rgba(62, 207, 142, 0.4);
+  color: var(--green);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.success-icon svg { width: 52%; height: 52%; }
+.success-state h3 { margin: 0 0 8px; font-size: 20px; }
+.success-state p {
+  font-family: "Cormorant Garamond", Georgia, serif;
+  font-size: 17px;
+  color: var(--muted);
+  margin: 0;
 }
 
 /* Pure-CSS org chart */

@@ -757,7 +757,7 @@ async function submitMember() {
   }
 }
 
-document.getElementById("treeArea").innerHTML = '<div class="skeleton-line">Loading house…</div>';
+document.getElementById("treeArea").innerHTML = '<div class="tree-panel"><div class="skeleton-line">Loading house…</div></div>';
 
 refresh().catch(() => {
   document.querySelector("main").innerHTML =

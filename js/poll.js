@@ -45,11 +45,19 @@ async function renderPoll() {
   const el = document.getElementById("pollWidget");
   if (!el) return;
 
+  el.innerHTML = `
+    <div class="poll-header">
+      <h2 class="poll-title">Cast Your Vote</h2>
+      <p class="poll-subtitle">Tallying the realm's votes…</p>
+    </div>
+    <div class="skeleton-card" style="height:150px"></div>
+  `;
+
   let data;
   try {
     data = await Api.getVotes();
   } catch (e) {
-    el.hidden = true;
+    el.innerHTML = `<p class="empty-state">Couldn't load the vote tally right now. Try refreshing the page.</p>`;
     return;
   }
 

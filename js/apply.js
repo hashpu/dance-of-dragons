@@ -143,8 +143,10 @@ function closeModal() {
 
 function showSuccess(dept) {
   document.getElementById("applyFormArea").innerHTML = `
-    <div class="empty-tree" style="padding:30px 0">
-      Application sent! A ${dept.name} recruiter will follow up with you on Discord.
+    <div class="success-state">
+      <div class="success-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg></div>
+      <h3>Application sent</h3>
+      <p>A ${dept.name} recruiter will follow up with you on Discord.</p>
     </div>
     <div class="modal-actions">
       <button class="btn btn-primary" onclick="closeModal()">Done</button>

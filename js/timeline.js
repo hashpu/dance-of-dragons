@@ -55,6 +55,13 @@ const groupsHtml = groups
   })
   .join("");
 
+document.getElementById("timelineLegend").innerHTML = ["black", "green", "neutral"]
+  .map(
+    (tag) =>
+      `<span class="timeline-legend-item"><span class="timeline-legend-dot" style="background:${TAG_COLORS[tag]}; color:${TAG_COLORS[tag]}"></span>${TAG_LABELS[tag]}</span>`
+  )
+  .join("");
+
 document.getElementById("timelineList").innerHTML = groupsHtml;
 
 const revealItems = document.querySelectorAll(".timeline-row");
