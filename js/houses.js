@@ -64,7 +64,7 @@ async function runSearch(query) {
   const matchingHouses = houses.filter((h) => matchesHouse(h, q));
   grid.innerHTML = matchingHouses.length
     ? matchingHouses.map(houseCardHtml).join("")
-    : `<p class="page-desc" style="grid-column:1/-1">No houses match "${query}".</p>`;
+    : `<p class="empty-state">No houses match "${query}".</p>`;
 
   const memberHits = memberIndex.filter(
     ({ member }) => member.name.toLowerCase().includes(q) || (member.role || "").toLowerCase().includes(q)

@@ -23,8 +23,13 @@ function renderHeader() {
 function renderAdminTools() {
   const el = document.getElementById("adminTools");
   el.innerHTML = `
-    <button class="btn-link" id="lordDiscordBtn" style="margin:0 0 8px">Assign this house's Lord by Discord ID (admin)</button>
-    <button class="btn-link" id="lordRoleBtn" style="margin:0 0 22px">Assign this house's Lord by Discord role + Roblox (admin)</button>
+    <details class="admin-tools">
+      <summary><span class="chev">${FIELD_ICONS.chevronRight}</span> Admin tools</summary>
+      <div class="admin-tools-actions">
+        <button class="btn-link" id="lordDiscordBtn">Assign this house's Lord by Discord ID</button>
+        <button class="btn-link" id="lordRoleBtn">Assign this house's Lord by Discord role + Roblox</button>
+      </div>
+    </details>
   `;
   document.getElementById("lordDiscordBtn").onclick = async () => {
     const secret = await Dialog.prompt({

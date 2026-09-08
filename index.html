@@ -21,9 +21,20 @@
   <main class="container">
     <section class="hero">
       <div class="hero-content">
+        <div class="eyebrow" style="justify-content:center">A Fan Chronicle</div>
         <h1 class="hero-title">Dungeons &amp; <span>Dragons</span></h1>
+        <p class="hero-sub">
+          Every Great House of the Seven Kingdoms, drawn into the war for the Iron Throne. Explore
+          family trees, crown orders, and the history of the Dance itself.
+        </p>
+        <div class="hero-actions">
+          <a href="#houseGrid" class="btn btn-primary">Explore the Houses</a>
+          <a href="timeline.html" class="btn btn-outline">Read the Timeline</a>
+        </div>
       </div>
     </section>
+
+    <div class="ornament-divider" aria-hidden="true"><span></span></div>
 
     <h1 class="page-title">Houses</h1>
     <p class="page-desc">
@@ -42,10 +53,13 @@
     <div id="searchResults"></div>
     <div class="house-grid" id="houseGrid"></div>
 
-    <div style="margin-top:40px; display:flex; gap:20px; flex-wrap:wrap">
-      <button class="btn-link" id="seedMissingBtn">Add any new houses (safe, doesn't touch existing data)</button>
-      <button class="btn-link" id="resetAllBtn">Reset all house data to defaults</button>
-    </div>
+    <details class="admin-tools">
+      <summary><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span> Admin tools</summary>
+      <div class="admin-tools-actions">
+        <button class="btn-link" id="seedMissingBtn">Add any new houses (safe, doesn't touch existing data)</button>
+        <button class="btn-link" id="resetAllBtn">Reset all house data to defaults</button>
+      </div>
+    </details>
   </main>
 
   <script src="js/api.js"></script>
