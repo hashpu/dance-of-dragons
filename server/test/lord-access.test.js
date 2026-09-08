@@ -29,7 +29,7 @@ function mockNetwork({ discordTokens = {}, robloxTokens = {}, robloxUsernames = 
     if (urlStr === "https://discord.com/api/users/@me") {
       const entry = discordTokens[authHeader.replace("Bearer ", "")];
       if (!entry) return { ok: false, status: 401 };
-      return { ok: true, json: async () => ({ id: entry.userId }) };
+      return { ok: true, json: async () => ({ id: entry.userId, username: entry.username }) };
     }
     if (urlStr.includes("discord.com") && urlStr.includes("/guilds/") && urlStr.includes("/members/")) {
       assert.equal(authHeader, `Bot ${process.env.DISCORD_BOT_TOKEN}`);
@@ -198,4 +198,36 @@ test("forgot-password is admin-only now — even a fully verified Lord can't use
 
   const check = await request.get("/api/houses/stark");
   assert.equal(check.body.locked, false);
+});
+
+test("a Discord account listed in OWNER_DISCORD_USER_IDS gets full owner access with no secret at all", async () => {
+  process.env.OWNER_DISCORD_USER_IDS = "owner-discord-id-1, owner-discord-id-2";
+  mockNetwork({
+    discordTokens: {
+      "owner-token": { userId: "owner-discord-id-1", username: "TheRealOwner" },
+      "regular-token": { userId: "some-other-user", username: "JustSomeone" }
+    }
+  });
+
+  try {
+    const noToken = await request.get("/api/admin/houses");
+    assert.equal(noToken.status, 401);
+
+    const notAnOwner = await request.get("/api/admin/houses").set("Authorization", "Bearer regular-token");
+    assert.equal(notAnOwner.status, 401);
+
+    const whoami = await request.get("/api/admin/whoami").set("Authorization", "Bearer owner-token");
+    assert.equal(whoami.status, 200);
+    assert.equal(whoami.body.role, "owner");
+    assert.equal(whoami.body.name, "TheRealOwner");
+
+    const houses = await request.get("/api/admin/houses").set("Authorization", "Bearer owner-token");
+    assert.equal(houses.status, 200);
+
+    // owner-only actions work too, no admin secret required
+    const staffList = await request.get("/api/admin/staff").set("Authorization", "Bearer owner-token");
+    assert.equal(staffList.status, 200);
+  } finally {
+    delete process.env.OWNER_DISCORD_USER_IDS;
+  }
 });

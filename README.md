@@ -66,6 +66,9 @@ See `server/.env.example` for the full list. The important ones:
   view submitted applications. Since house/member data is now shared across
   every visitor (not per-browser like before), this gates the destructive
   "reset everything" action.
+- `OWNER_DISCORD_USER_IDS` — optional, comma-separated. Any Discord account
+  listed here gets full owner access to `/admin.html` just by being signed in
+  with Discord, no admin secret typed in at all.
 - `WEBHOOK_<DEPARTMENT>` — optional Discord webhook URLs (one per Apply
   department) to auto-post new applications into a channel. Leave unset and
   applications are still saved to the database — you just won't get a Discord

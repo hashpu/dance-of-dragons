@@ -66,18 +66,37 @@ function renderGate(errorMessage) {
   input.focus();
 }
 
+async function loadDashboard(secret) {
+  const [houses, applications, admin] = await Promise.all([Api.adminGetHouses(secret), Api.getApplications(secret), Api.whoami(secret)]);
+  adminSecret = secret;
+  allHouses = houses;
+  allApplications = applications;
+  currentAdmin = admin;
+  allStaff = admin.role === "owner" ? await Api.getStaff(secret) : [];
+  renderDashboard();
+}
+
 async function attemptUnlock(secret) {
   if (!secret) return;
   try {
-    const [houses, applications, admin] = await Promise.all([Api.adminGetHouses(secret), Api.getApplications(secret), Api.whoami(secret)]);
-    adminSecret = secret;
-    allHouses = houses;
-    allApplications = applications;
-    currentAdmin = admin;
-    allStaff = admin.role === "owner" ? await Api.getStaff(secret) : [];
-    renderDashboard();
+    await loadDashboard(secret);
   } catch (e) {
     renderGate(e.message);
+  }
+}
+
+// If they're signed in with Discord and happen to be one of the accounts
+// listed server-side in OWNER_DISCORD_USER_IDS, apiFetch already attaches
+// their Discord token to every request (see js/api.js) — so this succeeds
+// silently with no secret at all. Anyone else just falls through to the
+// normal gate below.
+async function trySilentDiscordOwnerLogin() {
+  if (typeof getDiscordUser !== "function" || !getDiscordUser()) return false;
+  try {
+    await loadDashboard("");
+    return true;
+  } catch (e) {
+    return false;
   }
 }
 
@@ -561,4 +580,8 @@ function renderDashboard() {
   renderTickets();
 }
 
-renderGate();
+(async function initAdminPage() {
+  document.getElementById("adminRoot").innerHTML = `${adminHeaderHtml()}<p class="page-desc">Checking access...</p>`;
+  const loggedInSilently = await trySilentDiscordOwnerLogin();
+  if (!loggedInSilently) renderGate();
+})();

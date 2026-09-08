@@ -24,14 +24,14 @@ function getBearerToken(req) {
   return auth.startsWith("Bearer ") ? auth.slice(7).trim() : null;
 }
 
-async function verifyDiscordUserId(accessToken) {
+async function verifyDiscordUser(accessToken) {
   try {
     const res = await fetch("https://discord.com/api/users/@me", {
       headers: { Authorization: `Bearer ${accessToken}` }
     });
     if (!res.ok) return null;
     const me = await res.json();
-    return me.id || null;
+    return me.id ? { id: me.id, username: me.username || me.id } : null;
   } catch (e) {
     return null;
   }
@@ -52,12 +52,36 @@ async function getGuildMemberRoles(userId, guildId) {
   }
 }
 
+// The verified Discord identity of whoever is making this request, if any.
+async function getRequestDiscordUser(req) {
+  const token = getBearerToken(req);
+  if (!token) return null;
+  return verifyDiscordUser(token);
+}
+
 // The verified Discord ID of whoever is making this request, if any — used
 // for audit-log messages so a Lord action can say who did it.
 async function getRequestDiscordUserId(req) {
-  const token = getBearerToken(req);
-  if (!token) return null;
-  return verifyDiscordUserId(token);
+  const user = await getRequestDiscordUser(req);
+  return user ? user.id : null;
+}
+
+// A short, fixed list of Discord accounts that get full owner access to the
+// admin dashboard just by being signed in with Discord — no admin secret or
+// staff password needed. Configured via OWNER_DISCORD_USER_IDS (comma-
+// separated). Empty/unset means nobody gets owner access this way.
+function getOwnerDiscordIds() {
+  return (process.env.OWNER_DISCORD_USER_IDS || "")
+    .split(",")
+    .map((id) => id.trim())
+    .filter(Boolean);
+}
+
+async function getRequestOwnerDiscordUser(req) {
+  const ownerIds = getOwnerDiscordIds();
+  if (!ownerIds.length) return null;
+  const user = await getRequestDiscordUser(req);
+  return user && ownerIds.includes(user.id) ? user : null;
 }
 
 async function isLordOfHouse(req, house) {
@@ -88,4 +112,4 @@ function isAdminRequest(req) {
   return !!secret && req.get("x-admin-secret") === secret;
 }
 
-module.exports = { isLordOfHouse, isAdminRequest, getRequestDiscordUserId };
+module.exports = { isLordOfHouse, isAdminRequest, getRequestDiscordUserId, getRequestOwnerDiscordUser };

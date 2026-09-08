@@ -1,21 +1,29 @@
 const bcrypt = require("bcrypt");
 const { pool } = require("../db");
+const { getRequestOwnerDiscordUser } = require("../discord");
 
-// Identifies who a request's x-admin-secret header belongs to: the site
-// owner (matches ADMIN_SECRET exactly) or one of the named staff accounts
-// the owner created (see routes/admin.js's /staff endpoints). Staff
-// passwords are only ever stored as bcrypt hashes, same as house passwords,
-// so this has to check each one in turn rather than a single lookup.
+// Identifies who's making this request: the site owner (matches
+// ADMIN_SECRET exactly, OR is signed in with Discord as one of the accounts
+// listed in OWNER_DISCORD_USER_IDS — no secret needed at all for those), or
+// one of the named staff accounts the owner created (see routes/admin.js's
+// /staff endpoints). Staff passwords are only ever stored as bcrypt hashes,
+// same as house passwords, so this has to check each one in turn rather
+// than a single lookup.
 async function identifyAdmin(req) {
   const secret = process.env.ADMIN_SECRET;
   const provided = req.get("x-admin-secret");
-  if (!secret || !provided) return null;
-  if (provided === secret) return { role: "owner", name: "Owner" };
 
-  const { rows } = await pool.query("SELECT id, name, password_hash FROM staff_accounts");
-  for (const row of rows) {
-    if (await bcrypt.compare(provided, row.password_hash)) {
-      return { role: "staff", id: row.id, name: row.name };
+  if (secret && provided && provided === secret) return { role: "owner", name: "Owner" };
+
+  const ownerDiscordUser = await getRequestOwnerDiscordUser(req);
+  if (ownerDiscordUser) return { role: "owner", name: ownerDiscordUser.username };
+
+  if (provided) {
+    const { rows } = await pool.query("SELECT id, name, password_hash FROM staff_accounts");
+    for (const row of rows) {
+      if (await bcrypt.compare(provided, row.password_hash)) {
+        return { role: "staff", id: row.id, name: row.name };
+      }
     }
   }
   return null;
