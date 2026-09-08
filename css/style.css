@@ -1579,6 +1579,19 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 .modal h3 { margin: 0; font-size: 21px; }
 
+.form-section-heading {
+  font-family: "Cinzel", serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--card-color, var(--red));
+  margin: 28px 0 16px;
+  padding-top: 20px;
+  border-top: 1px solid var(--panel-border);
+}
+.form-section-heading:first-child { margin-top: 0; padding-top: 0; border-top: none; }
+
 .field { margin-bottom: 18px; }
 .field label {
   display: block;

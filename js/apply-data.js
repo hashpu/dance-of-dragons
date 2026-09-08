@@ -33,15 +33,15 @@ const DEPARTMENTS = [
     icon: "quill",
     blurb: "Research and write the in-universe history, houses, and storylines that give the game its world.",
     questions: [
-      { id: "discordId", label: "Discord user ID (right-click your name in Discord, Copy User ID; enable Developer Mode if you don't see that option)", type: "text", required: true },
-      { id: "robloxProfile", label: "Roblox profile link or numeric user ID", type: "text", required: true },
-      { id: "experience", label: "What prior experience do you have with lore writing or worldbuilding?", type: "textarea", required: true },
-      { id: "readBooks", label: "Have you read the A Song of Ice and Fire novels? If so, which ones?", type: "text", required: true },
-      { id: "viserysQuestion", label: "Why did King Viserys I name Rhaenyra his heir, and why did that choice remain so contested even after he had sons?", type: "textarea", required: true },
-      { id: "dorneQuestion", label: "Why was Dorne able to resist Aegon's Conquest when the other six kingdoms could not?", type: "textarea", required: true },
-      { id: "northQuestion", label: "Why does the North's involvement in the realm's wars matter so much, despite its distance from King's Landing?", type: "textarea", required: true },
-      { id: "acDescription", label: "Pick any year \"AC\" in Westerosi history and briefly describe what happened.", type: "textarea", required: true },
-      { id: "creativeStory", label: "Write a short creative piece (a few paragraphs) set in the world of A Song of Ice and Fire.", type: "textarea", required: true }
+      { id: "discordId", label: "Discord user ID (right-click your name in Discord, Copy User ID; enable Developer Mode if you don't see that option)", type: "text", required: true, section: "Your Details" },
+      { id: "robloxProfile", label: "Roblox profile link or numeric user ID", type: "text", required: true, section: "Your Details" },
+      { id: "experience", label: "What prior experience do you have with lore writing or worldbuilding?", type: "textarea", required: true, section: "Background" },
+      { id: "readBooks", label: "Have you read the A Song of Ice and Fire novels? If so, which ones?", type: "text", required: true, section: "Background" },
+      { id: "viserysQuestion", label: "Why did King Viserys I name Rhaenyra his heir, and why did that choice remain so contested even after he had sons?", type: "textarea", required: true, section: "Lore Knowledge" },
+      { id: "dorneQuestion", label: "Why was Dorne able to resist Aegon's Conquest when the other six kingdoms could not?", type: "textarea", required: true, section: "Lore Knowledge" },
+      { id: "northQuestion", label: "Why does the North's involvement in the realm's wars matter so much, despite its distance from King's Landing?", type: "textarea", required: true, section: "Lore Knowledge" },
+      { id: "acDescription", label: "Pick any year \"AC\" in Westerosi history and briefly describe what happened.", type: "textarea", required: true, section: "Lore Knowledge" },
+      { id: "creativeStory", label: "Write a short creative piece (a few paragraphs) set in the world of A Song of Ice and Fire.", type: "textarea", required: true, section: "Creative Writing" }
     ]
   },
   {

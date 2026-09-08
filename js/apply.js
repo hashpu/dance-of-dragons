@@ -27,6 +27,19 @@ function questionFieldHtml(q) {
   `;
 }
 
+// Questions can share an optional `section` label (e.g. "Lore Knowledge")
+// to group them under a heading instead of one flat list of fields.
+function questionsHtml(questions) {
+  let lastSection = null;
+  return questions
+    .map((q) => {
+      const heading = q.section && q.section !== lastSection ? `<div class="form-section-heading">${q.section}</div>` : "";
+      lastSection = q.section || lastSection;
+      return heading + questionFieldHtml(q);
+    })
+    .join("");
+}
+
 function openApplyModal(deptKey) {
   const dept = DEPARTMENTS.find((d) => d.key === deptKey);
   if (!dept) return;
@@ -65,7 +78,7 @@ function openApplyModal(deptKey) {
             </div>
           </div>
 
-          ${dept.questions.map(questionFieldHtml).join("")}
+          ${questionsHtml(dept.questions)}
 
           <div class="field">
             <label>Why do you want to join ${dept.name}?</label>
