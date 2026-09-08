@@ -26,7 +26,20 @@ test("accepts a complete application and stores it", async () => {
     .field("discordUsername", "tester")
     .field("availability", "5hrs/week")
     .field("why", "I love writing lore")
-    .field("answers", JSON.stringify({ familiarity: "Very familiar", sample: "House Testwell..." }));
+    .field(
+      "answers",
+      JSON.stringify({
+        discordId: "123456789012345678",
+        robloxProfile: "https://www.roblox.com/users/1/profile",
+        experience: "Wrote lore for a few Roblox groups before.",
+        readBooks: "Yes, all five published novels.",
+        viserysQuestion: "He'd promised the lords his word as king, and undoing it risked civil war either way.",
+        dorneQuestion: "Guerrilla tactics and the desert terrain made a direct conquest too costly.",
+        northQuestion: "It's the largest, most defensible region and its lords rarely commit lightly.",
+        acDescription: "129 AC: King Viserys I dies, and the succession crisis begins.",
+        creativeStory: "House Testwell..."
+      })
+    );
 
   assert.equal(res.status, 201);
   assert.ok(res.body.id);
