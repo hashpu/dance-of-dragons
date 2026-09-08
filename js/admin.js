@@ -124,6 +124,8 @@ function houseTableRowHtml(h) {
           ${
             currentAdmin && currentAdmin.role === "owner"
               ? `${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
+                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">Set Lord (ID)</button>
+                 <button class="a-link" data-action="set-lord-role" data-slug="${h.slug}">Set Lord (Role)</button>
                  <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
               : ""
           }
@@ -174,6 +176,84 @@ function bindHouseActions() {
       if (!ok) return;
       await Api.adminDeleteHouse(slug, adminSecret);
       await refreshHouses();
+    };
+  });
+
+  document.querySelectorAll('[data-action="set-lord-discord"]').forEach((btn) => {
+    btn.onclick = async () => {
+      const slug = btn.dataset.slug;
+      const houseName = (allHouses.find((h) => h.slug === slug) || {}).name || slug;
+      const discordUserId = await Dialog.prompt({
+        kicker: `House ${houseName}`,
+        title: "Assign Lord by Discord ID",
+        message: "Whoever signs in with this exact Discord account gets password-free access to manage the house. Leave blank to remove.",
+        label: "Discord user ID",
+        placeholder: "e.g. 123456789012345678",
+        confirmText: "Save",
+        icon: "discord"
+      });
+      if (discordUserId === null) return;
+
+      try {
+        await Api.setLordDiscordId(slug, discordUserId.trim(), adminSecret);
+        await refreshHouses();
+        await Dialog.alert({
+          kicker: `House ${houseName}`,
+          title: discordUserId.trim() ? "Lord assigned" : "Lord removed",
+          message: discordUserId.trim()
+            ? `Only the Discord account with ID ${discordUserId.trim()} can manage House ${houseName} without the password.`
+            : `House ${houseName} no longer has a Discord-ID Lord assigned.`,
+          icon: "discord"
+        });
+      } catch (e) {
+        await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-action="set-lord-role"]').forEach((btn) => {
+    btn.onclick = async () => {
+      const slug = btn.dataset.slug;
+      const houseName = (allHouses.find((h) => h.slug === slug) || {}).name || slug;
+      const roleId = await Dialog.prompt({
+        kicker: `House ${houseName}`,
+        title: "Assign Lord by Discord role",
+        message: "Leave blank to remove the Lord entirely.",
+        label: "Discord role ID",
+        placeholder: "e.g. 123456789012345678",
+        confirmText: "Next",
+        icon: "discord"
+      });
+      if (roleId === null) return;
+
+      let robloxUsername = "";
+      if (roleId.trim()) {
+        robloxUsername = await Dialog.prompt({
+          kicker: `House ${houseName}`,
+          title: "Match a Roblox account",
+          message: "They must be signed in as BOTH that Discord role and this exact Roblox account for Lord access to work.",
+          label: "Roblox username",
+          placeholder: "e.g. WinterfellKing",
+          confirmText: "Save",
+          icon: "lock"
+        });
+        if (robloxUsername === null) return;
+      }
+
+      try {
+        await Api.setLordRole(slug, roleId.trim(), robloxUsername.trim(), adminSecret);
+        await refreshHouses();
+        await Dialog.alert({
+          kicker: `House ${houseName}`,
+          title: roleId.trim() ? "Lord assigned" : "Lord removed",
+          message: roleId.trim()
+            ? `Only someone signed in with that Discord role AND that Roblox account can manage House ${houseName} without the password.`
+            : `House ${houseName} no longer has a Lord assigned.`,
+          icon: "discord"
+        });
+      } catch (e) {
+        await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
+      }
     };
   });
 }

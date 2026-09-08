@@ -20,107 +20,6 @@ function renderHeader() {
   `;
 }
 
-function renderAdminTools() {
-  const el = document.getElementById("adminTools");
-  el.innerHTML = `
-    <details class="admin-tools">
-      <summary><span class="chev">${FIELD_ICONS.chevronRight}</span> Admin tools</summary>
-      <div class="admin-tools-actions">
-        <button class="btn-link" id="lordDiscordBtn">Assign this house's Lord by Discord ID</button>
-        <button class="btn-link" id="lordRoleBtn">Assign this house's Lord by Discord role + Roblox</button>
-      </div>
-    </details>
-  `;
-  document.getElementById("lordDiscordBtn").onclick = async () => {
-    const secret = await Dialog.prompt({
-      kicker: "Admin only",
-      title: "Enter admin secret",
-      label: "Admin secret",
-      type: "password",
-      placeholder: "••••••••",
-      confirmText: "Continue",
-      icon: "lock"
-    });
-    if (!secret) return;
-
-    const discordUserId = await Dialog.prompt({
-      kicker: `House ${house.name}`,
-      title: "Assign Lord by Discord ID",
-      message: "Whoever signs in with this exact Discord account gets password-free access to manage the house. Leave blank to remove.",
-      label: "Discord user ID",
-      placeholder: "e.g. 123456789012345678",
-      confirmText: "Save",
-      icon: "discord"
-    });
-    if (discordUserId === null) return;
-
-    try {
-      await Api.setLordDiscordId(slug, discordUserId.trim(), secret);
-      await Dialog.alert({
-        kicker: `House ${house.name}`,
-        title: discordUserId.trim() ? "Lord assigned" : "Lord removed",
-        message: discordUserId.trim()
-          ? `Only the Discord account with ID ${discordUserId.trim()} can manage House ${house.name} without the password.`
-          : `House ${house.name} no longer has a Discord-ID Lord assigned.`,
-        icon: "discord"
-      });
-    } catch (e) {
-      await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
-    }
-  };
-  document.getElementById("lordRoleBtn").onclick = async () => {
-    const secret = await Dialog.prompt({
-      kicker: "Admin only",
-      title: "Enter admin secret",
-      label: "Admin secret",
-      type: "password",
-      placeholder: "••••••••",
-      confirmText: "Continue",
-      icon: "lock"
-    });
-    if (!secret) return;
-
-    const roleId = await Dialog.prompt({
-      kicker: `House ${house.name}`,
-      title: "Assign Lord by Discord role",
-      message: "Leave blank to remove the Lord entirely.",
-      label: "Discord role ID",
-      placeholder: "e.g. 123456789012345678",
-      confirmText: "Next",
-      icon: "discord"
-    });
-    if (roleId === null) return;
-
-    let robloxUsername = "";
-    if (roleId.trim()) {
-      robloxUsername = await Dialog.prompt({
-        kicker: `House ${house.name}`,
-        title: "Match a Roblox account",
-        message: "They must be signed in as BOTH that Discord role and this exact Roblox account for Lord access to work.",
-        label: "Roblox username",
-        placeholder: "e.g. WinterfellKing",
-        confirmText: "Save",
-        icon: "lock"
-      });
-      if (robloxUsername === null) return;
-    }
-
-    try {
-      await Api.setLordRole(slug, roleId.trim(), robloxUsername.trim(), secret);
-      await Dialog.alert({
-        kicker: `House ${house.name}`,
-        title: roleId.trim() ? "Lord assigned" : "Lord removed",
-        message: roleId.trim()
-          ? `Only someone signed in with that Discord role AND that Roblox account can manage House ${house.name} without the password.`
-          : `House ${house.name} no longer has a Lord assigned.`,
-        icon: "discord"
-      });
-    } catch (e) {
-      await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
-    }
-  };
-}
-
 function renderStatus() {
   const el = document.getElementById("statusArea");
   if (house.locked && sessionPassword) {
@@ -167,7 +66,6 @@ function renderStatus() {
 async function refresh() {
   house = await Api.getHouse(slug, sessionPassword);
   renderHeader();
-  renderAdminTools();
   renderStatus();
   renderTree();
   applyHighlight();

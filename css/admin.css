@@ -168,7 +168,8 @@
 .admin-table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
 .admin-table-name { font-weight: 600; }
 .admin-table-faction { color: var(--a-muted); font-size: 12px; margin-top: 2px; }
-.admin-table-actions { display: flex; gap: 14px; justify-content: flex-end; white-space: nowrap; }
+.admin-table-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: flex-end; }
+.admin-table-actions .a-link { white-space: nowrap; }
 .admin-empty-row td { text-align: center; color: var(--a-muted); padding: 30px 16px; }
 
 .admin-page .empty-state {
