@@ -126,8 +126,23 @@ function bindHouseActions() {
   });
 }
 
+function ticketAnswersHtml(dept, answers) {
+  const entries = dept ? dept.questions.map((q) => [q.label, answers[q.id], q.type === "textarea"]) : Object.entries(answers).map(([k, v]) => [k, v, String(v || "").length > 60]);
+
+  return entries
+    .map(
+      ([label, value, isLong]) => `
+      <div class="ticket-answer-card${isLong ? " ticket-answer-full" : ""}">
+        <div class="ticket-answer-label">${escapeHtml(label)}</div>
+        <div class="ticket-answer-value">${escapeHtml(value) || "<em>N/A</em>"}</div>
+      </div>`
+    )
+    .join("");
+}
+
 function ticketHtml(app) {
   const dept = DEPARTMENTS.find((d) => d.key === app.department);
+  const color = dept ? dept.color : "var(--muted)";
   let answers = app.answers || {};
   if (typeof answers === "string") {
     try {
@@ -141,29 +156,35 @@ function ticketHtml(app) {
     ? new Date(app.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })
     : "";
 
-  const qaHtml = dept
-    ? dept.questions.map((q) => `<dt>${escapeHtml(q.label)}</dt><dd>${escapeHtml(answers[q.id]) || "<em>N/A</em>"}</dd>`).join("")
-    : Object.entries(answers)
-        .map(([k, v]) => `<dt>${escapeHtml(k)}</dt><dd>${escapeHtml(v) || "<em>N/A</em>"}</dd>`)
-        .join("");
-
   return `
     <details class="ticket-card" data-id="${app.id}">
       <summary class="ticket-summary">
-        <span class="ticket-dept-badge" style="--dept-color:${dept ? dept.color : "var(--muted)"}">${escapeHtml(dept ? dept.name : app.department)}</span>
-        <span class="ticket-applicant">${escapeHtml(app.roblox_username)} <span class="ticket-applicant-sub">(${escapeHtml(app.discord_username)})</span></span>
-        <span class="ticket-date">${submitted}</span>
-        <span class="chev">${CHEVRON_ICON}</span>
+        <div class="ticket-icon" style="--card-color:${color}">${dept ? DEPT_ICONS[dept.icon] || "" : ""}</div>
+        <div class="ticket-summary-main">
+          <div class="ticket-dept-name" style="color:${color}">${escapeHtml(dept ? dept.name : app.department)}</div>
+          <div class="ticket-applicant">${escapeHtml(app.roblox_username)}<span class="ticket-applicant-sub">Discord: ${escapeHtml(app.discord_username)}</span></div>
+        </div>
+        <div class="ticket-summary-meta">
+          <span class="ticket-date">${submitted}</span>
+          <span class="chev">${CHEVRON_ICON}</span>
+        </div>
       </summary>
       <div class="ticket-body">
-        <dl class="ticket-qa">
-          <dt>Availability</dt><dd>${escapeHtml(app.availability) || "<em>N/A</em>"}</dd>
-          ${qaHtml}
-          <dt>Why they want to join</dt><dd>${escapeHtml(app.why)}</dd>
-        </dl>
-        ${app.image_path ? `<img class="ticket-image" src="${app.image_path}" alt="Attached image" />` : ""}
+        ${app.availability ? `<span class="ticket-avail-pill">${DEPT_ICONS.clock} ${escapeHtml(app.availability)}</span>` : ""}
+        <div class="ticket-answers">${ticketAnswersHtml(dept, answers)}</div>
+        <blockquote class="ticket-why" style="--card-color:${color}">
+          <span class="ticket-why-label">Why they want to join</span>
+          ${escapeHtml(app.why)}
+        </blockquote>
+        ${
+          app.image_path
+            ? `<a class="ticket-image-link" href="${app.image_path}" target="_blank" rel="noopener">
+                 <img class="ticket-image" src="${app.image_path}" alt="Attached image" />
+               </a>`
+            : ""
+        }
         <div class="modal-actions" style="justify-content:flex-start; margin-top:6px">
-          <button class="btn btn-outline" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
+          <button class="btn btn-danger-outline" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
         </div>
       </div>
     </details>
