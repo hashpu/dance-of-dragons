@@ -58,6 +58,7 @@ const Api = {
     apiFetch(`/admin/houses/${slug}/reset-password`, { method: "POST", body: { password }, headers: { "x-admin-secret": secret } }),
   getApplications: (secret) => apiFetch("/applications", { headers: { "x-admin-secret": secret } }),
   deleteApplication: (id, secret) => apiFetch(`/applications/${id}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
+  approveApplication: (id, secret) => apiFetch(`/applications/${id}/approve`, { method: "POST", headers: { "x-admin-secret": secret } }),
   whoami: (secret) => apiFetch("/admin/whoami", { headers: { "x-admin-secret": secret } }),
   getStaff: (secret) => apiFetch("/admin/staff", { headers: { "x-admin-secret": secret } }),
   createStaff: (name, password, secret) =>

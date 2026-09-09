@@ -88,6 +88,45 @@ test("DELETE /api/applications/:id requires the admin secret and removes just th
   assert.ok(!list.body.some((a) => a.id === id));
 });
 
+test("POST /api/applications/:id/approve requires the admin secret and marks just that ticket approved", async () => {
+  const created = await request
+    .post("/api/applications")
+    .field("department", "lore")
+    .field("robloxUsername", "ToApprove")
+    .field("discordUsername", "toapprove")
+    .field("why", "Testing approval")
+    .field(
+      "answers",
+      JSON.stringify({
+        experience: "N/A",
+        readBooks: "N/A",
+        viserysQuestion: "N/A",
+        dorneQuestion: "N/A",
+        northQuestion: "N/A",
+        acDescription: "N/A",
+        creativeStory: "N/A"
+      })
+    );
+  assert.equal(created.status, 201);
+  const id = created.body.id;
+
+  const list = await request.get("/api/applications").set("x-admin-secret", "test-secret");
+  assert.equal(list.body.find((a) => a.id === id).status, "pending");
+
+  const noAuth = await request.post(`/api/applications/${id}/approve`);
+  assert.equal(noAuth.status, 401);
+
+  const missing = await request.post("/api/applications/999999/approve").set("x-admin-secret", "test-secret");
+  assert.equal(missing.status, 404);
+
+  const approve = await request.post(`/api/applications/${id}/approve`).set("x-admin-secret", "test-secret");
+  assert.equal(approve.status, 200);
+  assert.equal(approve.body.status, "approved");
+
+  const after = await request.get("/api/applications").set("x-admin-secret", "test-secret");
+  assert.equal(after.body.find((a) => a.id === id).status, "approved");
+});
+
 test("rejects an unknown department", async () => {
   const res = await request
     .post("/api/applications")

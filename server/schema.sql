@@ -91,3 +91,9 @@ CREATE TABLE IF NOT EXISTS applications (
   image_path TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Set to 'approved' when an admin approves a ticket in the dashboard — see
+-- routes/applications.js's /approve endpoint. There's no applicant login, so
+-- this doesn't notify them directly; it just posts to the Discord webhook
+-- (same one the original submission used) so the team can follow up.
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';

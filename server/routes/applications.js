@@ -66,6 +66,21 @@ async function forwardToDiscord(webhookUrl, dept, data, imageBuffer, imageFilena
   }
 }
 
+async function postApprovalToDiscord(webhookUrl, dept, app) {
+  const embed = {
+    title: `✅ ${dept.name} Application Approved`,
+    description: `**${app.roblox_username}** (Discord: ${app.discord_username}) was approved for **${dept.name}**. Reach out to them to get them onboarded.`,
+    color: parseInt(dept.color.replace("#", ""), 16),
+    timestamp: new Date().toISOString()
+  };
+  const res = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ embeds: [embed] })
+  });
+  if (!res.ok) throw new Error("Discord webhook responded " + res.status);
+}
+
 // POST /api/applications — submit an application (multipart if it includes an image)
 router.post("/", upload.single("image"), async (req, res, next) => {
   try {
@@ -129,6 +144,34 @@ router.get("/", requireAdmin, async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM applications ORDER BY created_at DESC LIMIT 200");
     res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/applications/:id/approve — admin only. There's no applicant
+// login or verified contact info to notify them directly with, so this just
+// marks the ticket approved and posts to the department's Discord webhook
+// (same one the original submission used) so the team can follow up.
+router.post("/:id/approve", requireAdmin, async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: "Invalid application ID." });
+
+    const { rows } = await pool.query("UPDATE applications SET status = 'approved' WHERE id = $1 RETURNING *", [req.params.id]);
+    const app = rows[0];
+    if (!app) return res.status(404).json({ error: "Application not found." });
+
+    const dept = findDepartment(app.department);
+    const webhookUrl = process.env[`WEBHOOK_${app.department.toUpperCase()}`] || process.env.WEBHOOK_APPLICATIONS;
+    if (dept && webhookUrl) {
+      try {
+        await postApprovalToDiscord(webhookUrl, dept, app);
+      } catch (e) {
+        console.warn("Discord approval webhook failed:", e.message);
+      }
+    }
+
+    res.json({ ok: true, status: app.status });
   } catch (err) {
     next(err);
   }

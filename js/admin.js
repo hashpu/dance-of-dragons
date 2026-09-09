@@ -362,6 +362,7 @@ function ticketHtml(app) {
           <div class="ticket-applicant">${escapeHtml(app.roblox_username)}<span class="ticket-applicant-sub">Discord: ${escapeHtml(app.discord_username)}</span></div>
         </div>
         <div class="ticket-summary-meta">
+          ${app.status === "approved" ? `<span class="a-badge a-badge-unlocked">Approved</span>` : ""}
           <span class="ticket-date">${submitted}</span>
           <span class="chev">${CHEVRON_ICON}</span>
         </div>
@@ -381,6 +382,11 @@ function ticketHtml(app) {
             : ""
         }
         <div class="modal-actions" style="justify-content:flex-start; margin-top:6px">
+          ${
+            app.status === "approved"
+              ? `<button class="a-btn" disabled>Approved ✓</button>`
+              : `<button class="a-btn a-btn-success" data-action="approve-ticket" data-id="${app.id}">Approve</button>`
+          }
           <button class="a-btn a-btn-danger" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
         </div>
       </div>
@@ -400,6 +406,15 @@ function renderTickets() {
 
   const el = document.getElementById("adminTicketsList");
   el.innerHTML = filtered.length ? filtered.map(ticketHtml).join("") : `<p class="empty-state">No applications match.</p>`;
+
+  el.querySelectorAll('[data-action="approve-ticket"]').forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.preventDefault();
+      const id = btn.dataset.id;
+      await Api.approveApplication(id, adminSecret);
+      await refreshApplications();
+    };
+  });
 
   el.querySelectorAll('[data-action="dismiss-ticket"]').forEach((btn) => {
     btn.onclick = async (e) => {
