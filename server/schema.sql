@@ -89,17 +89,25 @@ CREATE TABLE IF NOT EXISTS votes (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Named staff accounts the owner (whoever knows ADMIN_SECRET) can create,
--- each with its own password, for delegated access to the admin dashboard.
--- Staff can view houses/applications but not the owner-only destructive
--- actions (reset all data, delete a house, manage staff accounts) — see
--- middleware/requireAdmin.js's requireOwner.
+-- Named staff accounts the owner grants delegated access to the admin
+-- dashboard. Staff can view houses/applications but not the owner-only
+-- destructive actions (reset all data, delete a house, manage staff
+-- accounts) — see middleware/requireAdmin.js's requireOwner.
 CREATE TABLE IF NOT EXISTS staff_accounts (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  password_hash TEXT NOT NULL,
+  password_hash TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- The normal path now: the owner picks a Discord account that has already
+-- signed in on the site (see discord_users above) and that account alone
+-- gets in, no password involved. password_hash above is kept only for
+-- accounts created before this existed; IF NOT EXISTS/DROP NOT NULL keep
+-- this safe to rerun on every boot.
+ALTER TABLE staff_accounts ALTER COLUMN password_hash DROP NOT NULL;
+ALTER TABLE staff_accounts ADD COLUMN IF NOT EXISTS discord_user_id TEXT REFERENCES discord_users(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS staff_accounts_discord_user_id_key ON staff_accounts (discord_user_id) WHERE discord_user_id IS NOT NULL;
 
 CREATE TABLE IF NOT EXISTS applications (
   id SERIAL PRIMARY KEY,

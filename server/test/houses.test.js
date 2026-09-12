@@ -517,59 +517,91 @@ test("GET /api/admin/whoami reports owner vs staff", async () => {
   assert.equal(owner.body.role, "owner");
 });
 
-test("staff accounts: owner can create/list/delete them, and a staff password grants dashboard access but not owner-only actions", async () => {
-  const noAuth = await request.post("/api/admin/staff").send({ name: "Jake", password: "hunter22" });
-  assert.equal(noAuth.status, 401);
-
-  const tooShort = await request
+test("staff accounts: owner adds/lists/revokes by Discord account, and that account alone grants dashboard access", async () => {
+  // Can't add someone who's never signed in — nothing to verify them against.
+  const beforeSignIn = await request
     .post("/api/admin/staff")
     .set("x-admin-secret", "test-secret")
-    .send({ name: "Jake", password: "abc" });
-  assert.equal(tooShort.status, 400);
+    .send({ discordUserId: "staff-user-1" });
+  assert.equal(beforeSignIn.status, 400);
 
-  const created = await request
-    .post("/api/admin/staff")
-    .set("x-admin-secret", "test-secret")
-    .send({ name: "Jake", password: "hunter22" });
-  assert.equal(created.status, 201);
-  assert.equal(created.body.name, "Jake");
-  const staffId = created.body.id;
+  const realFetch = global.fetch;
+  global.fetch = async (url, opts) => {
+    const urlStr = String(url);
+    const authHeader = (opts && opts.headers && opts.headers.Authorization) || "";
+    if (urlStr === "https://discord.com/api/users/@me") {
+      const token = authHeader.replace("Bearer ", "");
+      if (token === "jake-token") return { ok: true, json: async () => ({ id: "staff-user-1", username: "Jake" }) };
+      if (token === "impostor-token") return { ok: true, json: async () => ({ id: "some-other-user", username: "Impostor" }) };
+      return { ok: false, status: 401 };
+    }
+    return realFetch(url, opts);
+  };
 
-  const list = await request.get("/api/admin/staff").set("x-admin-secret", "test-secret");
-  assert.equal(list.status, 200);
-  assert.ok(list.body.some((s) => s.id === staffId && s.name === "Jake"));
-  assert.equal(list.body[0].password, undefined);
-  assert.equal(list.body[0].passwordHash, undefined);
+  try {
+    const noAuth = await request.post("/api/admin/staff").send({ discordUserId: "staff-user-1" });
+    assert.equal(noAuth.status, 401);
 
-  // the staff password works like an admin secret for read/light actions...
-  const asStaff = await request.get("/api/admin/houses").set("x-admin-secret", "hunter22");
-  assert.equal(asStaff.status, 200);
+    // Jake signs in with Discord at least once, which is what makes him pickable.
+    const seen = await request.get("/api/discord/me").set("Authorization", "Bearer jake-token");
+    assert.equal(seen.status, 200);
 
-  const staffDiscordUsers = await request.get("/api/admin/discord-users").set("x-admin-secret", "hunter22");
-  assert.equal(staffDiscordUsers.status, 200);
+    const created = await request
+      .post("/api/admin/staff")
+      .set("x-admin-secret", "test-secret")
+      .send({ discordUserId: "staff-user-1" });
+    assert.equal(created.status, 201);
+    assert.equal(created.body.name, "Jake");
+    const staffId = created.body.id;
 
-  const whoami = await request.get("/api/admin/whoami").set("x-admin-secret", "hunter22");
-  assert.equal(whoami.status, 200);
-  assert.equal(whoami.body.role, "staff");
-  assert.equal(whoami.body.name, "Jake");
+    // adding the same account twice is rejected
+    const dup = await request
+      .post("/api/admin/staff")
+      .set("x-admin-secret", "test-secret")
+      .send({ discordUserId: "staff-user-1" });
+    assert.equal(dup.status, 400);
 
-  // ...but not for owner-only destructive actions
-  const staffReset = await request.post("/api/admin/reset").set("x-admin-secret", "hunter22");
-  assert.equal(staffReset.status, 401);
+    const list = await request.get("/api/admin/staff").set("x-admin-secret", "test-secret");
+    assert.equal(list.status, 200);
+    const row = list.body.find((s) => s.id === staffId);
+    assert.equal(row.name, "Jake");
+    assert.equal(row.discordUserId, "staff-user-1");
+    assert.equal(row.password, undefined);
+    assert.equal(row.passwordHash, undefined);
 
-  const staffDeleteHouse = await request.delete("/api/admin/houses/hightower").set("x-admin-secret", "hunter22");
-  assert.equal(staffDeleteHouse.status, 401);
+    // Jake himself, just by being signed in with Discord, gets dashboard access — no secret needed
+    const asStaff = await request.get("/api/admin/houses").set("Authorization", "Bearer jake-token");
+    assert.equal(asStaff.status, 200);
 
-  const staffCreatesStaff = await request
-    .post("/api/admin/staff")
-    .set("x-admin-secret", "hunter22")
-    .send({ name: "Nobody", password: "shouldfail" });
-  assert.equal(staffCreatesStaff.status, 401);
+    const whoami = await request.get("/api/admin/whoami").set("Authorization", "Bearer jake-token");
+    assert.equal(whoami.status, 200);
+    assert.equal(whoami.body.role, "staff");
+    assert.equal(whoami.body.name, "Jake");
 
-  // owner revokes the staff account
-  const del = await request.delete(`/api/admin/staff/${staffId}`).set("x-admin-secret", "test-secret");
-  assert.equal(del.status, 200);
+    // someone else entirely gets nothing
+    const impostor = await request.get("/api/admin/houses").set("Authorization", "Bearer impostor-token");
+    assert.equal(impostor.status, 401);
 
-  const afterRevoke = await request.get("/api/admin/houses").set("x-admin-secret", "hunter22");
-  assert.equal(afterRevoke.status, 401);
+    // ...and Jake can't do owner-only destructive actions
+    const staffReset = await request.post("/api/admin/reset").set("Authorization", "Bearer jake-token");
+    assert.equal(staffReset.status, 401);
+
+    const staffDeleteHouse = await request.delete("/api/admin/houses/hightower").set("Authorization", "Bearer jake-token");
+    assert.equal(staffDeleteHouse.status, 401);
+
+    const staffCreatesStaff = await request
+      .post("/api/admin/staff")
+      .set("Authorization", "Bearer jake-token")
+      .send({ discordUserId: "some-other-user" });
+    assert.equal(staffCreatesStaff.status, 401);
+
+    // owner revokes the staff account
+    const del = await request.delete(`/api/admin/staff/${staffId}`).set("x-admin-secret", "test-secret");
+    assert.equal(del.status, 200);
+
+    const afterRevoke = await request.get("/api/admin/houses").set("Authorization", "Bearer jake-token");
+    assert.equal(afterRevoke.status, 401);
+  } finally {
+    global.fetch = realFetch;
+  }
 });

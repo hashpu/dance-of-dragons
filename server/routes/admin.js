@@ -13,31 +13,49 @@ router.get("/whoami", requireAdmin, (req, res) => {
   res.json(req.admin);
 });
 
-// GET /api/admin/staff — owner only: lists staff accounts (never their
-// passwords, only ever stored as bcrypt hashes).
+// GET /api/admin/staff — owner only: lists staff accounts, with a live
+// avatar/username for Discord-based ones (joined from discord_users so it
+// stays current even if they change their Discord name later).
 router.get("/staff", requireOwner, async (req, res, next) => {
   try {
-    const { rows } = await pool.query("SELECT id, name, created_at FROM staff_accounts ORDER BY created_at");
-    res.json(rows.map((r) => ({ id: r.id, name: r.name, createdAt: r.created_at })));
+    const { rows } = await pool.query(`
+      SELECT s.id, s.name, s.created_at, s.discord_user_id, du.username AS discord_username, du.avatar AS discord_avatar
+      FROM staff_accounts s
+      LEFT JOIN discord_users du ON du.id = s.discord_user_id
+      ORDER BY s.created_at
+    `);
+    res.json(
+      rows.map((r) => ({
+        id: r.id,
+        name: r.discord_username || r.name,
+        avatar: r.discord_avatar || "",
+        discordUserId: r.discord_user_id,
+        createdAt: r.created_at
+      }))
+    );
   } catch (err) {
     next(err);
   }
 });
 
-// POST /api/admin/staff { name, password } — owner only: creates a staff
-// account with its own password, giving them admin-dashboard access
-// without ever sharing the real ADMIN_SECRET.
+// POST /api/admin/staff { discordUserId } — owner only: grants staff access
+// to a Discord account that has already signed in on the site at least once
+// (looked up in discord_users — this is the check that enforces it). No
+// password: being signed in with that exact Discord account is the login.
 router.post("/staff", requireOwner, async (req, res, next) => {
   try {
-    const name = (req.body.name || "").trim();
-    const password = req.body.password || "";
-    if (!name) return res.status(400).json({ error: "A name is required." });
-    if (password.length < 4) return res.status(400).json({ error: "Password must be at least 4 characters." });
+    const discordUserId = (req.body.discordUserId || "").trim();
+    if (!discordUserId) return res.status(400).json({ error: "Pick a Discord account." });
+
+    const { rows: du } = await pool.query("SELECT id, username FROM discord_users WHERE id = $1", [discordUserId]);
+    if (!du[0]) return res.status(400).json({ error: "That account hasn't signed in on the site yet." });
+
+    const { rows: existing } = await pool.query("SELECT id FROM staff_accounts WHERE discord_user_id = $1", [discordUserId]);
+    if (existing[0]) return res.status(400).json({ error: "That account already has staff access." });
 
     const id = crypto.randomUUID();
-    const hash = await bcrypt.hash(password, 10);
-    await pool.query("INSERT INTO staff_accounts (id, name, password_hash) VALUES ($1,$2,$3)", [id, name, hash]);
-    res.status(201).json({ id, name });
+    await pool.query("INSERT INTO staff_accounts (id, name, discord_user_id) VALUES ($1,$2,$3)", [id, du[0].username, discordUserId]);
+    res.status(201).json({ id, name: du[0].username });
   } catch (err) {
     next(err);
   }

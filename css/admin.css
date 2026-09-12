@@ -104,9 +104,6 @@
 
 .admin-section-desc { font-size: 13.5px; color: var(--a-muted); margin: 0 0 18px; max-width: 620px; line-height: 1.6; }
 
-.admin-staff-form { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
-.admin-staff-form .admin-search { flex: 1; min-width: 160px; }
-
 /* Toolbar */
 .admin-toolbar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 16px; }
 .admin-search, .admin-filter-select {
@@ -172,8 +169,16 @@
 .admin-table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
 .admin-table-name { font-weight: 600; }
 .admin-table-user { display: flex; align-items: center; gap: 10px; }
-.admin-table-avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
+.admin-table-avatar { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; background: var(--a-panel-2); }
+.admin-table-avatar-lg { width: 34px; height: 34px; box-shadow: 0 0 0 2px var(--a-border-soft), 0 0 0 3px var(--a-border); }
 .admin-table-faction { color: var(--a-muted); font-size: 12px; margin-top: 2px; }
+.admin-table-time { color: var(--a-muted); font-size: 12.5px; cursor: default; }
+.admin-mono {
+  font-family: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: 12px;
+  color: var(--a-muted);
+  letter-spacing: 0.2px;
+}
 .admin-table-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: flex-end; }
 .admin-table-actions .a-link { white-space: nowrap; }
 .admin-empty-row td { text-align: center; color: var(--a-muted); padding: 30px 16px; }

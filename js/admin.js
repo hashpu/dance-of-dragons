@@ -481,12 +481,36 @@ function updateTabCounts() {
   if (staffCount) staffCount.textContent = allStaff.length;
 }
 
+// Formats a timestamp as a short relative label ("3h ago") with the exact
+// date/time in a tooltip — used for both the sign-ins log and staff list so
+// neither needs to show a long absolute timestamp inline.
+function relativeTime(dateInput) {
+  if (!dateInput) return { text: "—", title: "" };
+  const date = new Date(dateInput);
+  const title = date.toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  const seconds = Math.round((Date.now() - date.getTime()) / 1000);
+  if (seconds < 60) return { text: "Just now", title };
+  const minutes = Math.round(seconds / 60);
+  if (minutes < 60) return { text: `${minutes}m ago`, title };
+  const hours = Math.round(minutes / 60);
+  if (hours < 24) return { text: `${hours}h ago`, title };
+  const days = Math.round(hours / 24);
+  if (days < 30) return { text: `${days}d ago`, title };
+  return { text: date.toLocaleDateString(undefined, { dateStyle: "medium" }), title };
+}
+
 function staffRowHtml(s) {
-  const created = s.createdAt ? new Date(s.createdAt).toLocaleDateString(undefined, { dateStyle: "medium" }) : "";
+  const avatarUrl = typeof discordAvatarUrl === "function" ? discordAvatarUrl({ id: s.discordUserId, avatar: s.avatar }) : "";
+  const added = relativeTime(s.createdAt);
   return `
     <tr data-id="${s.id}">
-      <td class="admin-table-name">${escapeHtml(s.name)}</td>
-      <td>${created}</td>
+      <td>
+        <div class="admin-table-user">
+          <img class="admin-table-avatar admin-table-avatar-lg" src="${avatarUrl}" alt="" />
+          <span class="admin-table-name">${escapeHtml(s.name)}</span>
+        </div>
+      </td>
+      <td><span class="admin-table-time" title="${escapeHtml(added.title)}">${escapeHtml(added.text)}</span></td>
       <td><button class="a-link a-link-danger" data-action="delete-staff" data-id="${s.id}">Revoke</button></td>
     </tr>
   `;
@@ -530,26 +554,23 @@ async function refreshStaff() {
 
 function discordUserRowHtml(u) {
   const avatarUrl = typeof discordAvatarUrl === "function" ? discordAvatarUrl(u) : "";
-  const lastSeen = u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
+  const seen = relativeTime(u.lastSeenAt);
   return `
     <tr>
       <td>
         <div class="admin-table-user">
-          <img class="admin-table-avatar" src="${avatarUrl}" alt="" />
+          <img class="admin-table-avatar admin-table-avatar-lg" src="${avatarUrl}" alt="" />
           <span class="admin-table-name">${escapeHtml(u.username)}</span>
         </div>
       </td>
-      <td class="admin-table-faction">${escapeHtml(u.id)}</td>
-      <td>${lastSeen}</td>
+      <td class="admin-mono">${escapeHtml(u.id)}</td>
+      <td><span class="admin-table-time" title="${escapeHtml(seen.title)}">${seen.text}</span></td>
     </tr>
   `;
 }
 
-// Everyone who's ever signed in with Discord, most recent first — a person
-// only ever appears here after actually authenticating (see discord.js's
-// recordDiscordUserSeen), never added by hand. Limited to the 100 most
-// recently seen accounts server-side; the search box below filters within
-// that set rather than re-querying, same as the Houses/Staff tabs.
+// Limited to the 100 most recently seen accounts server-side; the search box
+// below filters within that set rather than re-querying, same as Houses/Staff.
 function renderDiscordUsersList() {
   const query = (document.getElementById("discordUserSearchInput")?.value || "").trim().toLowerCase();
   const filtered = query ? allDiscordUsers.filter((u) => u.username.toLowerCase().includes(query)) : allDiscordUsers;
@@ -612,10 +633,7 @@ function renderDashboard() {
     </div>
 
     <div class="admin-panel" data-panel="signins">
-      <p class="admin-section-desc">
-        Every Discord account that's signed in on the site at least once, most recent first. Someone only shows up
-        here after actually authenticating — nothing is added by hand.
-      </p>
+      <p class="admin-section-desc">Everyone who's signed in with Discord, most recent first.</p>
       <div class="admin-toolbar">
         <input type="text" id="discordUserSearchInput" class="admin-search" placeholder="Search by Discord username..." />
       </div>
@@ -626,17 +644,10 @@ function renderDashboard() {
       isOwner
         ? `
     <div class="admin-panel" data-panel="staff">
-      <p class="admin-section-desc">
-        Give someone their own login to this dashboard without sharing the real admin secret. Staff can view
-        houses and applications and dismiss tickets, but can't clear locks, delete houses, manage staff, or
-        reset data.
-      </p>
-      <div class="admin-staff-form">
-        <input type="text" id="staffNameInput" class="admin-search" placeholder="Name" />
-        <input type="text" id="staffPasswordInput" class="admin-search" placeholder="Password (min 4 characters)" />
-        <button class="a-btn a-btn-primary" id="addStaffBtn">Add staff</button>
+      <p class="admin-section-desc">Staff can manage houses and applications. Only you can delete houses, manage staff, or reset data.</p>
+      <div class="admin-toolbar">
+        <button class="a-btn a-btn-primary" id="addStaffBtn">+ Add staff</button>
       </div>
-      <p class="error-text" id="staffFormError" style="display:none"></p>
       <div id="adminStaffList"></div>
     </div>`
         : ""
@@ -693,18 +704,18 @@ function renderDashboard() {
     };
 
     document.getElementById("addStaffBtn").onclick = async () => {
-      const nameInput = document.getElementById("staffNameInput");
-      const passwordInput = document.getElementById("staffPasswordInput");
-      const err = document.getElementById("staffFormError");
-      err.style.display = "none";
+      const user = await Dialog.search({
+        kicker: "Staff",
+        title: "Add staff by Discord account",
+        message: "Only accounts that have signed in with Discord on the site before show up here. Whoever you pick can open the admin dashboard right away — no password needed.",
+        fetchResults: (query) => Api.searchDiscordUsers(query, adminSecret)
+      });
+      if (!user) return;
       try {
-        await Api.createStaff(nameInput.value.trim(), passwordInput.value, adminSecret);
-        nameInput.value = "";
-        passwordInput.value = "";
+        await Api.addStaffByDiscord(user.id, adminSecret);
         await refreshStaff();
       } catch (e) {
-        err.textContent = e.message;
-        err.style.display = "block";
+        await Dialog.alert({ title: "Couldn't add staff", message: e.message, icon: "warning", cardColor: "var(--red)" });
       }
     };
 

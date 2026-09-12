@@ -63,8 +63,8 @@ const Api = {
   approveApplication: (id, secret) => apiFetch(`/applications/${id}/approve`, { method: "POST", headers: { "x-admin-secret": secret } }),
   whoami: (secret) => apiFetch("/admin/whoami", { headers: { "x-admin-secret": secret } }),
   getStaff: (secret) => apiFetch("/admin/staff", { headers: { "x-admin-secret": secret } }),
-  createStaff: (name, password, secret) =>
-    apiFetch("/admin/staff", { method: "POST", body: { name, password }, headers: { "x-admin-secret": secret } }),
+  addStaffByDiscord: (discordUserId, secret) =>
+    apiFetch("/admin/staff", { method: "POST", body: { discordUserId }, headers: { "x-admin-secret": secret } }),
   deleteStaff: (id, secret) => apiFetch(`/admin/staff/${id}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
   setLordRole: (slug, roleId, robloxUsername, secret) =>
     apiFetch(`/houses/${slug}/lord-role`, {
