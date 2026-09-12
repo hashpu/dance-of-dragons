@@ -370,7 +370,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 
   /* Sign in / account and Join Discord stay visible at all times, in their
      own compact row right under the brand — only the page links (Houses,
-     Leaderboard, etc.) collapse behind the hamburger. Previously the whole
+     Crown Orders, etc.) collapse behind the hamburger. Previously the whole
      .topbar-actions block was tucked inside that same collapsed menu, which
      meant a phone visitor had to know to tap the hamburger before they
      could even see a way to sign in or join the Discord at all. */
@@ -625,88 +625,12 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 
 /* Generic scroll-reveal utility — fades/slides an element in once it
    crosses into view (see reveal.js's scrollReveal()). Used across most
-   pages (house cards, leaderboard rows, rally tiers, etc), not tied to any
-   one page's own styling. */
+   pages (house cards, rally tiers, etc), not tied to any one page's own
+   styling. */
 .reveal { opacity: 0; transform: translateY(26px); transition: opacity 0.6s ease, transform 0.6s ease; }
 .reveal.revealed { opacity: 1; transform: translateY(0); }
 @media (prefers-reduced-motion: reduce) {
   .reveal, .reveal.revealed { opacity: 1; transform: none; transition: none; }
-}
-
-/* Leaderboard — every House/Crown Order ranked by member count, with a
-   proportional fill bar (relative to the current leader) behind each row. */
-.leaderboard-list {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-  max-width: 820px;
-  margin: 0 auto;
-}
-.leaderboard-row {
-  position: relative;
-  overflow: hidden;
-  display: grid;
-  grid-template-columns: 32px 44px 1fr auto;
-  align-items: center;
-  gap: 16px;
-  padding: 12px 18px;
-  background: var(--panel);
-  border: 1px solid var(--panel-border);
-  border-radius: 6px;
-  transition: border-color 0.2s, transform 0.15s ease-out;
-}
-.leaderboard-row:hover { border-color: color-mix(in srgb, var(--card-color, var(--red)) 55%, var(--panel-border)); transform: translateY(-1px); }
-.leaderboard-row::before {
-  content: "";
-  position: absolute;
-  inset: 0;
-  width: var(--fill, 0%);
-  background: linear-gradient(90deg, color-mix(in srgb, var(--card-color, var(--red)) 14%, transparent), transparent);
-  pointer-events: none;
-}
-.leaderboard-rank {
-  position: relative;
-  font-family: "Cinzel", serif;
-  font-weight: 700;
-  font-size: 16px;
-  color: var(--muted);
-  text-align: center;
-}
-.leaderboard-gold .leaderboard-rank { color: #e8c34a; text-shadow: 0 0 12px rgba(232, 195, 74, 0.5); }
-.leaderboard-silver .leaderboard-rank { color: #c7cad2; text-shadow: 0 0 12px rgba(199, 202, 210, 0.4); }
-.leaderboard-bronze .leaderboard-rank { color: #c9884f; text-shadow: 0 0 12px rgba(201, 136, 79, 0.4); }
-.leaderboard-icon {
-  position: relative;
-  width: 40px;
-  height: 40px;
-  border-radius: 6px;
-  flex-shrink: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: color-mix(in srgb, var(--card-color) 18%, transparent);
-  border: 1px solid color-mix(in srgb, var(--card-color) 45%, transparent);
-  color: var(--card-color);
-}
-.leaderboard-icon svg { width: 58%; height: 58%; }
-.leaderboard-info { position: relative; min-width: 0; }
-.leaderboard-name { display: block; font-family: "Cinzel", serif; font-weight: 600; font-size: 15px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.leaderboard-faction { display: block; font-size: 10.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); margin-top: 2px; }
-.leaderboard-count {
-  position: relative;
-  font-family: "Cinzel", serif;
-  font-weight: 700;
-  font-size: 19px;
-  text-align: right;
-  white-space: nowrap;
-}
-.leaderboard-count span { display: block; font-family: "Inter", system-ui, sans-serif; font-size: 9.5px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; color: var(--muted); }
-
-@media (max-width: 560px) {
-  .leaderboard-row { grid-template-columns: 24px 36px 1fr auto; padding: 10px 12px; gap: 10px; }
-  .leaderboard-icon { width: 34px; height: 34px; }
-  .leaderboard-name { font-size: 13.5px; }
-  .leaderboard-count { font-size: 16px; }
 }
 
 /* Skeleton loading states */

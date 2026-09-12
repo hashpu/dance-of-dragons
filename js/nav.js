@@ -3,7 +3,6 @@ const DISCORD_INVITE_URL = "https://discord.gg/eRHDDrnJZk";
 
 const NAV_ICONS = {
   houses: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>`,
-  leaderboard: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4h12v4a6 6 0 01-12 0V4z"/><path d="M6 5H3.5A2.5 2.5 0 006 7.5M18 5h2.5A2.5 2.5 0 0118 7.5"/><path d="M12 14v3.5"/><path d="M8.5 20.5h7l-.6-3H9.1z"/></svg>`,
   factions: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9-3 1 1-3 9-9z"/><path d="M13.5 8.5l2 2M4 20l3.5-3.5"/></svg>`,
   showcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.2"/></svg>`,
   apply: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-6 0-13 4-15 12l-1 4 4-1C16 17 20 10 20 4z"/><path d="M9.5 14.5L4 20"/></svg>`,
@@ -21,7 +20,6 @@ function navEscapeHtml(str) {
   const active = el.dataset.active || "";
   const links = [
     { href: "/", label: "Houses", icon: "houses" },
-    { href: "/leaderboard", label: "Leaderboard", icon: "leaderboard" },
     { href: "/factions", label: "Crown Orders", icon: "factions" },
     { href: "/showcase", label: "Community", icon: "showcase" },
     { href: "/apply", label: "Apply", icon: "apply" },
