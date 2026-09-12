@@ -13,6 +13,7 @@ let currentAdmin = null;
 let allHouses = [];
 let allApplications = [];
 let allStaff = [];
+let allDiscordUsers = [];
 
 // Applications hold fully public, unauthenticated free text (anyone can
 // submit one) that ends up rendered inside a privileged admin session that
@@ -78,10 +79,16 @@ function renderGate(errorMessage) {
 }
 
 async function loadDashboard(secret) {
-  const [houses, applications, admin] = await Promise.all([Api.adminGetHouses(secret), Api.getApplications(secret), Api.whoami(secret)]);
+  const [houses, applications, discordUsers, admin] = await Promise.all([
+    Api.adminGetHouses(secret),
+    Api.getApplications(secret),
+    Api.searchDiscordUsers("", secret),
+    Api.whoami(secret)
+  ]);
   adminSecret = secret;
   allHouses = houses;
   allApplications = applications;
+  allDiscordUsers = discordUsers;
   currentAdmin = admin;
   allStaff = admin.role === "owner" ? await Api.getStaff(secret) : [];
   renderDashboard();
@@ -469,6 +476,7 @@ function renderStats() {
 function updateTabCounts() {
   document.getElementById("housesTabCount").textContent = allHouses.length;
   document.getElementById("appsTabCount").textContent = allApplications.length;
+  document.getElementById("signinsTabCount").textContent = allDiscordUsers.length;
   const staffCount = document.getElementById("staffTabCount");
   if (staffCount) staffCount.textContent = allStaff.length;
 }
@@ -520,6 +528,43 @@ async function refreshStaff() {
   updateTabCounts();
 }
 
+function discordUserRowHtml(u) {
+  const avatarUrl = typeof discordAvatarUrl === "function" ? discordAvatarUrl(u) : "";
+  const lastSeen = u.lastSeenAt ? new Date(u.lastSeenAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—";
+  return `
+    <tr>
+      <td>
+        <div class="admin-table-user">
+          <img class="admin-table-avatar" src="${avatarUrl}" alt="" />
+          <span class="admin-table-name">${escapeHtml(u.username)}</span>
+        </div>
+      </td>
+      <td class="admin-table-faction">${escapeHtml(u.id)}</td>
+      <td>${lastSeen}</td>
+    </tr>
+  `;
+}
+
+// Everyone who's ever signed in with Discord, most recent first — a person
+// only ever appears here after actually authenticating (see discord.js's
+// recordDiscordUserSeen), never added by hand. Limited to the 100 most
+// recently seen accounts server-side; the search box below filters within
+// that set rather than re-querying, same as the Houses/Staff tabs.
+function renderDiscordUsersList() {
+  const query = (document.getElementById("discordUserSearchInput")?.value || "").trim().toLowerCase();
+  const filtered = query ? allDiscordUsers.filter((u) => u.username.toLowerCase().includes(query)) : allDiscordUsers;
+
+  document.getElementById("adminDiscordUsersList").innerHTML = filtered.length
+    ? `
+      <div class="admin-table-wrap">
+        <table class="admin-table">
+          <thead><tr><th>Discord account</th><th>ID</th><th>Last seen</th></tr></thead>
+          <tbody>${filtered.map(discordUserRowHtml).join("")}</tbody>
+        </table>
+      </div>`
+    : `<p class="empty-state">${allDiscordUsers.length ? `No accounts match "${escapeHtml(query)}".` : "Nobody's signed in with Discord yet."}</p>`;
+}
+
 function switchTab(name) {
   document.querySelectorAll(".admin-tab").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === name));
   document.querySelectorAll(".admin-panel").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === name));
@@ -536,6 +581,7 @@ function renderDashboard() {
     <div class="admin-tabs">
       <button class="admin-tab active" data-tab="houses">Houses <span class="count" id="housesTabCount">0</span></button>
       <button class="admin-tab" data-tab="applications">Applications <span class="count" id="appsTabCount">0</span></button>
+      <button class="admin-tab" data-tab="signins">Discord Sign-Ins <span class="count" id="signinsTabCount">0</span></button>
       ${isOwner ? `<button class="admin-tab" data-tab="staff">Staff <span class="count" id="staffTabCount">0</span></button>` : ""}
       ${isOwner ? `<button class="admin-tab" data-tab="maintenance">Maintenance</button>` : ""}
     </div>
@@ -563,6 +609,17 @@ function renderDashboard() {
         </select>
       </div>
       <div id="adminTicketsList"></div>
+    </div>
+
+    <div class="admin-panel" data-panel="signins">
+      <p class="admin-section-desc">
+        Every Discord account that's signed in on the site at least once, most recent first. Someone only shows up
+        here after actually authenticating — nothing is added by hand.
+      </p>
+      <div class="admin-toolbar">
+        <input type="text" id="discordUserSearchInput" class="admin-search" placeholder="Search by Discord username..." />
+      </div>
+      <div id="adminDiscordUsersList"></div>
     </div>
 
     ${
@@ -609,6 +666,7 @@ function renderDashboard() {
   document.getElementById("houseSearchInput").addEventListener("input", renderHouseTable);
   document.getElementById("appSearchInput").addEventListener("input", renderTickets);
   document.getElementById("appDeptFilter").addEventListener("change", renderTickets);
+  document.getElementById("discordUserSearchInput").addEventListener("input", renderDiscordUsersList);
 
   if (isOwner) {
     document.getElementById("adminSeedMissingBtn").onclick = async () => {
@@ -657,6 +715,7 @@ function renderDashboard() {
   updateTabCounts();
   renderHouseTable();
   renderTickets();
+  renderDiscordUsersList();
 }
 
 (async function initAdminPage() {

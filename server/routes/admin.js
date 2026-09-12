@@ -114,24 +114,27 @@ router.get("/houses", requireAdmin, async (req, res, next) => {
   }
 });
 
-// GET /api/admin/discord-users?q= — owner only: searches Discord accounts
-// that have actually signed in on the site before (see discord.js's
-// recordDiscordUserSeen), by username substring. Powers the "assign a Lord"
-// picker so an admin picks a real, verified account instead of pasting a
-// raw ID — someone who has never signed in here simply won't show up.
-// Empty/missing q returns the most recently seen accounts instead of every
-// match, so the picker has something to show before you start typing.
-router.get("/discord-users", requireOwner, async (req, res, next) => {
+// GET /api/admin/discord-users?q= — searches Discord accounts that have
+// actually signed in on the site before (see discord.js's
+// recordDiscordUserSeen), by username substring. Powers two things: the
+// "assign a Lord" picker (owner-only in the UI, but this endpoint itself is
+// staff-readable like the Houses/Applications tabs) so an admin picks a
+// real, verified account instead of pasting a raw ID, and the "Discord
+// sign-ins" log tab. Someone who has never signed in here simply won't show
+// up. Empty/missing q returns the most recently seen accounts instead of
+// every match, so both the picker and the log have something to show
+// before you start typing.
+router.get("/discord-users", requireAdmin, async (req, res, next) => {
   try {
     const q = (req.query.q || "").trim();
     const { rows } = await pool.query(
-      `SELECT id, username, avatar FROM discord_users
+      `SELECT id, username, avatar, last_seen_at FROM discord_users
        WHERE $1 = '' OR username ILIKE '%' || $1 || '%'
        ORDER BY last_seen_at DESC
-       LIMIT 20`,
+       LIMIT 100`,
       [q]
     );
-    res.json(rows);
+    res.json(rows.map((r) => ({ id: r.id, username: r.username, avatar: r.avatar, lastSeenAt: r.last_seen_at })));
   } catch (err) {
     next(err);
   }

@@ -545,6 +545,9 @@ test("staff accounts: owner can create/list/delete them, and a staff password gr
   const asStaff = await request.get("/api/admin/houses").set("x-admin-secret", "hunter22");
   assert.equal(asStaff.status, 200);
 
+  const staffDiscordUsers = await request.get("/api/admin/discord-users").set("x-admin-secret", "hunter22");
+  assert.equal(staffDiscordUsers.status, 200);
+
   const whoami = await request.get("/api/admin/whoami").set("x-admin-secret", "hunter22");
   assert.equal(whoami.status, 200);
   assert.equal(whoami.body.role, "staff");
