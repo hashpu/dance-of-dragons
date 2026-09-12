@@ -81,9 +81,25 @@ function questionsHtml(questions) {
   return html;
 }
 
-function openApplyModal(deptKey) {
+// Starting an application now requires being signed in with Discord first
+// — asked for here, right when they try to apply, rather than gating the
+// whole page (browsing what departments exist doesn't need it).
+async function openApplyModal(deptKey) {
   const dept = DEPARTMENTS.find((d) => d.key === deptKey);
   if (!dept) return;
+
+  if (typeof getDiscordUser !== "function" || !getDiscordUser()) {
+    const ok = await Dialog.confirm({
+      kicker: dept.name,
+      title: "Sign in to apply",
+      message: "You need to sign in with Discord before starting an application.",
+      confirmText: "Sign in with Discord",
+      icon: "discord",
+      cardColor: dept.color
+    });
+    if (ok) beginDiscordLogin();
+    return;
+  }
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">

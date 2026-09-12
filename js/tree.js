@@ -921,9 +921,34 @@ async function submitMember() {
   }
 }
 
-document.getElementById("treeArea").innerHTML = '<div class="tree-panel"><div class="skeleton-line">Loading house…</div></div>';
+// Viewing any family tree — locked or not — now requires being signed in
+// with Discord first. Rendered in place of the whole page, same footprint
+// as a locked house's password gate, so there's nothing to peek at
+// underneath. beginDiscordLogin() remembers this exact URL (including
+// ?highlight=) and comes straight back here once signed in.
+const DISCORD_GATE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M20.32 4.37a19.8 19.8 0 00-4.9-1.52.07.07 0 00-.08.04c-.21.38-.45.87-.61 1.26a18.3 18.3 0 00-5.48 0 12.6 12.6 0 00-.63-1.26.08.08 0 00-.08-.04 19.7 19.7 0 00-4.9 1.52.07.07 0 00-.03.03C1.24 9.05.47 13.58.83 18.06a.08.08 0 00.03.06 19.9 19.9 0 006 3.02.08.08 0 00.08-.03c.46-.63.87-1.3 1.23-2a.08.08 0 00-.04-.11 13 13 0 01-1.88-.9.08.08 0 01-.01-.13c.13-.09.25-.19.37-.29a.07.07 0 01.08-.01c3.93 1.8 8.18 1.8 12.07 0a.08.08 0 01.08.01c.12.1.24.2.37.29a.08.08 0 010 .13c-.6.35-1.23.65-1.89.9a.08.08 0 00-.04.11c.37.7.78 1.37 1.23 2a.08.08 0 00.08.03 19.8 19.8 0 006.03-3.02.08.08 0 00.03-.06c.43-5.19-.72-9.68-3.05-13.66a.06.06 0 00-.03-.03zM8.52 15.3c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.17 1.1 2.15 2.43 0 1.33-.95 2.42-2.15 2.42zm6.98 0c-1.18 0-2.15-1.09-2.15-2.42 0-1.34.95-2.43 2.15-2.43 1.21 0 2.17 1.1 2.15 2.43 0 1.33-.94 2.42-2.15 2.42z"/></svg>`;
 
-refresh().catch(() => {
-  document.querySelector("main").innerHTML =
-    '<p style="color:#9a9a9e">House not found. <a href="/" style="color:#e0483e">Go back</a>.</p>';
-});
+function renderSignInGate() {
+  document.title = "Sign in required · Family Tree";
+  document.getElementById("houseHeader").innerHTML = "";
+  document.getElementById("statusArea").innerHTML = `
+    <div class="locked-card" style="--card-color:var(--gold)">
+      <div class="lock-icon">${DISCORD_GATE_ICON}</div>
+      <h3>Sign in to view this house</h3>
+      <p>Family trees are only visible to signed-in visitors. Sign in with Discord to keep going.</p>
+      <button class="btn btn-primary" id="houseSignInBtn">Sign in with Discord</button>
+    </div>
+  `;
+  document.getElementById("treeArea").innerHTML = "";
+  document.getElementById("houseSignInBtn").onclick = () => beginDiscordLogin();
+}
+
+if (typeof getDiscordUser === "function" && getDiscordUser()) {
+  document.getElementById("treeArea").innerHTML = '<div class="tree-panel"><div class="skeleton-line">Loading house…</div></div>';
+  refresh().catch(() => {
+    document.querySelector("main").innerHTML =
+      '<p style="color:#9a9a9e">House not found. <a href="/" style="color:#e0483e">Go back</a>.</p>';
+  });
+} else {
+  renderSignInGate();
+}
