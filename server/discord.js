@@ -58,6 +58,35 @@ async function verifyDiscordUser(accessToken) {
   }
 }
 
+// DMs a Discord user directly (used to notify an applicant their
+// application was approved/declined — see routes/applications.js). Requires
+// the bot to share a server with them and for them to allow DMs from server
+// members; returns false rather than throwing on any failure (wrong
+// privacy settings, bot not in a shared guild, no bot token configured) so
+// a failed DM never blocks the approve/decline action itself.
+async function sendDiscordDM(userId, messagePayload) {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!botToken) return false;
+  try {
+    const dmRes = await fetch("https://discord.com/api/v10/users/@me/channels", {
+      method: "POST",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ recipient_id: userId })
+    });
+    if (!dmRes.ok) return false;
+    const dm = await dmRes.json();
+
+    const msgRes = await fetch(`https://discord.com/api/v10/channels/${dm.id}/messages`, {
+      method: "POST",
+      headers: { Authorization: `Bot ${botToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify(messagePayload)
+    });
+    return msgRes.ok;
+  } catch (e) {
+    return false;
+  }
+}
+
 async function getGuildMemberRoles(userId, guildId) {
   const botToken = process.env.DISCORD_BOT_TOKEN;
   if (!botToken) return null;
@@ -128,4 +157,10 @@ async function isLordOfHouse(req, house) {
   return robloxUserId === house.lord_roblox_user_id;
 }
 
-module.exports = { isLordOfHouse, getRequestDiscordUser, getRequestDiscordUserId, getRequestOwnerDiscordUser };
+module.exports = {
+  isLordOfHouse,
+  getRequestDiscordUser,
+  getRequestDiscordUserId,
+  getRequestOwnerDiscordUser,
+  sendDiscordDM
+};

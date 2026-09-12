@@ -10,6 +10,10 @@ const NAV_ICONS = {
   rules: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10a1 1 0 011 1v16l-3-2-3 2-3-2-3 2V4a1 1 0 011-1z"/><path d="M9 8h6M9 12h6"/></svg>`
 };
 
+function navEscapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 (async function () {
   const el = document.getElementById("topbar");
   if (!el) return;
@@ -38,12 +42,71 @@ const NAV_ICONS = {
   // Fire-and-forget: a network hiccup here shouldn't affect page load.
   if (user && typeof Api !== "undefined") Api.discordMe().catch(() => {});
 
+  // Application decisions (approved/declined) the applicant hasn't dismissed
+  // yet — the site-side half of notifying them, alongside the Discord DM
+  // routes/applications.js sends. Fetched after the nav itself has already
+  // rendered (like discordMe above) so a slow/failed request never delays
+  // the page; the notification dot and card just pop in a moment later.
+  // Only ever populated for someone who was actually signed in with Discord
+  // when they applied — anyone else has nothing to show here.
+  if (user && typeof Api !== "undefined") {
+    Api.getMyApplications()
+      .then((apps) => apps.filter((a) => !a.seen))
+      .then((updates) => {
+        if (!updates.length) return;
+        const section = document.getElementById("appUpdatesSection");
+        const dot = document.getElementById("userChipDot");
+        if (!section || !dot) return;
+        document.getElementById("appUpdates").innerHTML = updates.map(applicationUpdateHtml).join("");
+        section.hidden = false;
+        dot.hidden = false;
+        wireAppUpdateDismissButtons();
+      })
+      .catch(() => {});
+  }
+
+  function applicationUpdateHtml(a) {
+    const approved = a.status === "approved";
+    return `
+      <div class="app-update-card ${approved ? "app-update-approved" : "app-update-declined"}" data-id="${a.id}">
+        <div class="app-update-head">
+          <span class="app-update-status">${approved ? "✅ Approved" : "❌ Declined"}</span>
+          <span class="app-update-dept">${navEscapeHtml(a.departmentName)}</span>
+        </div>
+        ${!approved && a.declineReason ? `<p class="app-update-reason">${navEscapeHtml(a.declineReason)}</p>` : ""}
+        <button class="btn-link app-update-dismiss" data-action="dismiss-app-update" data-id="${a.id}">Dismiss</button>
+      </div>
+    `;
+  }
+
+  function wireAppUpdateDismissButtons() {
+    document.querySelectorAll('[data-action="dismiss-app-update"]').forEach((btn) => {
+      btn.onclick = async (e) => {
+        e.stopPropagation();
+        const id = btn.dataset.id;
+        btn.disabled = true;
+        try {
+          await Api.markApplicationSeen(id);
+        } catch (err) {
+          btn.disabled = false;
+          return;
+        }
+        btn.closest(".app-update-card")?.remove();
+        if (!document.querySelectorAll(".app-update-card").length) {
+          document.getElementById("appUpdatesSection")?.setAttribute("hidden", "");
+          document.getElementById("userChipDot")?.setAttribute("hidden", "");
+        }
+      };
+    });
+  }
+
   const authHtml = user
     ? `
       <div class="profile-menu" id="profileMenu">
         <button class="user-chip" id="profileTrigger" type="button" aria-expanded="false">
           <img src="${discordAvatarUrl(user)}" alt="" />
           <span>${user.username}</span>
+          <span class="user-chip-dot" id="userChipDot" hidden></span>
         </button>
         <div class="profile-card" id="profileCard" hidden style="--profile-accent:${discordAccentColorCss(user) || "var(--red)"}">
           <div class="profile-banner" style="${discordProfileBannerCss(user)}"></div>
@@ -51,6 +114,10 @@ const NAV_ICONS = {
             <img class="profile-avatar" src="${discordAvatarUrl(user)}" alt="" />
             <div class="profile-name">${user.username}</div>
             ${memberSince ? `<div class="profile-meta">Discord member since ${memberSince.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</div>` : ""}
+            <div id="appUpdatesSection" hidden>
+              <div class="profile-divider"></div>
+              <div class="app-updates" id="appUpdates"></div>
+            </div>
             <div class="profile-badges">
               <span class="profile-badge profile-badge-verified">✓ Verified via Discord</span>
               ${discordBadges(user)

@@ -73,12 +73,22 @@ const Dialog = (() => {
     placeholder = "",
     value = "",
     type = "text",
+    multiline = false,
     confirmText = "OK",
     cancelText = "Cancel",
     icon = "lock",
-    cardColor = "var(--gold, #d4af37)"
+    cardColor = "var(--gold, #d4af37)",
+    required = false
   }) {
     return new Promise((resolve) => {
+      const fieldHtml = multiline
+        ? `<textarea id="dialogInput" placeholder="${placeholder}">${value}</textarea>`
+        : `
+          <div class="input-wrap">
+            ${(ICONS[icon] || ICONS.lock).replace("<svg ", '<svg class="field-icon" ')}
+            <input id="dialogInput" type="${type}" placeholder="${placeholder}" value="${value}" autocomplete="off" />
+          </div>`;
+
       const overlay = shell({
         kicker,
         title,
@@ -88,11 +98,9 @@ const Dialog = (() => {
         bodyHtml: `
           <div class="field">
             ${label ? `<label>${label}</label>` : ""}
-            <div class="input-wrap">
-              ${(ICONS[icon] || ICONS.lock).replace("<svg ", '<svg class="field-icon" ')}
-              <input id="dialogInput" type="${type}" placeholder="${placeholder}" value="${value}" autocomplete="off" />
-            </div>
+            ${fieldHtml}
           </div>
+          <p class="error-text" id="dialogPromptError" style="display:none"></p>
           <div class="modal-actions">
             <button type="button" class="btn btn-outline" id="dialogCancel">${cancelText}</button>
             <button type="button" class="btn btn-primary" id="dialogConfirm">${confirmText}</button>
@@ -105,6 +113,13 @@ const Dialog = (() => {
 
       function confirm() {
         const val = input.value;
+        if (required && !val.trim()) {
+          const err = overlay.querySelector("#dialogPromptError");
+          err.textContent = "This can't be left blank.";
+          err.style.display = "block";
+          input.focus();
+          return;
+        }
         cleanup();
         resolve(val);
       }
@@ -115,7 +130,7 @@ const Dialog = (() => {
         resolve(null);
       };
       input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") confirm();
+        if (e.key === "Enter" && !multiline) confirm();
       });
 
       input.focus();

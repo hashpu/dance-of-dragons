@@ -121,8 +121,25 @@ CREATE TABLE IF NOT EXISTS applications (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Set to 'approved' when an admin approves a ticket in the dashboard — see
--- routes/applications.js's /approve endpoint. There's no applicant login, so
--- this doesn't notify them directly; it just posts to the Discord webhook
--- (same one the original submission used) so the team can follow up.
+-- 'pending' | 'approved' | 'declined' — set by the /approve and /decline
+-- endpoints in routes/applications.js.
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'pending';
+
+-- Which Discord account submitted this, IF they happened to be signed in
+-- with Discord on the site at the moment they applied (captured server-side
+-- from their own auth token — never from the free-typed discord_username
+-- field above, which can't be trusted to name a real account). There's
+-- still no applicant login, so this is the only reliable way to notify an
+-- applicant of a decision: a DM (see discord.js's sendDiscordDM) and the
+-- "my applications" panel in nav.js both key off this, and both simply have
+-- nothing to show someone who wasn't signed in when they applied.
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS discord_user_id TEXT;
+CREATE INDEX IF NOT EXISTS applications_discord_user_idx ON applications(discord_user_id);
+
+-- Set together with status = 'declined' by the /decline endpoint.
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT NOT NULL DEFAULT '';
+
+-- Flips to true once the applicant has dismissed the decision in their "my
+-- applications" panel (see POST /:id/seen) — drives the unread dot on their
+-- profile menu. Reset to false whenever a new decision is made.
+ALTER TABLE applications ADD COLUMN IF NOT EXISTS seen_by_applicant BOOLEAN NOT NULL DEFAULT false;

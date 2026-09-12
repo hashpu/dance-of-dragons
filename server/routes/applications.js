@@ -4,6 +4,7 @@ const { pool } = require("../db");
 const { findDepartment } = require("../departments");
 const { requireAdmin } = require("../middleware/requireAdmin");
 const { saveUpload } = require("../uploads");
+const { getRequestDiscordUserId, sendDiscordDM } = require("../discord");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 const router = express.Router();
@@ -81,6 +82,43 @@ async function postApprovalToDiscord(webhookUrl, dept, app) {
   if (!res.ok) throw new Error("Discord webhook responded " + res.status);
 }
 
+async function postDeclineToDiscord(webhookUrl, dept, app, reason) {
+  const embed = {
+    title: `❌ ${dept.name} Application Declined`,
+    description: `**${app.roblox_username}** (Discord: ${app.discord_username}) was declined for **${dept.name}**.`,
+    fields: [{ name: "Reason given", value: truncate(reason) }],
+    color: 0xef5b5b,
+    timestamp: new Date().toISOString()
+  };
+  const res = await fetch(webhookUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ embeds: [embed] })
+  });
+  if (!res.ok) throw new Error("Discord webhook responded " + res.status);
+}
+
+function applicantDmEmbed({ approved, deptName, reason }) {
+  return {
+    embeds: [
+      approved
+        ? {
+            title: `✅ You've been accepted!`,
+            description: `You accepted the **${deptName}** application. A recruiter will reach out on Discord to get you onboarded.`,
+            color: 0x3ecf8e,
+            timestamp: new Date().toISOString()
+          }
+        : {
+            title: `${deptName} Application Update`,
+            description: `Your **${deptName}** application wasn't accepted this time.`,
+            fields: [{ name: "Reason", value: truncate(reason) }],
+            color: 0xef5b5b,
+            timestamp: new Date().toISOString()
+          }
+    ]
+  };
+}
+
 // POST /api/applications — submit an application (multipart if it includes an image)
 router.post("/", upload.single("image"), async (req, res, next) => {
   try {
@@ -110,10 +148,16 @@ router.post("/", upload.single("image"), async (req, res, next) => {
       imagePath = await saveUpload(req.file.buffer, req.file.mimetype);
     }
 
+    // Only set if they're actually signed in with Discord on the site right
+    // now — never derived from the free-typed discordUsername field above.
+    // This is what lets an approve/decline notify them later (see
+    // /:id/approve, /:id/decline, and GET /mine below).
+    const discordUserId = await getRequestDiscordUserId(req);
+
     const insertRes = await pool.query(
-      `INSERT INTO applications (department, roblox_username, discord_username, availability, why, answers, image_path)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-      [department, robloxUsername, discordUsername, availability || "", why, JSON.stringify(answers), imagePath]
+      `INSERT INTO applications (department, roblox_username, discord_username, availability, why, answers, image_path, discord_user_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+      [department, robloxUsername, discordUsername, availability || "", why, JSON.stringify(answers), imagePath, discordUserId]
     );
 
     logApplication(dept, { robloxUsername, discordUsername, availability, why, answers }, imagePath);
@@ -149,19 +193,26 @@ router.get("/", requireAdmin, async (req, res, next) => {
   }
 });
 
-// POST /api/applications/:id/approve — admin only. There's no applicant
-// login or verified contact info to notify them directly with, so this just
-// marks the ticket approved and posts to the department's Discord webhook
-// (same one the original submission used) so the team can follow up.
+// POST /api/applications/:id/approve — admin only. Posts to the
+// department's Discord webhook so the team can follow up, and — if the
+// applicant happened to be signed in with Discord when they applied — DMs
+// them directly too. `dmSent` in the response tells the dashboard whether
+// that actually went through, since plenty of applicants won't have a
+// discord_user_id on file at all.
 router.post("/:id/approve", requireAdmin, async (req, res, next) => {
   try {
     if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: "Invalid application ID." });
 
-    const { rows } = await pool.query("UPDATE applications SET status = 'approved' WHERE id = $1 RETURNING *", [req.params.id]);
+    const { rows } = await pool.query(
+      "UPDATE applications SET status = 'approved', seen_by_applicant = false WHERE id = $1 RETURNING *",
+      [req.params.id]
+    );
     const app = rows[0];
     if (!app) return res.status(404).json({ error: "Application not found." });
 
     const dept = findDepartment(app.department);
+    const deptName = dept ? dept.name : app.department;
+
     const webhookUrl = process.env[`WEBHOOK_${app.department.toUpperCase()}`] || process.env.WEBHOOK_APPLICATIONS;
     if (dept && webhookUrl) {
       try {
@@ -171,7 +222,105 @@ router.post("/:id/approve", requireAdmin, async (req, res, next) => {
       }
     }
 
-    res.json({ ok: true, status: app.status });
+    const dmSent = app.discord_user_id
+      ? await sendDiscordDM(app.discord_user_id, applicantDmEmbed({ approved: true, deptName }))
+      : false;
+
+    res.json({ ok: true, status: app.status, dmSent });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/applications/:id/decline { reason } — admin only. Same
+// notification paths as approve (staff webhook + a DM if we know who they
+// are), plus the reason is stored so it shows up in their "my applications"
+// panel (GET /mine below) even if the DM never lands.
+router.post("/:id/decline", requireAdmin, async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: "Invalid application ID." });
+    const reason = (req.body.reason || "").trim();
+    if (!reason) return res.status(400).json({ error: "A reason is required." });
+
+    const { rows } = await pool.query(
+      "UPDATE applications SET status = 'declined', decline_reason = $2, seen_by_applicant = false WHERE id = $1 RETURNING *",
+      [req.params.id, reason]
+    );
+    const app = rows[0];
+    if (!app) return res.status(404).json({ error: "Application not found." });
+
+    const dept = findDepartment(app.department);
+    const deptName = dept ? dept.name : app.department;
+
+    const webhookUrl = process.env[`WEBHOOK_${app.department.toUpperCase()}`] || process.env.WEBHOOK_APPLICATIONS;
+    if (dept && webhookUrl) {
+      try {
+        await postDeclineToDiscord(webhookUrl, dept, app, reason);
+      } catch (e) {
+        console.warn("Discord decline webhook failed:", e.message);
+      }
+    }
+
+    const dmSent = app.discord_user_id
+      ? await sendDiscordDM(app.discord_user_id, applicantDmEmbed({ approved: false, deptName, reason }))
+      : false;
+
+    res.json({ ok: true, status: app.status, declineReason: app.decline_reason, dmSent });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/applications/mine — no admin secret: just whatever the caller's
+// own signed-in Discord identity has decided applications for. Only
+// decided (not pending) ones, since "pending" isn't a notification. Powers
+// the "my applications" panel in nav.js.
+router.get("/mine", async (req, res, next) => {
+  try {
+    const discordUserId = await getRequestDiscordUserId(req);
+    if (!discordUserId) return res.json([]);
+
+    const { rows } = await pool.query(
+      `SELECT id, department, status, decline_reason, seen_by_applicant, created_at
+       FROM applications WHERE discord_user_id = $1 AND status != 'pending'
+       ORDER BY created_at DESC LIMIT 50`,
+      [discordUserId]
+    );
+    res.json(
+      rows.map((r) => {
+        const dept = findDepartment(r.department);
+        return {
+          id: r.id,
+          department: r.department,
+          departmentName: dept ? dept.name : r.department,
+          status: r.status,
+          declineReason: r.decline_reason,
+          seen: r.seen_by_applicant,
+          createdAt: r.created_at
+        };
+      })
+    );
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/applications/:id/seen — no admin secret: the applicant
+// dismissing their own notification. Ownership is enforced by matching
+// discord_user_id to whoever's actually signed in, not just the ID in the
+// URL, so nobody can mark someone else's application as seen.
+router.post("/:id/seen", async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: "Invalid application ID." });
+    const discordUserId = await getRequestDiscordUserId(req);
+    if (!discordUserId) return res.status(401).json({ error: "Sign in with Discord first." });
+
+    const { rows } = await pool.query(
+      "UPDATE applications SET seen_by_applicant = true WHERE id = $1 AND discord_user_id = $2 RETURNING id",
+      [req.params.id, discordUserId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Application not found." });
+    res.json({ ok: true });
   } catch (err) {
     next(err);
   }

@@ -390,6 +390,7 @@ function ticketHtml(app) {
         </div>
         <div class="ticket-summary-meta">
           ${app.status === "approved" ? `<span class="a-badge a-badge-unlocked">Approved</span>` : ""}
+          ${app.status === "declined" ? `<span class="a-badge a-badge-locked">Declined</span>` : ""}
           <span class="ticket-date">${submitted}</span>
           <span class="chev">${CHEVRON_ICON}</span>
         </div>
@@ -402,6 +403,14 @@ function ticketHtml(app) {
           ${escapeHtml(app.why)}
         </blockquote>
         ${
+          app.status === "declined"
+            ? `<blockquote class="ticket-why" style="--card-color:var(--a-danger, #ef5b5b)">
+                 <span class="ticket-why-label">Decline reason</span>
+                 ${escapeHtml(app.decline_reason)}
+               </blockquote>`
+            : ""
+        }
+        ${
           app.image_path
             ? `<a class="ticket-image-link" href="${app.image_path}" target="_blank" rel="noopener">
                  <img class="ticket-image" src="${app.image_path}" alt="Attached image" />
@@ -412,7 +421,12 @@ function ticketHtml(app) {
           ${
             app.status === "approved"
               ? `<button class="a-btn" disabled>Approved ✓</button>`
-              : `<button class="a-btn a-btn-success" data-action="approve-ticket" data-id="${app.id}">Approve</button>`
+              : app.status === "declined"
+                ? `<button class="a-btn" disabled>Declined</button>`
+                : `
+                  <button class="a-btn a-btn-success" data-action="approve-ticket" data-id="${app.id}">Approve</button>
+                  <button class="a-btn a-btn-danger" data-action="decline-ticket" data-id="${app.id}">Decline</button>
+                `
           }
           <button class="a-btn a-btn-danger" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
         </div>
@@ -438,8 +452,43 @@ function renderTickets() {
     btn.onclick = async (e) => {
       e.preventDefault();
       const id = btn.dataset.id;
-      await Api.approveApplication(id, adminSecret);
+      const { dmSent } = await Api.approveApplication(id, adminSecret);
       await refreshApplications();
+      await Dialog.alert({
+        title: "Application approved",
+        message: dmSent
+          ? "They've been DMed on Discord to let them know."
+          : "Saved — they weren't signed in with Discord when they applied, so no DM could be sent. The staff webhook still got it.",
+        icon: dmSent ? "discord" : "info"
+      });
+    };
+  });
+
+  el.querySelectorAll('[data-action="decline-ticket"]').forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.preventDefault();
+      const id = btn.dataset.id;
+      const reason = await Dialog.prompt({
+        kicker: "Admin only",
+        title: "Decline this application?",
+        label: "Reason",
+        placeholder: "Let them know why, so they can improve next time...",
+        multiline: true,
+        required: true,
+        confirmText: "Decline",
+        icon: "warning",
+        cardColor: "var(--red)"
+      });
+      if (!reason) return;
+      const { dmSent } = await Api.declineApplication(id, reason, adminSecret);
+      await refreshApplications();
+      await Dialog.alert({
+        title: "Application declined",
+        message: dmSent
+          ? "They've been DMed the reason on Discord."
+          : "Reason saved — they weren't signed in with Discord when they applied, so no DM could be sent. They'll still see it if they sign in on the site.",
+        icon: dmSent ? "discord" : "info"
+      });
     };
   });
 

@@ -194,6 +194,14 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .user-chip:hover { background: rgba(255, 255, 255, 0.06); }
 .user-chip img { width: 26px; height: 26px; border-radius: 50%; }
 .user-chip span { font-weight: 600; }
+.user-chip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 0 2px var(--panel), 0 0 6px var(--red);
+  flex-shrink: 0;
+}
 
 .profile-card {
   --profile-accent: var(--red);
@@ -246,6 +254,20 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .profile-meta { font-size: 11px; color: var(--muted); margin-top: 2px; margin-bottom: 10px; }
 
 .profile-divider { height: 1px; background: var(--panel-border); margin: 2px 0 12px; }
+
+.app-updates { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; text-align: left; }
+.app-update-card {
+  border-radius: 6px;
+  padding: 9px 11px;
+  border: 1px solid;
+  background: rgba(255, 255, 255, 0.03);
+}
+.app-update-approved { border-color: rgba(62, 207, 142, 0.4); background: rgba(62, 207, 142, 0.08); }
+.app-update-declined { border-color: rgba(224, 72, 62, 0.4); background: rgba(224, 72, 62, 0.08); }
+.app-update-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 700; }
+.app-update-dept { color: var(--muted); font-weight: 500; }
+.app-update-reason { margin: 6px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }
+.app-update-dismiss { display: block; margin: 6px 0 0 auto; font-size: 11.5px; }
 
 .profile-roblox-header {
   display: flex;
