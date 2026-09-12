@@ -48,6 +48,15 @@ CREATE INDEX IF NOT EXISTS members_parent_idx ON members(parent_id);
 -- houses.lord_discord_user_id above for that).
 ALTER TABLE members ADD COLUMN IF NOT EXISTS discord_id TEXT NOT NULL DEFAULT '';
 
+-- A spouse is a one-directional pointer, same as parent_id — no house
+-- scoping (marrying in from another house's tree is allowed, same as a
+-- cross-house parent), and no permission check on the pointed-to member's
+-- own house when it's set (see routes/houses.js). A member who married in
+-- with no family of their own here (no parent_id) and points to a spouse
+-- doesn't get a separate branch in the tree — they're rendered paired
+-- inside their spouse's own box instead.
+ALTER TABLE members ADD COLUMN IF NOT EXISTS spouse_id TEXT REFERENCES members(id) ON DELETE SET NULL;
+
 -- Uploaded files (member avatars, application images) stored in the
 -- database itself rather than on local disk — Render's local filesystem is
 -- wiped on every redeploy/restart, but this table lives in the same
@@ -57,6 +66,18 @@ CREATE TABLE IF NOT EXISTS uploaded_files (
   mime_type TEXT NOT NULL,
   data BYTEA NOT NULL,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- One row per Discord account that has ever signed in on the site (verified
+-- via a real Discord API call, see discord.js's recordDiscordUserSeen) —
+-- lets the admin dashboard search/assign a Lord by username instead of
+-- needing their raw numeric ID, and only from people who've actually signed
+-- in here (never pre-populated or guessed).
+CREATE TABLE IF NOT EXISTS discord_users (
+  id TEXT PRIMARY KEY,
+  username TEXT NOT NULL,
+  avatar TEXT NOT NULL DEFAULT '',
+  last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
 -- One row per Discord account: which side of the Dance they're backing.

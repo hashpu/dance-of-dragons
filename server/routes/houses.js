@@ -34,10 +34,16 @@ const avatarUpload = multer({
   }
 });
 
-function toMemberJson(row, externalParent) {
+function toMemberJson(row, externalParent, spouse) {
   return {
     id: row.id,
     parentId: row.parent_id,
+    // The raw pointer, distinct from the resolved `spouse` object below —
+    // the frontend needs to tell "I point at a spouse" (spouseId set on
+    // this row) apart from "someone else points at me" (spouse resolved
+    // only in reverse) to know which half of a couple keeps its own place
+    // in the tree. See buildForest in tree.js.
+    spouseId: row.spouse_id,
     name: row.name,
     role: row.role,
     avatarUrl: row.avatar_url,
@@ -45,34 +51,67 @@ function toMemberJson(row, externalParent) {
     robloxProfile: row.roblox_profile,
     discordId: row.discord_id,
     note: row.note,
-    ...(externalParent ? { externalParent } : {})
+    ...(externalParent ? { externalParent } : {}),
+    ...(spouse ? { spouse } : {})
   };
 }
 
-// A member's parent can belong to a different house entirely (e.g. someone
-// married in from another dynasty) — parent_id has no house_slug scoping at
-// the database level. For any such "external" parent, look up their name
-// and house so the frontend can show who they are without fetching that
-// whole other house.
+// A member's parent or spouse can belong to a different house entirely
+// (e.g. someone married in from another dynasty) — parent_id/spouse_id have
+// no house_slug scoping at the database level. For any such "external"
+// reference, look up enough of their info so the frontend can show them
+// without fetching that whole other house.
 async function toMemberJsonList(rows) {
   const localIds = new Set(rows.map((r) => r.id));
-  const externalIds = [...new Set(rows.filter((r) => r.parent_id && !localIds.has(r.parent_id)).map((r) => r.parent_id))];
+  const byLocalId = new Map(rows.map((r) => [r.id, r]));
 
-  let externalParents = {};
+  const externalIds = [...new Set(rows.flatMap((r) => [r.parent_id, r.spouse_id]).filter((id) => id && !localIds.has(id)))];
+
+  let externalRows = {};
   if (externalIds.length) {
     const placeholders = externalIds.map((_, i) => `$${i + 1}`).join(",");
     const { rows: extRows } = await pool.query(
-      `SELECT m.id, m.name, h.slug AS house_slug, h.name AS house_name, h.faction
+      `SELECT m.id, m.name, m.role, m.avatar_url, m.roblox_profile, m.discord_id,
+              h.slug AS house_slug, h.name AS house_name, h.faction
        FROM members m JOIN houses h ON h.slug = m.house_slug
        WHERE m.id IN (${placeholders})`,
       externalIds
     );
     extRows.forEach((r) => {
-      externalParents[r.id] = { name: r.name, houseSlug: r.house_slug, houseName: r.house_name, houseFaction: r.faction };
+      externalRows[r.id] = r;
     });
   }
 
-  return rows.map((row) => toMemberJson(row, externalParents[row.parent_id]));
+  function personSummary(r, withHouse) {
+    return {
+      id: r.id,
+      name: r.name,
+      role: r.role,
+      avatarUrl: r.avatar_url,
+      discordId: r.discord_id,
+      robloxProfile: r.roblox_profile,
+      ...(withHouse ? { houseSlug: r.house_slug, houseName: r.house_name, houseFaction: r.faction } : {})
+    };
+  }
+
+  // Checked in order: this row's own spouse_id (local, then external), and
+  // only if neither is set, whether someone ELSE points back at this row —
+  // that reverse check is local-only, since a spouse added through the site
+  // always lands in the same house as the member they're attached to.
+  function resolveSpouse(row) {
+    if (row.spouse_id && byLocalId.has(row.spouse_id)) return personSummary(byLocalId.get(row.spouse_id), false);
+    if (row.spouse_id && externalRows[row.spouse_id]) return personSummary(externalRows[row.spouse_id], true);
+    const reverse = rows.find((r) => r.spouse_id === row.id);
+    return reverse ? personSummary(reverse, false) : undefined;
+  }
+
+  return rows.map((row) => {
+    const extParentRow = row.parent_id && !localIds.has(row.parent_id) ? externalRows[row.parent_id] : undefined;
+    const externalParent = extParentRow
+      ? { name: extParentRow.name, houseSlug: extParentRow.house_slug, houseName: extParentRow.house_name, houseFaction: extParentRow.faction }
+      : undefined;
+    return toMemberJson(row, externalParent, resolveSpouse(row));
+  });
 }
 
 function toHouseSummaryJson(row) {
@@ -103,6 +142,17 @@ async function hasHousePassword(req, house) {
 function makeMemberId(name) {
   const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
   return `${slug || "member"}-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+}
+
+// spouse_id is one-directional, so a couple can end up "paired" purely
+// because the OTHER member points here (see toMemberJsonList's reverse
+// lookup) — this member's own spouse_id can be null the whole time. Without
+// this, marrying memberId to someone new (or clearing their spouse
+// entirely) would leave that old reverse pointer in place, and the couple
+// would keep showing as paired from the other side even after this side
+// "moved on." No-op if nobody currently points here.
+async function clearReverseSpouseLinks(memberId) {
+  await pool.query("UPDATE members SET spouse_id = NULL WHERE spouse_id = $1", [memberId]);
 }
 
 // Computed in JS rather than a recursive CTE — trees here are small, and this
@@ -200,7 +250,7 @@ router.post("/:slug/unlock", async (req, res, next) => {
       tagline: house.tagline,
       description: house.description,
       locked: true,
-      members: membersRes.rows.map(toMemberJson)
+      members: await toMemberJsonList(membersRes.rows)
     });
   } catch (err) {
     next(err);
@@ -323,6 +373,40 @@ router.post("/:slug/lord-discord", async (req, res, next) => {
   }
 });
 
+// POST /api/houses/:slug/lord-password { password } — lets this house's
+// Discord-recognized Lord set a brand-new password themselves, in one step,
+// without knowing the current one or needing the admin secret. Same
+// one-step semantics as the admin's reset-password endpoint, just gated on
+// isLordOfHouse instead of requireOwner.
+router.post("/:slug/lord-password", async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("SELECT * FROM houses WHERE slug = $1", [req.params.slug]);
+    const house = rows[0];
+    if (!house) return res.status(404).json({ error: "House not found." });
+
+    if (!(await isLordOfHouse(req, house))) {
+      return res.status(401).json({ error: `Only this house's ${leaderTitle(house.slug)} can change its password this way.` });
+    }
+
+    const password = req.body.password || "";
+    if (!password) return res.status(400).json({ error: "A password is required." });
+
+    const hash = await bcrypt.hash(password, 10);
+    await pool.query("UPDATE houses SET locked = true, password_hash = $2 WHERE slug = $1", [house.slug, hash]);
+
+    const userId = await getRequestDiscordUserId(req);
+    await postLog(
+      `🔑 ${leaderTitle(house.slug)} changed the password`,
+      `**${house.name}**'s password was changed by its ${leaderTitle(house.slug)} (Discord ID \`${userId}\`).`,
+      0xd4af37
+    );
+
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // Unlocked, or the caller is signed in as this house's Discord Lord, or sent
 // the correct x-house-password for this one request. Only the Lord case is
 // logged by the caller as a privileged edit (the house is otherwise locked
@@ -383,13 +467,38 @@ router.post("/:slug/avatar", (req, res, next) => {
   }
 });
 
+// GET /api/houses/:slug/discord-users?q= — same access as adding a member
+// (unlocked, Lord, or house password): searches Discord accounts that have
+// actually signed in on the site before (see discord.js's
+// recordDiscordUserSeen), for the "add a spouse" picker. Unlike the
+// admin-only /api/admin/discord-users, this works for anyone who can
+// already edit this house — no admin secret needed.
+router.get("/:slug/discord-users", async (req, res, next) => {
+  try {
+    const access = await authorizeEdit(req, res, req.params.slug);
+    if (!access) return;
+
+    const q = (req.query.q || "").trim();
+    const { rows } = await pool.query(
+      `SELECT id, username, avatar FROM discord_users
+       WHERE $1 = '' OR username ILIKE '%' || $1 || '%'
+       ORDER BY last_seen_at DESC
+       LIMIT 20`,
+      [q]
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/houses/:slug/members — add a member
 router.post("/:slug/members", async (req, res, next) => {
   try {
     const access = await authorizeEdit(req, res, req.params.slug);
     if (!access) return;
 
-    const { name, role, parentId, avatarUrl, buildLink, robloxProfile, discordId, note } = req.body;
+    const { name, role, parentId, spouseId, avatarUrl, buildLink, robloxProfile, discordId, note } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
 
     if (parentId) {
@@ -399,11 +508,20 @@ router.post("/:slug/members", async (req, res, next) => {
       if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found." });
     }
 
+    if (spouseId) {
+      // Same cross-house allowance as parentId above.
+      const spouse = await pool.query("SELECT id FROM members WHERE id = $1", [spouseId]);
+      if (!spouse.rows[0]) return res.status(400).json({ error: "Spouse not found." });
+      // Nobody else's reverse-only pairing to them should keep showing once
+      // they're forward-linked to this new member instead.
+      await clearReverseSpouseLinks(spouseId);
+    }
+
     const id = makeMemberId(name.trim());
     const { rows } = await pool.query(
-      `INSERT INTO members (id, house_slug, parent_id, name, role, avatar_url, build_link, roblox_profile, discord_id, note)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
-      [id, req.params.slug, parentId || null, name.trim(), role || "", avatarUrl || "", buildLink || "", robloxProfile || "", discordId || "", note || ""]
+      `INSERT INTO members (id, house_slug, parent_id, spouse_id, name, role, avatar_url, build_link, roblox_profile, discord_id, note)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
+      [id, req.params.slug, parentId || null, spouseId || null, name.trim(), role || "", avatarUrl || "", buildLink || "", robloxProfile || "", discordId || "", note || ""]
     );
     if (access.viaLordBypass) await logLordEdit(req, access.house, `added member "${name.trim()}"`);
     res.status(201).json(toMemberJson(rows[0]));
@@ -422,7 +540,7 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
     const existing = await pool.query("SELECT id FROM members WHERE id = $1 AND house_slug = $2", [id, req.params.slug]);
     if (!existing.rows[0]) return res.status(404).json({ error: "Member not found." });
 
-    const { name, role, parentId, avatarUrl, buildLink, robloxProfile, discordId, note } = req.body;
+    const { name, role, parentId, spouseId, avatarUrl, buildLink, robloxProfile, discordId, note } = req.body;
     if (!name || !name.trim()) return res.status(400).json({ error: "Name is required." });
 
     if (parentId) {
@@ -437,10 +555,26 @@ router.patch("/:slug/members/:id", async (req, res, next) => {
       if (!parent.rows[0]) return res.status(400).json({ error: "Parent not found." });
     }
 
+    if (spouseId) {
+      if (spouseId === id) return res.status(400).json({ error: "A member can't be their own spouse." });
+      // Same cross-house allowance as parentId above.
+      const spouse = await pool.query("SELECT id FROM members WHERE id = $1", [spouseId]);
+      if (!spouse.rows[0]) return res.status(400).json({ error: "Spouse not found." });
+      // Nobody else's reverse-only pairing to them should keep showing once
+      // they're forward-linked to this member instead.
+      await clearReverseSpouseLinks(spouseId);
+    }
+
+    // Whatever this member's spouse situation is about to become (a new
+    // spouse, or none), anyone still pointing here from the OLD one needs
+    // clearing — editing either half of a couple should be able to end it,
+    // not just the half that happens to hold the forward pointer.
+    await clearReverseSpouseLinks(id);
+
     const { rows } = await pool.query(
-      `UPDATE members SET name=$1, role=$2, parent_id=$3, avatar_url=$4, build_link=$5, roblox_profile=$6, discord_id=$7, note=$8
-       WHERE id=$9 AND house_slug=$10 RETURNING *`,
-      [name.trim(), role || "", parentId || null, avatarUrl || "", buildLink || "", robloxProfile || "", discordId || "", note || "", id, req.params.slug]
+      `UPDATE members SET name=$1, role=$2, parent_id=$3, spouse_id=$4, avatar_url=$5, build_link=$6, roblox_profile=$7, discord_id=$8, note=$9
+       WHERE id=$10 AND house_slug=$11 RETURNING *`,
+      [name.trim(), role || "", parentId || null, spouseId || null, avatarUrl || "", buildLink || "", robloxProfile || "", discordId || "", note || "", id, req.params.slug]
     );
     res.json(toMemberJson(rows[0]));
   } catch (err) {

@@ -43,12 +43,14 @@ function renderStatus() {
     el.innerHTML = `
       <div class="banner banner-lord">
         <div class="banner-left"><span class="dot dot-lord"></span> You're recognized as this ${house.faction === "CROWN" ? "order's" : "house's"} ${leaderTitle(house)}, locked for everyone else. You can add new members below, but editing or removing existing ones needs the house password.</div>
+        <button class="btn btn-outline" id="changePasswordBtn">Change password</button>
       </div>
     `;
+    document.getElementById("changePasswordBtn").onclick = changeLordPassword;
   } else if (house.locked) {
     el.innerHTML = `
-      <div class="locked-card">
-        <div class="lock-icon">🔒</div>
+      <div class="locked-card" style="--card-color:${house.color}">
+        <div class="lock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg></div>
         <h3>This tree is locked</h3>
         <p>Enter ${entityLabel(house)}'s password to view its family tree.</p>
         <div class="unlock-row">
@@ -132,19 +134,70 @@ async function lockHouse() {
   await refresh();
 }
 
+// Self-service password rotation for a Discord-recognized Lord — no need to
+// know the current password (it may be the whole reason they're changing
+// it) or ask an admin for the secret. Uses the same Discord bearer token
+// that already proved their Lord access, so it just works if they're
+// already signed in — no extra sign-in prompt.
+async function changeLordPassword() {
+  const pw = await Dialog.prompt({
+    kicker: entityLabel(house),
+    title: "Change password",
+    message: `Sets a brand-new password for ${entityLabel(house)} right away. The old password stops working immediately.`,
+    label: "New password",
+    type: "password",
+    placeholder: "••••••••",
+    confirmText: "Change password",
+    cardColor: house.color
+  });
+  if (!pw) return;
+  try {
+    await Api.setLordPassword(slug, pw);
+  } catch (e) {
+    await Dialog.alert({ title: "Couldn't change password", message: e.message, icon: "warning", cardColor: "var(--red)" });
+    return;
+  }
+  await Dialog.alert({
+    title: "Password changed",
+    message: `${entityLabel(house)}'s password has been updated.`,
+    icon: "lock",
+    cardColor: house.color
+  });
+  await refresh();
+}
+
 function buildForest(members) {
   // A parentId that doesn't match anyone in this house's own list means the
   // parent belongs to a different house (married in) — treat that member as
   // a root here too, since there's no local node to nest them under.
   const localIds = new Set(members.map((m) => m.id));
+
+  // A member with no parent of their own who points to a local spouse
+  // (spouseId set on their OWN row, not just resolved via reverse — see the
+  // server's toMemberJson comment) doesn't get an independent slot in the
+  // tree. They're rendered paired inside their spouse's own box instead, so
+  // whichever member DOES have a real position (a parentId, or a genuine
+  // root founder) keeps it. Checking spouseId rather than the resolved
+  // `spouse` object matters here: a root founder's spouse also resolves via
+  // reverse lookup, but the founder must never be excluded just because
+  // someone married into the house next to them.
+  const pairedSpouseFor = {};
+  members.forEach((m) => {
+    if (!m.parentId && m.spouseId && localIds.has(m.spouseId)) {
+      pairedSpouseFor[m.spouseId] = m;
+    }
+  });
+  const excludedIds = new Set(Object.values(pairedSpouseFor).map((m) => m.id));
+
   const byParent = {};
   members.forEach((m) => {
+    if (excludedIds.has(m.id)) return;
     const key = m.parentId && localIds.has(m.parentId) ? m.parentId : "root";
     (byParent[key] = byParent[key] || []).push(m);
   });
   function attach(m) {
     const children = (byParent[m.id] || []).map(attach);
-    return { ...m, children };
+    return { ...m, children, pairedSpouse: pairedSpouseFor[m.id] || null };
   }
   return (byParent.root || []).map(attach);
 }
@@ -155,6 +208,7 @@ function escapeAttr(str) {
 
 const PENCIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5l3 3L7 20H4v-3z"/></svg>`;
 const CROWN_BADGE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l4.5 3L12 4l4.5 7L21 8l-2 11H5L3 8zm4 12h10v1.5H7V20z"/></svg>`;
+const NODE_HEART_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.3s-7.2-4.4-9.4-8.7C1.2 8.4 2.8 5 6.2 5c2 0 3.4 1.2 5.8 4 2.4-2.8 3.8-4 5.8-4 3.4 0 5 3.4 3.6 6.6-2.2 4.3-9.4 8.7-9.4 8.7z"/></svg>`;
 
 // A Lord recognized via Discord (no password) can only add new members —
 // editing or removing an existing one needs the house password, same as
@@ -164,44 +218,91 @@ let lordOnlyAccess = false;
 // Staggers each node's entrance animation on render — reset per render pass.
 let nodeRenderIndex = 0;
 
-function nodeHtml(node) {
-  const i = nodeRenderIndex++;
-  const isRoot = !node.parentId;
-  const fallback = generatedAvatar(node.name, house.color);
-  const avatar = node.avatarUrl || fallback;
-  const avatarImg = `<img class="node-avatar" src="${avatar}" alt="${node.name}" onerror="this.onerror=null;this.src='${fallback}'" />`;
-  const avatarHtml = node.robloxProfile
-    ? `<a href="${escapeAttr(node.robloxProfile)}" target="_blank" rel="noopener" title="Open Roblox profile">${avatarImg}</a>`
+// The single-person card content shared by a normal node and each half of a
+// married couple's paired node — everything except the outer .node wrapper,
+// the "Child of" line, and the add-child/add-spouse buttons, all of which
+// belong to whichever member actually holds the tree position (see
+// nodeHtml), not to a spouse who only married in.
+function personCardHtml(person) {
+  const fallback = generatedAvatar(person.name, house.color);
+  const avatar = person.avatarUrl || fallback;
+  const avatarImg = `<img class="node-avatar" src="${avatar}" alt="${person.name}" onerror="this.onerror=null;this.src='${fallback}'" />`;
+  const avatarHtml = person.robloxProfile
+    ? `<a href="${escapeAttr(person.robloxProfile)}" target="_blank" rel="noopener" title="Open Roblox profile">${avatarImg}</a>`
     : avatarImg;
-  const role = node.role ? `<div class="node-role">${node.role}</div>` : `<div class="node-role">&nbsp;</div>`;
-  const nameTitle = node.note ? ` title="${escapeAttr(node.note)}"` : "";
-  const externalParentHtml = node.externalParent
-    ? `<a class="node-external-parent" href="/house?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · ${entityLabel({ name: node.externalParent.houseName, faction: node.externalParent.houseFaction })}</a>`
-    : "";
+  const role = person.role ? `<div class="node-role">${person.role}</div>` : `<div class="node-role">&nbsp;</div>`;
+  const nameTitle = person.note ? ` title="${escapeAttr(person.note)}"` : "";
   const linksHtml = `
-    ${node.buildLink ? `<a class="node-build-link" href="${escapeAttr(node.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
-    ${node.robloxProfile ? `<a class="node-build-link" href="${escapeAttr(node.robloxProfile)}" target="_blank" rel="noopener">Roblox profile ↗</a>` : ""}
-    ${node.discordId ? `<div class="node-discord">${FIELD_ICONS.discord} ${escapeAttr(node.discordId)}</div>` : ""}
+    ${person.buildLink ? `<a class="node-build-link" href="${escapeAttr(person.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
+    ${person.robloxProfile ? `<a class="node-build-link" href="${escapeAttr(person.robloxProfile)}" target="_blank" rel="noopener">Roblox profile ↗</a>` : ""}
+    ${person.discordId ? `<div class="node-discord">${FIELD_ICONS.discord} ${escapeAttr(person.discordId)}</div>` : ""}
   `;
-  const childrenHtml = node.children.length
-    ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c)}</li>`).join("")}</ul>`
-    : "";
   const editRemoveButtons = lordOnlyAccess
     ? ""
     : `
-      <button class="node-edit" title="Edit" onclick="openEditModal('${node.id}')">${PENCIL_ICON}</button>
-      <button class="node-remove" title="Remove" onclick="handleRemove('${node.id}')">✕</button>
+      <button class="node-edit" title="Edit" onclick="openEditModal('${person.id}')">${PENCIL_ICON}</button>
+      <button class="node-remove" title="Remove" onclick="handleRemove('${person.id}')">✕</button>
     `;
   return `
-    <div class="node${isRoot ? " node-root" : ""}" data-member-id="${node.id}" style="--node-i:${i}">
-      ${isRoot ? `<div class="node-crown-badge" title="Head of House">${CROWN_BADGE_ICON}</div>` : ""}
+    <div class="node-person">
       ${editRemoveButtons}
       ${avatarHtml}
-      <div class="node-name"${nameTitle}>${node.name}</div>
+      <div class="node-name"${nameTitle}>${person.name}</div>
       ${role}
-      ${externalParentHtml}
       ${linksHtml}
-      <button class="btn btn-danger-outline" onclick="openAddModal('${node.id}')">+ add child</button>
+    </div>
+  `;
+}
+
+function nodeHtml(node) {
+  const i = nodeRenderIndex++;
+  const isRoot = !node.parentId;
+  const externalParentHtml = node.externalParent
+    ? `<a class="node-external-link" href="/house?h=${node.externalParent.houseSlug}&highlight=${node.parentId}">Child of ${node.externalParent.name} · ${entityLabel({ name: node.externalParent.houseName, faction: node.externalParent.houseFaction })}</a>`
+    : "";
+  const childrenHtml = node.children.length
+    ? `<ul>${node.children.map((c) => `<li>${nodeHtml(c)}</li>`).join("")}</ul>`
+    : "";
+
+  const spouse = node.pairedSpouse;
+  const bodyHtml = spouse
+    ? `
+      <div class="node-spouse-row">
+        ${personCardHtml(node)}
+        <div class="node-spouse-divider" title="Married">${NODE_HEART_ICON}</div>
+        ${personCardHtml(spouse)}
+      </div>
+    `
+    : personCardHtml(node);
+
+  // A real spouse relationship that couldn't get the paired-box treatment —
+  // most often because they belong to a different house's tree entirely
+  // (there's no node here to pair with), occasionally because they happen
+  // to have their own tracked parent in this same house too. Either way,
+  // the marriage still deserves a mention instead of silently not
+  // appearing anywhere.
+  const unpairedSpouseHtml =
+    !spouse && node.spouse
+      ? node.spouse.houseSlug
+        ? `<a class="node-external-link" href="/house?h=${node.spouse.houseSlug}&highlight=${node.spouse.id}">Married to ${node.spouse.name} · ${entityLabel({ name: node.spouse.houseName, faction: node.spouse.houseFaction })}</a>`
+        : `<div class="node-external-link">Married to ${node.spouse.name}</div>`
+      : "";
+
+  const addSpouseBtn =
+    !node.spouse && !lordOnlyAccess
+      ? `<button class="btn btn-outline" onclick="openAddSpouseFlow('${node.id}')">+ add spouse</button>`
+      : "";
+
+  return `
+    <div class="node${isRoot ? " node-root" : ""}${spouse ? " node-paired" : ""}" data-member-id="${node.id}" style="--node-i:${i}">
+      ${isRoot ? `<div class="node-crown-badge" title="Head of House">${CROWN_BADGE_ICON}</div>` : ""}
+      ${bodyHtml}
+      ${externalParentHtml}
+      ${unpairedSpouseHtml}
+      <div class="node-actions-row">
+        <button class="btn btn-danger-outline" onclick="openAddModal('${node.id}')">+ add child</button>
+        ${addSpouseBtn}
+      </div>
     </div>
     ${childrenHtml}
   `;
@@ -345,8 +446,45 @@ function roleFieldHtml(currentRole) {
         </select>
         <span class="chevron">${FIELD_ICONS.chevron}</span>
       </div>
-      <div class="role-custom-wrap" id="fRoleCustomWrap"${isCustom ? "" : " hidden"}>
+      <div class="field-custom-wrap" id="fRoleCustomWrap"${isCustom ? "" : " hidden"}>
         <input id="fRoleCustom" placeholder="Type a custom title" value="${isCustom ? escapeAttr(currentRole) : ""}" />
+      </div>
+    </div>
+  `;
+}
+
+const NOTE_CUSTOM_VALUE = "__custom__";
+
+// A plain free-text box made people type "Married into House X" by hand —
+// inconsistent, and easy to get wrong. This picks the actual house instead,
+// excluding whichever house the member is being added to (marrying into
+// your own house doesn't mean anything), and generates the same note text
+// that used to be typed by hand. "Custom note…" still exists as an escape
+// hatch for anything that isn't a same-site house (e.g. a smallfolk family,
+// or a house not tracked here).
+function marriedInFieldHtml(currentNote, houses, currentHouseSlug) {
+  const eligibleHouses = houses.filter((h) => h.slug !== currentHouseSlug);
+  const matchedHouse = eligibleHouses.find((h) => currentNote === `Married into ${entityLabel(h)}`);
+  const isCustom = !!currentNote && !matchedHouse;
+
+  const options = eligibleHouses
+    .map((h) => `<option value="${h.slug}"${matchedHouse && matchedHouse.slug === h.slug ? " selected" : ""}>${escapeAttr(h.name)}</option>`)
+    .join("");
+
+  return `
+    <div class="field">
+      <label>Married in from <span class="hint">(optional)</span></label>
+      <div class="input-wrap">
+        ${FIELD_ICONS.heart}
+        <select id="fNoteHouseSelect">
+          <option value=""${!currentNote ? " selected" : ""}>Not married in</option>
+          ${options}
+          <option value="${NOTE_CUSTOM_VALUE}"${isCustom ? " selected" : ""}>Custom note…</option>
+        </select>
+        <span class="chevron">${FIELD_ICONS.chevron}</span>
+      </div>
+      <div class="field-custom-wrap" id="fNoteCustomWrap"${isCustom ? "" : " hidden"}>
+        <input id="fNoteCustom" placeholder="e.g. Married into the family" value="${isCustom ? escapeAttr(currentNote) : ""}" />
       </div>
     </div>
   `;
@@ -367,13 +505,14 @@ const FIELD_ICONS = {
   chevronRight: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`
 };
 
-// The member list currently backing the "who is their parent" dropdown —
-// either this house's own members, or another house's, when the visitor
-// picks a different house to link a cross-house parent from (marrying in).
+// The member list currently backing the "who is their parent" (or spouse)
+// dropdown — either this house's own members, or another house's, when the
+// visitor picks a different house to link someone from (marrying in).
 let parentPickerMembers = [];
+let spousePickerMembers = [];
 let parentPickerHouses = [];
 
-async function loadParentPickerMembers(houseSlug) {
+async function loadPickerMembers(houseSlug) {
   if (houseSlug === slug) return house.members;
   try {
     const data = await Api.getHouse(houseSlug);
@@ -391,8 +530,14 @@ function excludedParentIds(houseSlug) {
   return new Set([editingMemberId, ...getDescendantIds(editingMemberId)]);
 }
 
-function personOptionsHtml(members, excluded, selectedId) {
-  const opts = [`<option value="">Nobody, they start a new branch</option>`];
+function excludedSpouseIds(houseSlug) {
+  // A spouse just can't be yourself — there's no loop risk like reparenting.
+  if (!editingMemberId || houseSlug !== slug) return new Set();
+  return new Set([editingMemberId]);
+}
+
+function personOptionsHtml(members, excluded, selectedId, noneLabel = "Nobody, they start a new branch") {
+  const opts = [`<option value="">${noneLabel}</option>`];
   members
     .filter((m) => !excluded.has(m.id))
     .forEach((m) => opts.push(`<option value="${m.id}"${m.id === selectedId ? " selected" : ""}>${m.name}</option>`));
@@ -419,7 +564,7 @@ function updateParentPreview() {
 }
 
 async function refreshParentPersonSelect(houseSlug, selectedId) {
-  parentPickerMembers = await loadParentPickerMembers(houseSlug);
+  parentPickerMembers = await loadPickerMembers(houseSlug);
   const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlug);
   const personSelect = document.getElementById("fParent");
   personSelect.innerHTML = personOptionsHtml(parentPickerMembers, excludedParentIds(houseSlug), selectedId || "");
@@ -428,11 +573,20 @@ async function refreshParentPersonSelect(houseSlug, selectedId) {
   updateParentPreview();
 }
 
+async function refreshSpousePersonSelect(houseSlug, selectedId) {
+  spousePickerMembers = await loadPickerMembers(houseSlug);
+  const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlug);
+  const personSelect = document.getElementById("fSpouse");
+  personSelect.innerHTML = personOptionsHtml(spousePickerMembers, excludedSpouseIds(houseSlug), selectedId || "", "No spouse");
+  const lockedHint = document.getElementById("spouseHouseLockedHint");
+  lockedHint.hidden = !(pickedHouse && pickedHouse.locked && !spousePickerMembers.length && pickedHouse.memberCount > 0);
+}
+
 let editingMemberId = null;
 
-async function openAddModal(parentId) {
+async function openAddModal(parentId, presetSpouseId) {
   editingMemberId = null;
-  await openMemberModal({ parentId, member: null });
+  await openMemberModal({ parentId, member: null, presetSpouseId });
 }
 
 async function openEditModal(memberId) {
@@ -442,17 +596,86 @@ async function openEditModal(memberId) {
   await openMemberModal({ parentId: member.parentId, member });
 }
 
-async function openMemberModal({ parentId, member }) {
+// Fast path for a spouse who's an actual Discord member of the server —
+// search-and-pick (only accounts that have signed in here before show up,
+// same picker the admin dashboard uses for Lord assignment) instead of
+// filling out the whole add-member form by hand. Most spouses on a lore
+// site like this one won't have a real Discord account at all (or just
+// haven't signed in yet) — "Add them manually instead" falls back to the
+// regular Add Family Member form, with this member preselected as the
+// spouse, so a raw Discord ID can still be typed in there if wanted.
+async function openAddSpouseFlow(memberId) {
+  const member = house.members.find((m) => m.id === memberId);
+  if (!member) return;
+
+  const result = await Dialog.search({
+    kicker: entityLabel(house),
+    title: `Add ${member.name}'s spouse`,
+    message: "Search a Discord account that's signed in here before, or add them manually if they haven't (or don't need one).",
+    fetchResults: (query) => Api.searchHouseDiscordUsers(slug, query, sessionPassword),
+    allowManual: true,
+    manualLabel: "Add them manually instead"
+  });
+  if (!result) return;
+
+  if (result.manual) {
+    await openAddModal(null, memberId);
+    return;
+  }
+
+  try {
+    await Api.addMember(
+      slug,
+      {
+        name: result.username,
+        discordId: result.id,
+        spouseId: memberId,
+        parentId: null,
+        role: "",
+        avatarUrl: discordAvatarUrl(result),
+        buildLink: "",
+        robloxProfile: "",
+        note: ""
+      },
+      sessionPassword
+    );
+    await refresh();
+  } catch (e) {
+    await Dialog.alert({ title: "Couldn't add spouse", message: e.message, icon: "warning", cardColor: "var(--red)" });
+  }
+}
+
+async function openMemberModal({ parentId, member, presetSpouseId }) {
   const isEdit = !!member;
   parentPickerHouses = await Api.getHouses();
   const initialHouseSlug = isEdit && member.externalParent ? member.externalParent.houseSlug : slug;
-  parentPickerMembers = await loadParentPickerMembers(initialHouseSlug);
+  parentPickerMembers = await loadPickerMembers(initialHouseSlug);
 
   const houseOptions = parentPickerHouses
     .map((h) => `<option value="${h.slug}"${h.slug === initialHouseSlug ? " selected" : ""}>${h.name}</option>`)
     .join("");
   const initialHouse = parentPickerHouses.find((h) => h.slug === initialHouseSlug);
   const showLockedHint = initialHouse && initialHouse.locked && !parentPickerMembers.length && initialHouse.memberCount > 0;
+
+  // presetSpouseId comes from "+ add spouse"'s manual fallback — arriving
+  // here already knowing who this new member is marrying, so that pairing
+  // doesn't have to be re-picked by hand.
+  //
+  // Uses the resolved `spouse` here, not the raw `spouseId` — a member who's
+  // only paired because someone ELSE points at them (see toMemberJsonList's
+  // reverse lookup) has a null spouseId of their own, but editing them
+  // should still show their actual partner selected, not "No spouse". The
+  // server's clearReverseSpouseLinks makes saving from either side actually
+  // end the pairing correctly either way.
+  const initialSpouseId = isEdit && member.spouse ? member.spouse.id : presetSpouseId || "";
+  const initialSpouseHouseSlug = isEdit && member.spouse && member.spouse.houseSlug ? member.spouse.houseSlug : slug;
+  spousePickerMembers = await loadPickerMembers(initialSpouseHouseSlug);
+
+  const spouseHouseOptions = parentPickerHouses
+    .map((h) => `<option value="${h.slug}"${h.slug === initialSpouseHouseSlug ? " selected" : ""}>${h.name}</option>`)
+    .join("");
+  const initialSpouseHouse = parentPickerHouses.find((h) => h.slug === initialSpouseHouseSlug);
+  const showSpouseLockedHint = initialSpouseHouse && initialSpouseHouse.locked && !spousePickerMembers.length && initialSpouseHouse.memberCount > 0;
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
@@ -497,6 +720,26 @@ async function openMemberModal({ parentId, member }) {
           <div class="parent-preview" id="parentPreview"></div>
         </div>
 
+        <div class="more-grid">
+          <div class="field">
+            <label>Spouse's house <span class="hint">(pick another house if they married in from elsewhere)</span></label>
+            <div class="input-wrap">
+              ${FIELD_ICONS.tree}
+              <select id="fSpouseHouse">${spouseHouseOptions}</select>
+              <span class="chevron">${FIELD_ICONS.chevron}</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>Spouse <span class="hint">(optional — pairs them together in the tree)</span></label>
+            <div class="input-wrap">
+              ${FIELD_ICONS.heart}
+              <select id="fSpouse">${personOptionsHtml(spousePickerMembers, excludedSpouseIds(initialSpouseHouseSlug), initialSpouseId, "No spouse")}</select>
+              <span class="chevron">${FIELD_ICONS.chevron}</span>
+            </div>
+            <p class="hint" id="spouseHouseLockedHint"${showSpouseLockedHint ? "" : " hidden"}>This house is locked, so its members aren't available to pick from.</p>
+          </div>
+        </div>
+
         <details class="more-options"${isEdit && (member.buildLink || member.robloxProfile || member.discordId || member.avatarUrl || member.note) ? " open" : ""}>
           <summary><span class="chev">${FIELD_ICONS.chevronRight}</span> More options <span class="hint">(photo, links, married-in note)</span></summary>
           <div class="more-grid">
@@ -539,13 +782,7 @@ async function openMemberModal({ parentId, member }) {
             <p class="error-text" id="avatarUploadError" style="display:none"></p>
           </div>
 
-          <div class="field">
-            <label>Married-in note</label>
-            <div class="input-wrap">
-              ${FIELD_ICONS.heart}
-              <input id="fNote" placeholder="e.g. Married into the family" value="${isEdit ? escapeAttr(member.note || "") : ""}" />
-            </div>
-          </div>
+          ${marriedInFieldHtml(isEdit ? member.note || "" : "", parentPickerHouses, slug)}
         </details>
 
         <p class="error-text" id="fError" style="display:none"></p>
@@ -567,10 +804,20 @@ async function openMemberModal({ parentId, member }) {
   });
   updateParentPreview();
 
+  document.getElementById("fSpouseHouse").addEventListener("change", (e) => {
+    refreshSpousePersonSelect(e.target.value, "");
+  });
+
   document.getElementById("fRoleSelect").addEventListener("change", (e) => {
     const isCustom = e.target.value === ROLE_CUSTOM_VALUE;
     document.getElementById("fRoleCustomWrap").hidden = !isCustom;
     if (isCustom) document.getElementById("fRoleCustom").focus();
+  });
+
+  document.getElementById("fNoteHouseSelect").addEventListener("change", (e) => {
+    const isCustom = e.target.value === NOTE_CUSTOM_VALUE;
+    document.getElementById("fNoteCustomWrap").hidden = !isCustom;
+    if (isCustom) document.getElementById("fNoteCustom").focus();
   });
 
   document.getElementById("fAvatar").addEventListener("input", updateAvatarPreview);
@@ -634,13 +881,21 @@ function closeModal() {
 async function submitMember() {
   const name = document.getElementById("fName").value.trim();
   const parentId = document.getElementById("fParent").value || null;
+  const spouseId = document.getElementById("fSpouse").value || null;
   const roleSelectVal = document.getElementById("fRoleSelect").value;
   const role = roleSelectVal === ROLE_CUSTOM_VALUE ? document.getElementById("fRoleCustom").value.trim() : roleSelectVal;
   const avatarUrl = document.getElementById("fAvatar").value.trim();
   const buildLink = document.getElementById("fBuildLink").value.trim();
   const robloxProfile = document.getElementById("fRobloxProfile").value.trim();
   const discordId = document.getElementById("fDiscordId").value.trim();
-  const note = document.getElementById("fNote").value.trim();
+  const noteHouseVal = document.getElementById("fNoteHouseSelect").value;
+  let note = "";
+  if (noteHouseVal === NOTE_CUSTOM_VALUE) {
+    note = document.getElementById("fNoteCustom").value.trim();
+  } else if (noteHouseVal) {
+    const pickedHouse = parentPickerHouses.find((h) => h.slug === noteHouseVal);
+    note = pickedHouse ? `Married into ${entityLabel(pickedHouse)}` : "";
+  }
 
   if (!name) {
     const err = document.getElementById("fError");
@@ -649,7 +904,7 @@ async function submitMember() {
     return;
   }
 
-  const payload = { name, role, parentId, avatarUrl, buildLink, robloxProfile, discordId, note };
+  const payload = { name, role, parentId, spouseId, avatarUrl, buildLink, robloxProfile, discordId, note };
 
   try {
     if (editingMemberId) {

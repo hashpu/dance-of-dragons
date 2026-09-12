@@ -114,6 +114,29 @@ router.get("/houses", requireAdmin, async (req, res, next) => {
   }
 });
 
+// GET /api/admin/discord-users?q= — owner only: searches Discord accounts
+// that have actually signed in on the site before (see discord.js's
+// recordDiscordUserSeen), by username substring. Powers the "assign a Lord"
+// picker so an admin picks a real, verified account instead of pasting a
+// raw ID — someone who has never signed in here simply won't show up.
+// Empty/missing q returns the most recently seen accounts instead of every
+// match, so the picker has something to show before you start typing.
+router.get("/discord-users", requireOwner, async (req, res, next) => {
+  try {
+    const q = (req.query.q || "").trim();
+    const { rows } = await pool.query(
+      `SELECT id, username, avatar FROM discord_users
+       WHERE $1 = '' OR username ILIKE '%' || $1 || '%'
+       ORDER BY last_seen_at DESC
+       LIMIT 20`,
+      [q]
+    );
+    res.json(rows);
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/admin/houses/:slug/reset-password { password } — owner only:
 // directly sets a house's password to a new value the owner chooses, in one
 // step (unlike /lock, which only accepts a password the first time a house

@@ -53,6 +53,8 @@ const Api = {
   resetAll: (secret) => apiFetch("/admin/reset", { method: "POST", headers: { "x-admin-secret": secret } }),
   seedMissingHouses: (secret) => apiFetch("/admin/seed-missing", { method: "POST", headers: { "x-admin-secret": secret } }),
   adminGetHouses: (secret) => apiFetch("/admin/houses", { headers: { "x-admin-secret": secret } }),
+  searchDiscordUsers: (query, secret) =>
+    apiFetch(`/admin/discord-users?q=${encodeURIComponent(query || "")}`, { headers: { "x-admin-secret": secret } }),
   adminDeleteHouse: (slug, secret) => apiFetch(`/admin/houses/${slug}`, { method: "DELETE", headers: { "x-admin-secret": secret } }),
   adminResetHousePassword: (slug, password, secret) =>
     apiFetch(`/admin/houses/${slug}/reset-password`, { method: "POST", body: { password }, headers: { "x-admin-secret": secret } }),
@@ -76,6 +78,9 @@ const Api = {
       body: { discordUserId },
       headers: { "x-admin-secret": secret }
     }),
+  setLordPassword: (slug, password) => apiFetch(`/houses/${slug}/lord-password`, { method: "POST", body: { password } }),
+  searchHouseDiscordUsers: (slug, query, housePassword) =>
+    apiFetch(`/houses/${slug}/discord-users?q=${encodeURIComponent(query || "")}`, { housePassword }),
   submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData }),
   getVotes: () => apiFetch("/votes"),
   castVote: (choice) => apiFetch("/votes", { method: "POST", body: { choice } })

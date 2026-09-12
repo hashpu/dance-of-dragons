@@ -72,6 +72,35 @@ test("unlocking with the correct password succeeds but isn't shared with other v
   assert.equal(res2.body.members, undefined);
 });
 
+test("unlocking a house with more than one member doesn't corrupt later members with a bogus externalParent", async () => {
+  // Regression test: the /unlock response used to build each member with
+  // `rows.map(toMemberJson)`, which passes Array.map's (element, index) to
+  // toMemberJson(row, externalParent) — so every member past the first got
+  // the array index (1, 2, 3...) in place of a real externalParent object.
+  // Being a non-zero number, it's truthy, so the frontend rendered "Child of
+  // undefined · House undefined" under members that had a perfectly normal
+  // local parent (or no parent at all).
+  const add = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Jacaerys Velaryon", role: "", parentId: "rhaenyra" });
+  assert.equal(add.status, 201);
+
+  const unlock = await request.post("/api/houses/velaryon/unlock").send({ password: "driftmark" });
+  assert.equal(unlock.status, 200);
+  assert.ok(unlock.body.members.length > 1);
+
+  const laenor = unlock.body.members.find((m) => m.id === "laenor");
+  assert.equal(laenor.parentId, "corlys");
+  assert.equal(laenor.externalParent, undefined);
+
+  const laena = unlock.body.members.find((m) => m.id === "laena");
+  assert.equal(laena.externalParent, undefined);
+
+  const jacaerys = unlock.body.members.find((m) => m.name === "Jacaerys Velaryon");
+  assert.deepEqual(jacaerys.externalParent, { name: "Rhaenyra", houseSlug: "targaryen", houseName: "Targaryen", houseFaction: "ROYAL HOUSE" });
+});
+
 test("writes to a locked house require the password on every request; wrong/missing password is rejected", async () => {
   const noPassword = await request.post("/api/houses/targaryen/members").send({ name: "Should Fail" });
   assert.equal(noPassword.status, 403);
@@ -128,6 +157,172 @@ test("a member's parent can belong to a different house, and the API reports who
   // members with a purely local parent don't get an externalParent
   const laenor = check.body.members.find((m) => m.id === "laenor");
   assert.equal(laenor.externalParent, undefined);
+});
+
+test("a married-in spouse pairs with their partner from both sides, local or cross-house", async () => {
+  // Local: married in with no family of her own in this house.
+  const addLocal = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Local Wife", role: "", spouseId: "corlys" });
+  assert.equal(addLocal.status, 201);
+  assert.equal(addLocal.body.spouseId, "corlys");
+
+  const check1 = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  const localWife = check1.body.members.find((m) => m.name === "Local Wife");
+  assert.equal(localWife.spouseId, "corlys");
+  assert.deepEqual(localWife.spouse, { id: "corlys", name: "Corlys Velaryon", role: "Lord", avatarUrl: "", discordId: "", robloxProfile: "" });
+
+  // Reverse: Corlys never set his own spouse_id (still null on his own
+  // row), but Local Wife points at him — he should still show her as his
+  // spouse for display purposes.
+  const corlys = check1.body.members.find((m) => m.id === "corlys");
+  assert.equal(corlys.spouseId, null);
+  assert.equal(corlys.spouse.id, localWife.id);
+  assert.equal(corlys.spouse.name, "Local Wife");
+
+  // Cross-house: married in from Targaryen.
+  const addCrossHouse = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Foreign Husband", role: "", spouseId: "rhaenyra" });
+  assert.equal(addCrossHouse.status, 201);
+
+  const check2 = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  const foreignHusband = check2.body.members.find((m) => m.name === "Foreign Husband");
+  assert.deepEqual(foreignHusband.spouse, {
+    id: "rhaenyra",
+    name: "Rhaenyra",
+    role: "Heir",
+    avatarUrl: "",
+    discordId: "",
+    robloxProfile: "",
+    houseSlug: "targaryen",
+    houseName: "Targaryen",
+    houseFaction: "ROYAL HOUSE"
+  });
+
+  // Rejections.
+  const selfSpouse = await request
+    .patch(`/api/houses/velaryon/members/${localWife.id}`)
+    .set("x-house-password", "driftmark")
+    .send({ name: "Local Wife", role: "", spouseId: localWife.id });
+  assert.equal(selfSpouse.status, 400);
+
+  const badSpouse = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Nobody's Spouse", role: "", spouseId: "does-not-exist" });
+  assert.equal(badSpouse.status, 400);
+});
+
+test("editing the reverse-linked half of a pairing can still end it — clearing spouse there clears the other side's pointer too", async () => {
+  const husband = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Reverse Husband", role: "" });
+  assert.equal(husband.status, 201);
+  const husbandId = husband.body.id;
+
+  const wife = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Reverse Wife", role: "", spouseId: husbandId });
+  assert.equal(wife.status, 201);
+
+  // The husband never set his own spouse_id — he's only paired via the
+  // wife's forward pointer, resolved in reverse.
+  const before = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  const husbandBefore = before.body.members.find((m) => m.id === husbandId);
+  assert.equal(husbandBefore.spouseId, null);
+  assert.equal(husbandBefore.spouse.id, wife.body.id);
+
+  // Editing the husband (the reverse side) and explicitly clearing spouse
+  // must still end the pairing, not silently no-op because his own
+  // spouseId was already null.
+  const unmarry = await request
+    .patch(`/api/houses/velaryon/members/${husbandId}`)
+    .set("x-house-password", "driftmark")
+    .send({ name: "Reverse Husband", role: "", spouseId: "" });
+  assert.equal(unmarry.status, 200);
+
+  const after = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  assert.equal(after.body.members.find((m) => m.id === husbandId).spouse, undefined);
+  const wifeAfter = after.body.members.find((m) => m.id === wife.body.id);
+  assert.equal(wifeAfter.spouseId, null);
+  assert.equal(wifeAfter.spouse, undefined);
+});
+
+test("linking a member as someone's spouse clears any stale reverse pairing that person already had", async () => {
+  const target = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Sought After", role: "" });
+  assert.equal(target.status, 201);
+  const targetId = target.body.id;
+
+  const first = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "First Spouse", role: "", spouseId: targetId });
+  assert.equal(first.status, 201);
+
+  const check1 = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  assert.equal(check1.body.members.find((m) => m.id === targetId).spouse.name, "First Spouse");
+
+  const second = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Second Spouse", role: "", spouseId: targetId });
+  assert.equal(second.status, 201);
+
+  const check2 = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  assert.equal(check2.body.members.find((m) => m.id === targetId).spouse.name, "Second Spouse");
+  const firstAfter = check2.body.members.find((m) => m.name === "First Spouse");
+  assert.equal(firstAfter.spouseId, null);
+  assert.equal(firstAfter.spouse, undefined);
+});
+
+test("deleting a member clears their spouse's pointer (DB's ON DELETE SET NULL) instead of leaving it stale", async () => {
+  const husband = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Temp Husband", role: "" });
+  assert.equal(husband.status, 201);
+  const husbandId = husband.body.id;
+
+  const wife = await request
+    .post("/api/houses/velaryon/members")
+    .set("x-house-password", "driftmark")
+    .send({ name: "Temp Wife", role: "", spouseId: husbandId });
+  assert.equal(wife.status, 201);
+
+  const del = await request.delete(`/api/houses/velaryon/members/${husbandId}`).set("x-house-password", "driftmark");
+  assert.equal(del.status, 200);
+
+  const check = await request.get("/api/houses/velaryon").set("x-house-password", "driftmark");
+  const wifeAfter = check.body.members.find((m) => m.id === wife.body.id);
+  assert.ok(wifeAfter, "deleting the husband must not cascade-delete his spouse");
+  assert.equal(wifeAfter.spouseId, null);
+  assert.equal(wifeAfter.spouse, undefined);
+});
+
+test("the house-scoped Discord user search needs house access but never an admin secret", async () => {
+  await memPool.query(
+    `INSERT INTO discord_users (id, username, avatar, last_seen_at) VALUES ($1, $2, $3, now())`,
+    ["house-search-user-1", "SearchableSpouse", ""]
+  );
+
+  const locked = await request.get("/api/houses/velaryon/discord-users?q=Searchable");
+  assert.equal(locked.status, 403);
+
+  const withPassword = await request.get("/api/houses/velaryon/discord-users?q=Searchable").set("x-house-password", "driftmark");
+  assert.equal(withPassword.status, 200);
+  assert.equal(withPassword.body.length, 1);
+  assert.equal(withPassword.body[0].id, "house-search-user-1");
+
+  const noMatch = await request.get("/api/houses/velaryon/discord-users?q=NoSuchAccount").set("x-house-password", "driftmark");
+  assert.deepEqual(noMatch.body, []);
 });
 
 test("a member can store the Discord account of the real person behind them", async () => {

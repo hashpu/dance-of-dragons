@@ -155,7 +155,8 @@ function houseTableRowHtml(h) {
             currentAdmin && currentAdmin.role === "owner"
               ? `<button class="a-link" data-action="reset-password" data-slug="${h.slug}">Reset password</button>
                  ${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
-                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">Set ${leaderTitle(h)} (ID)</button>
+                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">${h.lordDiscordUserId ? "Change" : "Set"} ${leaderTitle(h)} (ID)</button>
+                 ${h.lordDiscordUserId ? `<button class="a-link a-link-danger" data-action="clear-lord-discord" data-slug="${h.slug}">Remove ${leaderTitle(h)}</button>` : ""}
                  <button class="a-link" data-action="set-lord-role" data-slug="${h.slug}">Set ${leaderTitle(h)} (Role)</button>
                  <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
               : ""
@@ -244,30 +245,49 @@ function bindHouseActions() {
       const title = leaderTitle(h);
       const label = entityLabel(h);
       const noun = h.faction === "CROWN" ? "order" : "house";
-      const discordUserId = await Dialog.prompt({
+      const user = await Dialog.search({
         kicker: label,
-        title: `Assign ${title} by Discord ID`,
-        message: `Whoever signs in with this exact Discord account gets password-free access to manage the ${noun}. Leave blank to remove.`,
-        label: "Discord user ID",
-        placeholder: "e.g. 123456789012345678",
-        confirmText: "Save",
-        icon: "discord"
+        title: `Assign ${title} by Discord account`,
+        message: `Only accounts that have signed in with Discord on the site before show up here. Whoever you pick gets password-free access to manage the ${noun}.`,
+        fetchResults: (query) => Api.searchDiscordUsers(query, adminSecret)
       });
-      if (discordUserId === null) return;
+      if (!user) return;
 
       try {
-        await Api.setLordDiscordId(slug, discordUserId.trim(), adminSecret);
+        await Api.setLordDiscordId(slug, user.id, adminSecret);
         await refreshHouses();
         await Dialog.alert({
           kicker: label,
-          title: discordUserId.trim() ? `${title} assigned` : `${title} removed`,
-          message: discordUserId.trim()
-            ? `Only the Discord account with ID ${discordUserId.trim()} can manage ${label} without the password.`
-            : `${label} no longer has a Discord-ID ${title} assigned.`,
+          title: `${title} assigned`,
+          message: `Only ${user.username} can manage ${label} without the password.`,
           icon: "discord"
         });
       } catch (e) {
         await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
+      }
+    };
+  });
+
+  document.querySelectorAll('[data-action="clear-lord-discord"]').forEach((btn) => {
+    btn.onclick = async () => {
+      const slug = btn.dataset.slug;
+      const h = allHouses.find((x) => x.slug === slug) || { slug, name: slug };
+      const title = leaderTitle(h);
+      const label = entityLabel(h);
+      const ok = await Dialog.confirm({
+        kicker: label,
+        title: `Remove ${label}'s ${title}?`,
+        message: "They'll lose password-free access. This doesn't touch the house's password.",
+        confirmText: `Remove ${title}`,
+        danger: true
+      });
+      if (!ok) return;
+
+      try {
+        await Api.setLordDiscordId(slug, "", adminSecret);
+        await refreshHouses();
+      } catch (e) {
+        await Dialog.alert({ title: "Couldn't remove", message: e.message, icon: "warning", cardColor: "var(--red)" });
       }
     };
   });

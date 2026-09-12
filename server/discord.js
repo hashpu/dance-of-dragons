@@ -17,11 +17,29 @@
       theirs. Requires DISCORD_GUILD_ID and DISCORD_BOT_TOKEN — without
       either, this path always returns false. */
 
+const { pool } = require("./db");
 const { verifyRequestRobloxUserId } = require("./roblox");
 
 function getBearerToken(req) {
   const auth = req.get("authorization") || "";
   return auth.startsWith("Bearer ") ? auth.slice(7).trim() : null;
+}
+
+// Best-effort bookkeeping so the admin dashboard can later search this
+// person by username (see routes/admin.js's /discord-users). Errors are
+// swallowed rather than thrown — this is searchability, not access control,
+// so a DB hiccup here should never fail the real auth check it's called
+// from.
+async function recordDiscordUserSeen(user) {
+  try {
+    await pool.query(
+      `INSERT INTO discord_users (id, username, avatar, last_seen_at) VALUES ($1, $2, $3, now())
+       ON CONFLICT (id) DO UPDATE SET username = $2, avatar = $3, last_seen_at = now()`,
+      [user.id, user.username, user.avatar || ""]
+    );
+  } catch (e) {
+    // Non-critical — searchability, not access control. Swallow and move on.
+  }
 }
 
 async function verifyDiscordUser(accessToken) {
@@ -31,7 +49,10 @@ async function verifyDiscordUser(accessToken) {
     });
     if (!res.ok) return null;
     const me = await res.json();
-    return me.id ? { id: me.id, username: me.username || me.id } : null;
+    if (!me.id) return null;
+    const user = { id: me.id, username: me.username || me.id, avatar: me.avatar || "" };
+    await recordDiscordUserSeen(user);
+    return user;
   } catch (e) {
     return null;
   }

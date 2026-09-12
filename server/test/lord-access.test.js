@@ -181,6 +181,35 @@ test("a Discord ID assigned directly gets Lord access with no Roblox account or 
   await request.post("/api/houses/hightower/lord-discord").set("x-admin-secret", "test-secret").send({ discordUserId: "" });
 });
 
+test("a Discord-recognized Lord can change their own house's password with no admin secret and no old password", async () => {
+  await request.post("/api/houses/hightower/lord-discord").set("x-admin-secret", "test-secret").send({ discordUserId: "lord-99" });
+
+  const noAuth = await request.post("/api/houses/hightower/lord-password").send({ password: "newsecret" });
+  assert.equal(noAuth.status, 401);
+
+  mockNetwork({ discordTokens: { "impostor-token": { userId: "someone-else", roles: [] } } });
+  const wrongLord = await request
+    .post("/api/houses/hightower/lord-password")
+    .set("Authorization", "Bearer impostor-token")
+    .send({ password: "newsecret" });
+  assert.equal(wrongLord.status, 401);
+
+  mockNetwork({ discordTokens: { "lord-token": { userId: "lord-99", roles: [] } } });
+  const asLord = await request
+    .post("/api/houses/hightower/lord-password")
+    .set("Authorization", "Bearer lord-token")
+    .send({ password: "newsecret" });
+  assert.equal(asLord.status, 200);
+
+  const oldPassword = await request.post("/api/houses/hightower/unlock").send({ password: "oldtown" });
+  assert.equal(oldPassword.status, 401);
+
+  const newPassword = await request.post("/api/houses/hightower/unlock").send({ password: "newsecret" });
+  assert.equal(newPassword.status, 200);
+
+  await request.post("/api/houses/hightower/lord-discord").set("x-admin-secret", "test-secret").send({ discordUserId: "" });
+});
+
 test("forgot-password is admin-only now — even a fully verified Lord can't use it", async () => {
   mockNetwork({
     discordTokens: { "good-token": { userId: "user-1", roles: ["role-stark-lord"] } },
@@ -241,4 +270,43 @@ test("a Discord account listed in OWNER_DISCORD_USER_IDS gets full owner access 
   } finally {
     delete process.env.OWNER_DISCORD_USER_IDS;
   }
+});
+
+test("signing in with Discord records the account, searchable by username — but only after they've actually signed in", async () => {
+  const notYetSeen = await request.get("/api/admin/discord-users?q=WinterfellKing").set("x-admin-secret", "test-secret");
+  assert.equal(notYetSeen.status, 200);
+  assert.deepEqual(notYetSeen.body, []);
+
+  // GET /api/votes always verifies the Discord token, regardless of any
+  // house's lock state — unlike /api/houses/:slug, which only verifies at
+  // all while that specific house is locked (and other tests in this file
+  // unlock/relock houses, so relying on one of those would be fragile).
+  mockNetwork({ discordTokens: { "seen-token": { userId: "seen-user-1", username: "WinterfellKing" } } });
+  const check = await request.get("/api/votes").set("Authorization", "Bearer seen-token");
+  assert.equal(check.status, 200);
+
+  const noSecret = await request.get("/api/admin/discord-users?q=winter");
+  assert.equal(noSecret.status, 401);
+
+  const noMatch = await request.get("/api/admin/discord-users?q=NoSuchPerson").set("x-admin-secret", "test-secret");
+  assert.deepEqual(noMatch.body, []);
+
+  // Case-insensitive substring match.
+  const match = await request.get("/api/admin/discord-users?q=winter").set("x-admin-secret", "test-secret");
+  assert.equal(match.status, 200);
+  assert.equal(match.body.length, 1);
+  assert.equal(match.body[0].id, "seen-user-1");
+  assert.equal(match.body[0].username, "WinterfellKing");
+
+  // Signing in again with a changed username updates the record in place, not a second row.
+  mockNetwork({ discordTokens: { "seen-token-2": { userId: "seen-user-1", username: "WinterfellKing2" } } });
+  await request.get("/api/votes").set("Authorization", "Bearer seen-token-2");
+  const renamed = await request.get("/api/admin/discord-users?q=WinterfellKing2").set("x-admin-secret", "test-secret");
+  assert.equal(renamed.body.length, 1);
+  assert.equal(renamed.body[0].username, "WinterfellKing2");
+
+  // Empty query returns recently-seen accounts rather than nothing.
+  const browse = await request.get("/api/admin/discord-users").set("x-admin-secret", "test-secret");
+  assert.equal(browse.status, 200);
+  assert.ok(browse.body.some((u) => u.id === "seen-user-1"));
 });

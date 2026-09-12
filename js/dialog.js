@@ -89,7 +89,7 @@ const Dialog = (() => {
           <div class="field">
             ${label ? `<label>${label}</label>` : ""}
             <div class="input-wrap">
-              ${ICONS[icon] || ICONS.lock}
+              ${(ICONS[icon] || ICONS.lock).replace("<svg ", '<svg class="field-icon" ')}
               <input id="dialogInput" type="${type}" placeholder="${placeholder}" value="${value}" autocomplete="off" />
             </div>
           </div>
@@ -118,6 +118,113 @@ const Dialog = (() => {
         if (e.key === "Enter") confirm();
       });
 
+      input.focus();
+    });
+  }
+
+  // Search-and-pick from a live-queried list, instead of typing a raw
+  // value — e.g. picking a Discord account to assign as a house's Lord from
+  // only the accounts that have actually signed in on the site before.
+  // Resolves the chosen row's object, { manual: true } if the manual-entry
+  // escape hatch was used (only offered when allowManual is set — the list
+  // is meant to be the only path for some callers, like Lord assignment),
+  // or null if cancelled.
+  function search({
+    title,
+    kicker = "",
+    message = "",
+    placeholder = "Search by Discord username…",
+    cancelText = "Cancel",
+    icon = "discord",
+    cardColor = "var(--gold, #d4af37)",
+    fetchResults, // async (query) => [{ id, username, avatar }]
+    allowManual = false,
+    manualLabel = "Can't find them? Enter details manually"
+  }) {
+    return new Promise((resolve) => {
+      const overlay = shell({
+        kicker,
+        title,
+        message,
+        icon,
+        cardColor,
+        bodyHtml: `
+          <div class="field">
+            <div class="input-wrap">
+              <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+              <input id="dialogSearchInput" type="text" placeholder="${placeholder}" autocomplete="off" />
+            </div>
+          </div>
+          <div class="dialog-search-results" id="dialogSearchResults"></div>
+          ${allowManual ? `<button type="button" class="btn-link" id="dialogManual">${manualLabel}</button>` : ""}
+          <div class="modal-actions">
+            <button type="button" class="btn btn-outline" id="dialogCancel">${cancelText}</button>
+          </div>
+        `
+      });
+
+      const cleanup = mount(overlay, { onCancel: () => resolve(null) });
+
+      if (allowManual) {
+        overlay.querySelector("#dialogManual").onclick = () => {
+          cleanup();
+          resolve({ manual: true });
+        };
+      }
+      const input = overlay.querySelector("#dialogSearchInput");
+      const resultsEl = overlay.querySelector("#dialogSearchResults");
+
+      function rowHtml(user) {
+        const avatarUrl = typeof discordAvatarUrl === "function" ? discordAvatarUrl(user) : "";
+        return `
+          <button type="button" class="member-hit dialog-search-row" data-id="${user.id}">
+            <img src="${avatarUrl}" alt="" />
+            <span class="member-hit-name">${user.username}</span>
+          </button>
+        `;
+      }
+
+      // Guards against an in-flight search from an earlier keystroke
+      // resolving after a newer one and clobbering fresher results.
+      let requestId = 0;
+      async function runSearch(query) {
+        const thisRequest = ++requestId;
+        resultsEl.innerHTML = `<div class="dialog-search-status">Searching…</div>`;
+        let users;
+        try {
+          users = await fetchResults(query);
+        } catch (e) {
+          if (thisRequest !== requestId) return;
+          resultsEl.innerHTML = `<div class="dialog-search-status">Couldn't load results.</div>`;
+          return;
+        }
+        if (thisRequest !== requestId) return;
+        if (!users.length) {
+          resultsEl.innerHTML = `<div class="dialog-search-status">${query ? "No one matches yet." : "Nobody's signed in yet."} They need to sign in with Discord on the site at least once first.</div>`;
+          return;
+        }
+        resultsEl.innerHTML = users.map(rowHtml).join("");
+        resultsEl.querySelectorAll(".dialog-search-row").forEach((btn) => {
+          btn.onclick = () => {
+            const user = users.find((u) => u.id === btn.dataset.id);
+            cleanup();
+            resolve(user);
+          };
+        });
+      }
+
+      let debounceTimer = null;
+      input.addEventListener("input", () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => runSearch(input.value.trim()), 250);
+      });
+
+      overlay.querySelector("#dialogCancel").onclick = () => {
+        cleanup();
+        resolve(null);
+      };
+
+      runSearch("");
       input.focus();
     });
   }
@@ -185,5 +292,5 @@ const Dialog = (() => {
     });
   }
 
-  return { prompt, confirm: confirmDialog, alert: alertDialog };
+  return { prompt, confirm: confirmDialog, alert: alertDialog, search };
 })();
