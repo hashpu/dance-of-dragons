@@ -81,6 +81,7 @@ const Api = {
   setLordPassword: (slug, password) => apiFetch(`/houses/${slug}/lord-password`, { method: "POST", body: { password } }),
   searchHouseDiscordUsers: (slug, query, housePassword) =>
     apiFetch(`/houses/${slug}/discord-users?q=${encodeURIComponent(query || "")}`, { housePassword }),
+  discordMe: () => apiFetch("/discord/me"),
   submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData }),
   getVotes: () => apiFetch("/votes"),
   castVote: (choice) => apiFetch("/votes", { method: "POST", body: { choice } })

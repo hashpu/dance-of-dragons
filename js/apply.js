@@ -15,6 +15,25 @@ function renderDeptGrid() {
 }
 
 function questionFieldHtml(q) {
+  if (q.type === "yesno") {
+    return `
+      <div class="field">
+        <label>${q.label}${q.required ? "" : ' <span class="hint">(optional)</span>'}</label>
+        <div class="yesno-group">
+          <label class="yesno-option">
+            <input type="radio" name="q_${q.id}" value="Yes" />
+            <span class="yesno-radio"></span>
+            Yes
+          </label>
+          <label class="yesno-option">
+            <input type="radio" name="q_${q.id}" value="No" />
+            <span class="yesno-radio"></span>
+            No
+          </label>
+        </div>
+      </div>
+    `;
+  }
   const field =
     q.type === "textarea"
       ? `<textarea id="q_${q.id}" placeholder="${q.placeholder || ""}"></textarea>`
@@ -25,6 +44,16 @@ function questionFieldHtml(q) {
       ${field}
     </div>
   `;
+}
+
+// Yes/No questions read from a checked radio in their name-group instead of
+// a single element's value, unlike every other question type.
+function questionValue(q) {
+  if (q.type === "yesno") {
+    const checked = document.querySelector(`input[name="q_${q.id}"]:checked`);
+    return checked ? checked.value : "";
+  }
+  return document.getElementById(`q_${q.id}`).value.trim();
 }
 
 // Questions can share an optional `section` label (e.g. "Lore Knowledge")
@@ -39,8 +68,9 @@ function questionsHtml(questions) {
     const heading = q.section && q.section !== lastSection ? `<div class="form-section-heading">${q.section}</div>` : "";
     lastSection = q.section || lastSection;
 
+    const isPairable = (type) => type !== "textarea" && type !== "yesno";
     const next = questions[i + 1];
-    const canPair = q.type !== "textarea" && next && next.type !== "textarea" && next.section === q.section;
+    const canPair = isPairable(q.type) && next && isPairable(next.type) && next.section === q.section;
     if (canPair) {
       html += heading + `<div class="more-grid">${questionFieldHtml(q)}${questionFieldHtml(next)}</div>`;
       i++;
@@ -159,7 +189,7 @@ async function submitApplication(deptKey) {
   const val = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : "");
 
   const answers = {};
-  dept.questions.forEach((q) => (answers[q.id] = val(`q_${q.id}`)));
+  dept.questions.forEach((q) => (answers[q.id] = questionValue(q)));
 
   const roblox = val("q_roblox");
   const discord = val("q_discord");

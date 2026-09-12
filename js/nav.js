@@ -28,6 +28,16 @@ const NAV_ICONS = {
   const robloxUser = typeof getRobloxUser === "function" ? getRobloxUser() : null;
   const memberSince = user && typeof discordAccountCreatedAt === "function" ? discordAccountCreatedAt(user) : null;
 
+  // Most routes only verify+record a signed-in visitor's Discord identity as
+  // a side effect of checking something specific (a Lord assignment, a
+  // vote) — someone who just browses an unlocked house, or a locked one
+  // with no Lord configured yet, would never actually get recorded that
+  // way, even though they're genuinely signed in. This runs once per page
+  // load whenever a token is present, so being signed in anywhere on the
+  // site is enough to show up in the admin/house "add spouse" search.
+  // Fire-and-forget: a network hiccup here shouldn't affect page load.
+  if (user && typeof Api !== "undefined") Api.discordMe().catch(() => {});
+
   const authHtml = user
     ? `
       <div class="profile-menu" id="profileMenu">

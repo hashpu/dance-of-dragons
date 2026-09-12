@@ -310,3 +310,19 @@ test("signing in with Discord records the account, searchable by username — bu
   assert.equal(browse.status, 200);
   assert.ok(browse.body.some((u) => u.id === "seen-user-1"));
 });
+
+test("GET /api/discord/me records a signed-in visitor without needing a house, Lord, or vote action to trigger it", async () => {
+  const noToken = await request.get("/api/discord/me");
+  assert.equal(noToken.status, 200);
+  assert.deepEqual(noToken.body, { signedIn: false });
+
+  mockNetwork({ discordTokens: { "me-token": { userId: "me-user-1", username: "JustBrowsing" } } });
+  const withToken = await request.get("/api/discord/me").set("Authorization", "Bearer me-token");
+  assert.equal(withToken.status, 200);
+  assert.deepEqual(withToken.body, { signedIn: true, id: "me-user-1", username: "JustBrowsing" });
+
+  const found = await request.get("/api/admin/discord-users?q=JustBrowsing").set("x-admin-secret", "test-secret");
+  assert.equal(found.status, 200);
+  assert.equal(found.body.length, 1);
+  assert.equal(found.body[0].id, "me-user-1");
+});

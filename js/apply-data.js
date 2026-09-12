@@ -81,7 +81,8 @@ const DEPARTMENTS = [
       { id: "modExperience", label: "Prior moderation experience (Discord/Roblox/other)", type: "textarea", required: true, section: "Background" },
       { id: "scenario", label: "How would you handle a member breaking rules but claiming it was a joke?", type: "textarea", required: true, section: "Judgment Calls" },
       { id: "friendScenario", label: "A close friend of yours breaks a rule. How do you handle it?", type: "textarea", required: true, section: "Judgment Calls" },
-      { id: "disagreement", label: "You disagree with another moderator's decision, made publicly. What do you do?", type: "textarea", required: true, section: "Judgment Calls" }
+      { id: "disagreement", label: "You disagree with another moderator's decision, made publicly. What do you do?", type: "textarea", required: true, section: "Judgment Calls" },
+      { id: "understandRemoval", label: "Do you understand that abusing moderation permissions, playing favorites, or being inactive without notice may result in losing this position?", type: "yesno", required: true, section: "Judgment Calls" }
     ]
   },
   {

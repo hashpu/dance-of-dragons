@@ -1236,7 +1236,9 @@ div.poll-team:hover { transform: none; }
 .house-card {
   position: relative;
   overflow: hidden;
-  background: var(--panel);
+  background:
+    radial-gradient(140% 100% at 0% 0%, color-mix(in srgb, var(--card-color, var(--red)) 7%, transparent), transparent 60%),
+    var(--panel);
   border: 1px solid #3a3a3d;
   border-radius: 4px;
   padding: 22px;
@@ -1257,6 +1259,17 @@ div.poll-team:hover { transform: none; }
   pointer-events: none;
 }
 
+.house-card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, var(--card-color, var(--red)), transparent);
+  opacity: 0.7;
+}
+
 .house-card:hover {
   transform: translateY(-4px);
   border-color: var(--card-color, var(--red));
@@ -1275,6 +1288,7 @@ div.poll-team:hover { transform: none; }
   background: color-mix(in srgb, var(--card-color, var(--red)) 18%, transparent);
   border: 1px solid color-mix(in srgb, var(--card-color, var(--red)) 45%, transparent);
   color: var(--card-color, var(--red));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--card-color, var(--red)) 7%, transparent);
 }
 
 .house-icon svg {
@@ -2078,6 +2092,69 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   font-family: inherit;
   font-size: 14px;
 }
+
+/* Yes/No question: two big rows instead of a cramped inline pair — easier
+   to tap on mobile, and the selected one reads clearly at a glance.
+
+   Every rule below is scoped under .yesno-group rather than bare
+   .yesno-option/.yesno-radio — the option is a <label>, and the existing
+   ".field label" rule (block, uppercase, 11px, muted) outranks a bare
+   single-class selector like ".yesno-option" on specificity, since it
+   combines a class with the element type. Chaining onto its own wrapper
+   class keeps this comfortably ahead without depending on source order. */
+.yesno-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.yesno-group .yesno-option {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 18px;
+  border: 1px solid var(--panel-border);
+  border-radius: 4px;
+  background: #1c1c1e;
+  cursor: pointer;
+  text-transform: none;
+  font-size: 15px;
+  font-weight: 400;
+  letter-spacing: normal;
+  color: var(--text);
+  margin-bottom: 0;
+  transition: border-color 0.15s, background 0.15s;
+}
+.yesno-group .yesno-option:hover { border-color: #555; }
+.yesno-group .yesno-option:has(input:checked) {
+  border-color: var(--card-color, var(--red));
+  background: color-mix(in srgb, var(--card-color, var(--red)) 10%, #1c1c1e);
+}
+.yesno-group .yesno-option input[type="radio"] {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+}
+.yesno-group .yesno-radio {
+  position: relative;
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+  border-radius: 50%;
+  border: 2px solid var(--panel-border);
+  transition: border-color 0.15s;
+}
+.yesno-group .yesno-option input:checked ~ .yesno-radio { border-color: var(--card-color, var(--red)); }
+.yesno-group .yesno-radio::after {
+  content: "";
+  position: absolute;
+  inset: 3px;
+  border-radius: 50%;
+  background: var(--card-color, var(--red));
+  transform: scale(0);
+  transition: transform 0.15s;
+}
+.yesno-group .yesno-option input:checked ~ .yesno-radio::after { transform: scale(1); }
 
 .input-wrap { position: relative; display: flex; align-items: center; }
 .input-wrap .field-icon {

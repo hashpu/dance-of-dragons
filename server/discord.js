@@ -128,4 +128,4 @@ async function isLordOfHouse(req, house) {
   return robloxUserId === house.lord_roblox_user_id;
 }
 
-module.exports = { isLordOfHouse, getRequestDiscordUserId, getRequestOwnerDiscordUser };
+module.exports = { isLordOfHouse, getRequestDiscordUser, getRequestDiscordUserId, getRequestOwnerDiscordUser };
