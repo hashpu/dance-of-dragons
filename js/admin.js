@@ -133,8 +133,8 @@ async function refreshApplications() {
 }
 
 function lordSummary(h) {
-  if (h.lordDiscordUserId) return `${leaderTitle(h)} (Discord ID)`;
-  if (h.lordRoleId) return `${leaderTitle(h)} (Role + Roblox)`;
+  if (h.lordDiscordUserId) return leaderTitle(h);
+  if (h.lordRoleId) return `${leaderTitle(h)} (Role + Roblox, legacy)`;
   return null;
 }
 
@@ -162,9 +162,9 @@ function houseTableRowHtml(h) {
             currentAdmin && currentAdmin.role === "owner"
               ? `<button class="a-link" data-action="reset-password" data-slug="${h.slug}">Reset password</button>
                  ${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
-                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">${h.lordDiscordUserId ? "Change" : "Set"} ${leaderTitle(h)} (ID)</button>
+                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">${h.lordDiscordUserId ? "Change" : "Set"} ${leaderTitle(h)}</button>
                  ${h.lordDiscordUserId ? `<button class="a-link a-link-danger" data-action="clear-lord-discord" data-slug="${h.slug}">Remove ${leaderTitle(h)}</button>` : ""}
-                 <button class="a-link" data-action="set-lord-role" data-slug="${h.slug}">Set ${leaderTitle(h)} (Role)</button>
+                 ${h.lordRoleId ? `<button class="a-link a-link-danger" data-action="clear-lord-role" data-slug="${h.slug}">Remove ${leaderTitle(h)} (Role)</button>` : ""}
                  <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
               : ""
           }
@@ -299,50 +299,31 @@ function bindHouseActions() {
     };
   });
 
-  document.querySelectorAll('[data-action="set-lord-role"]').forEach((btn) => {
+  // Discord role + Roblox account assignment predates the search-based
+  // picker above and is no longer set-able from the UI — searching who's
+  // already signed in is simpler and needs no bot/guild setup. This just
+  // gives an escape hatch to clear one a house still has from before,
+  // without reintroducing manual role-ID/Roblox-username entry.
+  document.querySelectorAll('[data-action="clear-lord-role"]').forEach((btn) => {
     btn.onclick = async () => {
       const slug = btn.dataset.slug;
       const h = allHouses.find((x) => x.slug === slug) || { slug, name: slug };
       const title = leaderTitle(h);
       const label = entityLabel(h);
-      const roleId = await Dialog.prompt({
+      const ok = await Dialog.confirm({
         kicker: label,
-        title: `Assign ${title} by Discord role`,
-        message: `Leave blank to remove the ${title} entirely.`,
-        label: "Discord role ID",
-        placeholder: "e.g. 123456789012345678",
-        confirmText: "Next",
-        icon: "discord"
+        title: `Remove ${label}'s ${title} (Role)?`,
+        message: "This clears the Discord role + Roblox account assignment. This doesn't touch the house's password.",
+        confirmText: `Remove ${title}`,
+        danger: true
       });
-      if (roleId === null) return;
-
-      let robloxUsername = "";
-      if (roleId.trim()) {
-        robloxUsername = await Dialog.prompt({
-          kicker: label,
-          title: "Match a Roblox account",
-          message: `They must be signed in as BOTH that Discord role and this exact Roblox account for ${title} access to work.`,
-          label: "Roblox username",
-          placeholder: "e.g. WinterfellKing",
-          confirmText: "Save",
-          icon: "lock"
-        });
-        if (robloxUsername === null) return;
-      }
+      if (!ok) return;
 
       try {
-        await Api.setLordRole(slug, roleId.trim(), robloxUsername.trim(), adminSecret);
+        await Api.setLordRole(slug, "", "", adminSecret);
         await refreshHouses();
-        await Dialog.alert({
-          kicker: label,
-          title: roleId.trim() ? `${title} assigned` : `${title} removed`,
-          message: roleId.trim()
-            ? `Only someone signed in with that Discord role AND that Roblox account can manage ${label} without the password.`
-            : `${label} no longer has a ${title} assigned.`,
-          icon: "discord"
-        });
       } catch (e) {
-        await Dialog.alert({ title: "Couldn't save", message: e.message, icon: "warning", cardColor: "var(--red)" });
+        await Dialog.alert({ title: "Couldn't remove", message: e.message, icon: "warning", cardColor: "var(--red)" });
       }
     };
   });
@@ -389,8 +370,8 @@ function ticketHtml(app) {
           <div class="ticket-applicant">${escapeHtml(app.roblox_username)}<span class="ticket-applicant-sub">Discord: ${escapeHtml(app.discord_username)}</span></div>
         </div>
         <div class="ticket-summary-meta">
-          ${app.status === "approved" ? `<span class="a-badge a-badge-unlocked">Approved</span>` : ""}
-          ${app.status === "declined" ? `<span class="a-badge a-badge-locked">Declined</span>` : ""}
+          ${app.status === "approved" ? `<span class="a-badge a-badge-approved">Approved</span>` : ""}
+          ${app.status === "declined" ? `<span class="a-badge a-badge-declined">Declined</span>` : ""}
           <span class="ticket-date">${submitted}</span>
           <span class="chev">${CHEVRON_ICON}</span>
         </div>
@@ -404,7 +385,7 @@ function ticketHtml(app) {
         </blockquote>
         ${
           app.status === "declined"
-            ? `<blockquote class="ticket-why" style="--card-color:var(--a-danger, #ef5b5b)">
+            ? `<blockquote class="ticket-why" style="--card-color:var(--a-accent)">
                  <span class="ticket-why-label">Decline reason</span>
                  ${escapeHtml(app.decline_reason)}
                </blockquote>`
