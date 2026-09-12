@@ -151,7 +151,7 @@ const Dialog = (() => {
     placeholder = "Search by Discord username…",
     cancelText = "Cancel",
     icon = "discord",
-    cardColor = "#aab0bd",
+    cardColor = "var(--gold, #d4af37)",
     fetchResults, // async (query) => [{ id, username, avatar }]
     allowManual = false,
     manualLabel = "Can't find them? Enter details manually"

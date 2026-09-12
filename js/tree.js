@@ -679,7 +679,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal modal-wide" style="--card-color:#aab0bd">
+      <div class="modal modal-wide" style="--card-color:var(--gold, #d4af37)">
         <div class="modal-header">
           <div class="modal-crest">${HOUSE_ICONS[house.slug]}</div>
           <div>
