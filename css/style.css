@@ -367,17 +367,27 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 @media (max-width: 860px) {
   .topbar { flex-wrap: wrap; padding: 14px 20px; }
   .nav-toggle { display: flex; }
-  .nav-links,
+
+  /* Sign in / account and Join Discord stay visible at all times, in their
+     own compact row right under the brand — only the page links (Houses,
+     Timeline, etc.) collapse behind the hamburger. Previously the whole
+     .topbar-actions block was tucked inside that same collapsed menu, which
+     meant a phone visitor had to know to tap the hamburger before they
+     could even see a way to sign in or join the Discord at all. */
   .topbar-actions {
+    order: 2;
+    width: 100%;
+    flex-basis: 100%;
+    justify-content: space-between;
+    margin-top: 10px;
+  }
+  .user-chip { width: auto; }
+  .profile-card { right: auto; left: 0; }
+
+  .nav-links {
     display: none;
     width: 100%;
     flex-basis: 100%;
-  }
-  .topbar.menu-open .nav-links,
-  .topbar.menu-open .topbar-actions {
-    display: flex;
-  }
-  .nav-links {
     flex-direction: column;
     align-items: stretch;
     gap: 2px;
@@ -386,6 +396,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
     padding-top: 14px;
     border-top: 1px solid var(--panel-border);
   }
+  .topbar.menu-open .nav-links { display: flex; }
   .nav-links a {
     padding: 12px 4px;
     justify-content: flex-start;
@@ -393,16 +404,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   }
   .nav-links a::after { display: none; }
   .nav-links a.active { color: var(--red); }
-  .topbar-actions {
-    order: 4;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-    margin-top: 14px;
-  }
-  .topbar-actions .btn { width: 100%; text-align: center; }
-  .user-chip { width: 100%; justify-content: space-between; }
-  .profile-card { right: auto; left: 0; }
 }
 
 .container {
