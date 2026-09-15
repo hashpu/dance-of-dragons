@@ -790,20 +790,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
     linear-gradient(var(--red), var(--red)) bottom right / 2px 26px no-repeat;
 }
 
-.hero-eyebrow {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  margin-bottom: 4px;
-}
-.hero-eyebrow-line {
-  width: 40px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--red));
-}
-.hero-eyebrow-line.right { background: linear-gradient(90deg, var(--red), transparent); }
-
 .hero-title {
   font-family: "Game of Thrones", "Cinzel", serif;
   font-size: clamp(34px, 7vw, 68px);
