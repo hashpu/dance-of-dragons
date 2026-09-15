@@ -38,6 +38,28 @@ body {
   animation: pageFadeIn 0.4s ease;
 }
 
+/* Custom cursor — a small dot instead of the system pointer (see
+   cursor.js, which adds the .custom-cursor class and skips itself
+   entirely on touch devices / reduced-motion, so this never hides the
+   only pointer someone actually has). */
+.custom-cursor, .custom-cursor * { cursor: none !important; }
+.cursor-dot {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 10px;
+  height: 10px;
+  margin: -5px 0 0 -5px;
+  border-radius: 50%;
+  background: var(--red);
+  box-shadow: 0 0 10px rgba(224, 72, 62, 0.65);
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  transition: opacity 0.2s ease, scale 0.12s ease-out;
+}
+.cursor-dot-active { scale: 0.65; }
+
 h1, h2, h3, .brand { font-family: "Cinzel", serif; letter-spacing: 0.3px; }
 
 .prose {
