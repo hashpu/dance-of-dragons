@@ -409,7 +409,7 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .container {
   position: relative;
   z-index: 1;
-  max-width: 1100px;
+  max-width: 1400px;
   margin: 0 auto;
   padding: 40px 32px 80px;
 }
@@ -1057,10 +1057,12 @@ div.poll-team:hover { transform: none; }
 .member-hit-name { font-family: "Cinzel", serif; font-size: 14px; font-weight: 600; }
 .member-hit-house { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
 
-/* House grid */
+/* House grid — auto-fills as many columns as fit (each at least 280px)
+   instead of a fixed 3, so the wider .container actually puts the extra
+   room to use on a big screen instead of just stretching 3 cards wider. */
 .house-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   gap: 20px;
   scroll-margin-top: 90px;
 }
@@ -1075,13 +1077,6 @@ div.poll-team:hover { transform: none; }
   background: var(--panel);
   border: 1px solid var(--panel-border);
   border-radius: 4px;
-}
-
-@media (max-width: 860px) {
-  .house-grid { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 560px) {
-  .house-grid { grid-template-columns: 1fr; }
 }
 
 .house-card {
