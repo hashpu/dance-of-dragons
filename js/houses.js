@@ -8,6 +8,40 @@ async function getGreatHouses() {
   return all.filter((h) => h.faction !== "CROWN");
 }
 
+// Groups the flat house list into its own section per faction, in a fixed
+// narrative order (crown, then the two warring sides, then everyone who
+// stayed out of it), instead of one undifferentiated grid. Deliberately
+// plain — just a heading and a colored rule, no icon/badge/blurb — so the
+// house cards themselves stay the visual focus.
+const FACTION_ORDER = ["ROYAL HOUSE", "BLACK FACTION", "GREEN FACTION", "NEUTRAL", "LORDS OF HARRENHAL"];
+const FACTION_META = {
+  "ROYAL HOUSE": { label: "The Royal House", color: "var(--gold)" },
+  "BLACK FACTION": { label: "Team Black", color: "#5b8def" },
+  "GREEN FACTION": { label: "Team Green", color: "#6fae4a" },
+  NEUTRAL: { label: "Neutral Houses", color: "#9a9a9e" },
+  "LORDS OF HARRENHAL": { label: "Lords of Harrenhal", color: "#e0622f" }
+};
+
+function groupHousesByFaction(houses) {
+  const byFaction = new Map();
+  houses.forEach((h) => {
+    if (!byFaction.has(h.faction)) byFaction.set(h.faction, []);
+    byFaction.get(h.faction).push(h);
+  });
+  const known = FACTION_ORDER.filter((f) => byFaction.has(f));
+  const unknown = [...byFaction.keys()].filter((f) => !FACTION_ORDER.includes(f));
+  return [...known, ...unknown].map((faction) => ({ faction, houses: byFaction.get(faction) }));
+}
+
+function factionSectionHtml({ faction, houses }) {
+  const meta = FACTION_META[faction] || { label: faction, color: "var(--red)" };
+  return `
+    <section class="faction-section" style="--faction-color:${meta.color}">
+      <h2 class="faction-section-title">${meta.label} <span class="faction-section-count">${houses.length}</span></h2>
+      <div class="house-grid">${houses.map(houseCardHtml).join("")}</div>
+    </section>
+  `;
+}
 
 const STAT_ICONS = {
   houses: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>`,
@@ -26,7 +60,7 @@ function renderStats(houses) {
 async function renderHouseGrid() {
   document.getElementById("houseGrid").innerHTML = Array(6).fill('<div class="skeleton-card"></div>').join("");
   const houses = await getGreatHouses();
-  document.getElementById("houseGrid").innerHTML = houses.map(houseCardHtml).join("");
+  document.getElementById("houseGrid").innerHTML = groupHousesByFaction(houses).map(factionSectionHtml).join("");
   scrollReveal(".house-card", document.getElementById("houseGrid"));
   renderStats(houses);
 
@@ -56,14 +90,14 @@ async function runSearch(query) {
   const results = document.getElementById("searchResults");
 
   if (!q) {
-    grid.innerHTML = houses.map(houseCardHtml).join("");
+    grid.innerHTML = groupHousesByFaction(houses).map(factionSectionHtml).join("");
     results.innerHTML = "";
     return;
   }
 
   const matchingHouses = houses.filter((h) => matchesHouse(h, q));
   grid.innerHTML = matchingHouses.length
-    ? matchingHouses.map(houseCardHtml).join("")
+    ? groupHousesByFaction(matchingHouses).map(factionSectionHtml).join("")
     : `<p class="empty-state">No houses match "${query}".</p>`;
 
   const memberHits = memberIndex.filter(

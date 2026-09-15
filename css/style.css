@@ -1013,6 +1013,28 @@ div.poll-team:hover { transform: none; }
 .member-hit-name { font-family: "Cinzel", serif; font-size: 14px; font-weight: 600; }
 .member-hit-house { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
 
+/* Faction sections — the Houses page groups its grid by faction (crown,
+   then the two warring sides, then neutrals) instead of one undifferentiated
+   grid. Kept deliberately plain: a heading and a colored rule, nothing else
+   — the house cards do the visual work. */
+.faction-sections { display: flex; flex-direction: column; gap: 44px; scroll-margin-top: 90px; }
+.faction-section-title {
+  font-family: "Game of Thrones", "Cinzel", serif;
+  font-weight: 400;
+  font-size: clamp(19px, 3.6vw, 24px);
+  letter-spacing: 0.5px;
+  margin: 0 0 16px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid color-mix(in srgb, var(--faction-color, var(--red)) 55%, transparent);
+}
+.faction-section-count {
+  font-family: "Inter", system-ui, sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted);
+  letter-spacing: normal;
+}
+
 /* House grid */
 .house-grid {
   display: grid;
