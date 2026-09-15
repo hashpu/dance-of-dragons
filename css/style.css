@@ -741,11 +741,81 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 .hero {
   position: relative;
   text-align: center;
-  padding: 78px 20px 64px;
+  padding: 60px 20px 88px;
   overflow: hidden;
 }
 
-.hero-content { position: relative; max-width: 720px; margin: 0 auto; }
+/* Soft ambient bloom behind the framed content, plus a giant, near-invisible
+   house sigil watermark for texture — both sit at z-index 0, below
+   .hero-content's z-index 1. */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: 48%;
+  left: 50%;
+  width: min(900px, 140vw);
+  height: min(900px, 140vw);
+  transform: translate(-50%, -50%);
+  background: radial-gradient(circle, rgba(224, 72, 62, 0.22), transparent 65%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-sigil {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: clamp(380px, 58vw, 620px);
+  height: auto;
+  transform: translate(-50%, -52%);
+  color: var(--red);
+  opacity: 0.05;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 44px clamp(22px, 6vw, 56px);
+}
+
+/* Corner-bracket frame around the hero text, matching the house cards' and
+   rally tiers' framed-plaque look (see .rally-tier::after) — four corners
+   this time since the hero is the site's centerpiece, drawn as background
+   layers on one pseudo-element rather than extra markup. */
+.hero-content::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.55;
+  background:
+    linear-gradient(var(--red), var(--red)) top left / 26px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) top left / 2px 26px no-repeat,
+    linear-gradient(var(--red), var(--red)) top right / 26px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) top right / 2px 26px no-repeat,
+    linear-gradient(var(--red), var(--red)) bottom left / 26px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) bottom left / 2px 26px no-repeat,
+    linear-gradient(var(--red), var(--red)) bottom right / 26px 2px no-repeat,
+    linear-gradient(var(--red), var(--red)) bottom right / 2px 26px no-repeat;
+}
+
+.hero-eyebrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+.hero-eyebrow-line {
+  width: 40px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, var(--red));
+}
+.hero-eyebrow-line.right { background: linear-gradient(90deg, var(--red), transparent); }
 
 .hero-title {
   font-family: "Game of Thrones", "Cinzel", serif;
@@ -780,6 +850,34 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   justify-content: center;
   gap: 14px;
   flex-wrap: wrap;
+}
+
+.hero-scroll-cue {
+  position: absolute;
+  left: 50%;
+  bottom: 14px;
+  transform: translateX(-50%);
+  z-index: 1;
+  width: 34px;
+  height: 34px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  border: 1px solid #3a3a3d;
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--muted);
+  animation: heroScrollBounce 2.2s ease-in-out infinite;
+  transition: color 0.2s, border-color 0.2s;
+}
+.hero-scroll-cue:hover { color: var(--red); border-color: var(--red); }
+.hero-scroll-cue svg { width: 16px; height: 16px; }
+@keyframes heroScrollBounce {
+  0%, 100% { transform: translate(-50%, 0); }
+  50% { transform: translate(-50%, 6px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-scroll-cue { animation: none; }
 }
 
 .notfound-links {
