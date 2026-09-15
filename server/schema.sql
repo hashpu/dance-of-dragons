@@ -80,9 +80,10 @@ CREATE TABLE IF NOT EXISTS discord_users (
   last_seen_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- One row per Discord account: which side of the Dance they're backing.
--- Voting again just changes the existing row (see routes/votes.js's
--- upsert) rather than adding a second vote.
+-- Leftover from the "which side of the Dance are you on" vote feature,
+-- removed along with routes/votes.js and the Community page. Left in place
+-- (not dropped) so any historical votes already cast aren't deleted;
+-- nothing reads or writes to it anymore.
 CREATE TABLE IF NOT EXISTS votes (
   discord_user_id TEXT PRIMARY KEY,
   choice TEXT NOT NULL,

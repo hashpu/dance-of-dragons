@@ -277,12 +277,12 @@ test("signing in with Discord records the account, searchable by username — bu
   assert.equal(notYetSeen.status, 200);
   assert.deepEqual(notYetSeen.body, []);
 
-  // GET /api/votes always verifies the Discord token, regardless of any
-  // house's lock state — unlike /api/houses/:slug, which only verifies at
-  // all while that specific house is locked (and other tests in this file
-  // unlock/relock houses, so relying on one of those would be fragile).
+  // GET /api/discord/me always verifies the Discord token, regardless of
+  // any house's lock state — unlike /api/houses/:slug, which only verifies
+  // at all while that specific house is locked (and other tests in this
+  // file unlock/relock houses, so relying on one of those would be fragile).
   mockNetwork({ discordTokens: { "seen-token": { userId: "seen-user-1", username: "WinterfellKing" } } });
-  const check = await request.get("/api/votes").set("Authorization", "Bearer seen-token");
+  const check = await request.get("/api/discord/me").set("Authorization", "Bearer seen-token");
   assert.equal(check.status, 200);
 
   const noSecret = await request.get("/api/admin/discord-users?q=winter");
@@ -300,7 +300,7 @@ test("signing in with Discord records the account, searchable by username — bu
 
   // Signing in again with a changed username updates the record in place, not a second row.
   mockNetwork({ discordTokens: { "seen-token-2": { userId: "seen-user-1", username: "WinterfellKing2" } } });
-  await request.get("/api/votes").set("Authorization", "Bearer seen-token-2");
+  await request.get("/api/discord/me").set("Authorization", "Bearer seen-token-2");
   const renamed = await request.get("/api/admin/discord-users?q=WinterfellKing2").set("x-admin-secret", "test-secret");
   assert.equal(renamed.body.length, 1);
   assert.equal(renamed.body[0].username, "WinterfellKing2");

@@ -4,7 +4,6 @@ const DISCORD_INVITE_URL = "https://discord.gg/eRHDDrnJZk";
 const NAV_ICONS = {
   houses: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>`,
   factions: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9-3 1 1-3 9-9z"/><path d="M13.5 8.5l2 2M4 20l3.5-3.5"/></svg>`,
-  showcase: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8h3l1.5-2h7L17 8h3a1 1 0 011 1v9a1 1 0 01-1 1H4a1 1 0 01-1-1V9a1 1 0 011-1z"/><circle cx="12" cy="13" r="3.2"/></svg>`,
   apply: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 4c-6 0-13 4-15 12l-1 4 4-1C16 17 20 10 20 4z"/><path d="M9.5 14.5L4 20"/></svg>`,
   rules: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h10a1 1 0 011 1v16l-3-2-3 2-3-2-3 2V4a1 1 0 011-1z"/><path d="M9 8h6M9 12h6"/></svg>`
 };
@@ -21,7 +20,6 @@ function navEscapeHtml(str) {
   const links = [
     { href: "/", label: "Houses", icon: "houses" },
     { href: "/factions", label: "Crown Orders", icon: "factions" },
-    { href: "/showcase", label: "Community", icon: "showcase" },
     { href: "/apply", label: "Apply", icon: "apply" },
     { href: "/rules", label: "Rules", icon: "rules" }
   ];
@@ -31,9 +29,9 @@ function navEscapeHtml(str) {
   const memberSince = user && typeof discordAccountCreatedAt === "function" ? discordAccountCreatedAt(user) : null;
 
   // Most routes only verify+record a signed-in visitor's Discord identity as
-  // a side effect of checking something specific (a Lord assignment, a
-  // vote) — someone who just browses an unlocked house, or a locked one
-  // with no Lord configured yet, would never actually get recorded that
+  // a side effect of checking something specific (a Lord assignment, an
+  // application) — someone who just browses an unlocked house, or a locked
+  // one with no Lord configured yet, would never actually get recorded that
   // way, even though they're genuinely signed in. This runs once per page
   // load whenever a token is present, so being signed in anywhere on the
   // site is enough to show up in the admin/house "add spouse" search.
