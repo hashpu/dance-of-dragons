@@ -1,10 +1,16 @@
 function deptCardHtml(dept) {
   return `
   <div class="house-card" style="--card-color:${dept.color}">
-    <div class="house-icon">${DEPT_ICONS[dept.icon]}</div>
-    <h3 class="house-name">${dept.name}</h3>
+    <span class="house-card-corner house-card-corner-tl" aria-hidden="true"></span>
+    <span class="house-card-corner house-card-corner-br" aria-hidden="true"></span>
+    <div class="house-card-head">
+      <div class="house-icon"><span class="house-icon-ring"></span>${DEPT_ICONS[dept.icon]}</div>
+      <div class="house-card-heading"><h3 class="house-name">${dept.name}</h3></div>
+    </div>
     <p class="house-desc">${dept.blurb}</p>
-    <button class="btn btn-primary btn-block" onclick="openApplyModal('${dept.key}')">Apply →</button>
+    <div class="house-card-footer">
+      <button class="btn btn-primary btn-block" onclick="openApplyModal('${dept.key}')">Apply →</button>
+    </div>
   </div>`;
 }
 
