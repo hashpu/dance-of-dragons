@@ -9,7 +9,7 @@ function houseCardHtml(h) {
     <span class="house-card-corner house-card-corner-br" aria-hidden="true"></span>
     ${h.locked ? `<span class="house-lock-badge" title="Locked">${HOUSE_CARD_LOCK_ICON}</span>` : ""}
     <div class="house-card-head">
-      <div class="house-icon"><span class="house-icon-ring"></span>${HOUSE_ICONS[h.slug]}</div>
+      <div class="house-icon house-icon-plain"><span class="house-icon-ring"></span></div>
       <div class="house-card-heading">
         <div class="house-faction">${h.faction}</div>
         <h3 class="house-name">${h.name}</h3>

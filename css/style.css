@@ -1058,6 +1058,13 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
     inset 0 -3px 7px rgba(0, 0, 0, 0.35);
 }
 
+/* No sigil glyph inside — just a solid glossy swatch of the house's color,
+   used in place of the icon-bearing .house-icon (house-card.js, tree.js). */
+.house-icon-plain {
+  background: radial-gradient(circle at 32% 28%, color-mix(in srgb, var(--card-color, var(--red)) 85%, white 15%), var(--card-color, var(--red)) 78%);
+  border-color: color-mix(in srgb, var(--card-color, var(--red)) 80%, black 10%);
+}
+
 /* A thin rotating-in-spirit ring — a static dashed circle just outside the
    icon that brightens on hover, like a seal's engraved border. */
 .house-icon-ring {

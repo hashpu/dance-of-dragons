@@ -24,7 +24,7 @@ function renderHeader() {
   document.title = `${house.name} · Family Tree`;
   document.getElementById("houseHeader").innerHTML = `
     <div class="house-banner" style="--card-color:${house.color}">
-      <div class="house-icon house-icon-lg" style="background:color-mix(in srgb, ${house.color} 18%, transparent); border-color:color-mix(in srgb, ${house.color} 45%, transparent);">${HOUSE_ICONS[house.slug]}</div>
+      <div class="house-icon house-icon-lg house-icon-plain"></div>
       <h1>${entityLabel(house)}</h1>
       <p class="house-tagline">${house.tagline}</p>
     </div>
