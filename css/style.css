@@ -1029,22 +1029,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
     inset 0 -3px 7px rgba(0, 0, 0, 0.35);
 }
 
-/* No sigil glyph inside — just a solid glossy swatch of the house's color,
-   used in place of the icon-bearing .house-icon (house-card.js, tree.js). */
-.house-icon-plain {
-  background: var(--card-color, var(--red));
-  border-color: color-mix(in srgb, var(--card-color, var(--red)) 55%, black 30%);
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--card-color, var(--red)) 8%, transparent),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.25);
-}
-.house-card:hover .house-icon-plain {
-  box-shadow:
-    0 0 0 4px color-mix(in srgb, var(--card-color, var(--red)) 12%, transparent),
-    0 0 16px -6px var(--card-color, var(--red)),
-    inset 0 0 0 1px rgba(0, 0, 0, 0.25);
-}
-
 /* A thin rotating-in-spirit ring — a static dashed circle just outside the
    icon that brightens on hover, like a seal's engraved border. */
 .house-icon-ring {
@@ -1258,7 +1242,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   background: linear-gradient(90deg, transparent, var(--card-color), transparent);
 }
 
-.house-icon-lg { width: 76px; height: 76px; margin: 0 auto 18px; }
 .house-banner h1 {
   font-family: "Game of Thrones", "Cinzel", serif;
   font-weight: 400;
