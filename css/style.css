@@ -66,7 +66,7 @@ summary:focus-visible,
 ::-webkit-scrollbar-thumb:hover { background: var(--red); }
 html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
 
-/* Ambient background layer: grain + drifting embers, behind all real content */
+/* Ambient background layer: a subtle grain texture behind all real content */
 .bg-fx {
   position: fixed;
   inset: 0;
@@ -81,35 +81,6 @@ html { scrollbar-color: #3a2222 var(--bg); scrollbar-width: thin; }
   opacity: 0.06;
   mix-blend-mode: overlay;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-.ember {
-  position: absolute;
-  bottom: -14px;
-  opacity: 0;
-  filter: drop-shadow(0 0 3px rgba(224, 72, 62, 0.7));
-  animation: emberRise linear infinite;
-  will-change: transform, opacity;
-}
-@keyframes emberRise {
-  0% { transform: translate(0, 0); opacity: 0; }
-  8% { opacity: 0.9; }
-  85% { opacity: 0.4; }
-  100% { transform: translate(var(--drift, 30px), -110vh); opacity: 0; }
-}
-
-.ember-flame {
-  display: block;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(180deg, #fff3c4 0%, #ffb185 40%, var(--red) 75%, transparent 100%);
-  border-radius: 0 65% 65% 65%;
-  transform-origin: 50% 100%;
-  animation: flameFlicker ease-in-out infinite;
-}
-@keyframes flameFlicker {
-  0%, 100% { transform: scale(1, 1) rotate(-8deg); }
-  50% { transform: scale(0.82, 1.2) rotate(8deg); }
 }
 
 .topbar {
