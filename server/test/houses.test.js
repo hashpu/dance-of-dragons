@@ -15,7 +15,7 @@ test.before(async () => {
 test("GET /api/houses lists all houses with correct member counts, in order", async () => {
   const res = await request.get("/api/houses");
   assert.equal(res.status, 200);
-  assert.equal(res.body.length, 28);
+  assert.equal(res.body.length, 29);
   assert.equal(res.body[0].slug, "targaryen");
   assert.equal(res.body[0].memberCount, 5);
   assert.equal(res.body[1].slug, "velaryon");
@@ -421,7 +421,7 @@ test("GET /api/admin/houses gives the admin lock/lord status for every house, bu
 
   const res = await request.get("/api/admin/houses").set("x-admin-secret", "test-secret");
   assert.equal(res.status, 200);
-  assert.equal(res.body.length, 28);
+  assert.equal(res.body.length, 29);
 
   const targaryen = res.body.find((h) => h.slug === "targaryen");
   assert.equal(targaryen.locked, true); // every house starts locked in the default seed
