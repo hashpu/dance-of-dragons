@@ -85,6 +85,19 @@ function fieldValue(id) {
   return el ? el.value.trim() : "";
 }
 
+// The hours-per-week slider and timezone select on the Basics step compose
+// into the same single "availability" string the server has always stored
+// — no schema change, just a nicer way to build that string than typing it
+// by hand.
+function availabilityValue() {
+  const hoursEl = document.getElementById("q_availabilityHours");
+  if (!hoursEl) return "";
+  const hours = Number(hoursEl.value);
+  const hoursLabel = hours >= 40 ? "40+ hrs/week" : `${hours} hrs/week`;
+  const tz = fieldValue("q_availabilityTz");
+  return tz ? `${hoursLabel}, ${tz}` : hoursLabel;
+}
+
 // Two consecutive short (non-textarea/yesno) questions sit side by side
 // instead of stacking, to keep long forms from feeling endless. showHeading
 // is off inside a wizard step, since the step's own progress label already
@@ -159,14 +172,40 @@ async function openApplyModal(deptKey) {
   const stepBodyHtml = (step, i) => {
     if (step.type === "basics") {
       return `
-        <div class="more-grid">
-          <div class="field">
-            <label>Roblox username</label>
-            <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
-          </div>
-          <div class="field">
-            <label>Availability <span class="hint">(hours/week, timezone)</span></label>
-            <div class="input-wrap">${DEPT_ICONS.clock}<input id="q_availability" placeholder="e.g. 10hrs/week, EST" /></div>
+        <div class="field">
+          <label>Roblox username</label>
+          <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
+        </div>
+
+        <div class="field">
+          <label>Availability</label>
+          <div class="availability-picker">
+            <div class="availability-hours">
+              <div class="availability-hours-row">
+                <span class="availability-hours-icon">${DEPT_ICONS.clock}</span>
+                <span class="availability-hours-label">Hours per week</span>
+                <span class="availability-hours-value" id="availHoursValue">10 hrs/week</span>
+              </div>
+              <input type="range" id="q_availabilityHours" min="1" max="40" step="1" value="10" />
+            </div>
+            <div class="input-wrap">
+              ${DEPT_ICONS.globe}
+              <select id="q_availabilityTz" data-custom-select>
+                <option value="">Timezone (optional)</option>
+                <option value="PST">Pacific (PST, UTC-8)</option>
+                <option value="MST">Mountain (MST, UTC-7)</option>
+                <option value="CST">Central (CST, UTC-6)</option>
+                <option value="EST">Eastern (EST, UTC-5)</option>
+                <option value="UTC">UTC / GMT (UTC+0)</option>
+                <option value="CET">Central Europe (CET, UTC+1)</option>
+                <option value="EET">Eastern Europe (EET, UTC+2)</option>
+                <option value="IST">India (IST, UTC+5:30)</option>
+                <option value="CHN">China / Singapore (UTC+8)</option>
+                <option value="JST">Japan / Korea (JST/KST, UTC+9)</option>
+                <option value="AEST">Australia Eastern (AEST, UTC+10)</option>
+              </select>
+              <span class="chevron">${DEPT_ICONS.chevron}</span>
+            </div>
           </div>
         </div>
       `;
@@ -224,6 +263,17 @@ async function openApplyModal(deptKey) {
   });
 
   document.querySelectorAll("[data-custom-select]").forEach((select) => wireCustomSelect(select.id));
+
+  const hoursSlider = document.getElementById("q_availabilityHours");
+  const hoursValueEl = document.getElementById("availHoursValue");
+  function renderHoursSlider() {
+    const val = Number(hoursSlider.value);
+    hoursValueEl.textContent = val === 40 ? "40+ hrs/week" : `${val} hrs/week`;
+    const pct = ((val - hoursSlider.min) / (hoursSlider.max - hoursSlider.min)) * 100;
+    hoursSlider.style.background = `linear-gradient(to right, var(--card-color, var(--red)) ${pct}%, var(--surface-1) ${pct}%)`;
+  }
+  hoursSlider.addEventListener("input", renderHoursSlider);
+  renderHoursSlider();
 
   const stepEls = Array.from(document.querySelectorAll(".apply-step"));
   const backBtn = document.getElementById("applyBackBtn");
@@ -340,7 +390,7 @@ async function submitApplication(deptKey) {
   const form = new FormData();
   form.append("department", deptKey);
   form.append("robloxUsername", roblox);
-  form.append("availability", fieldValue("q_availability"));
+  form.append("availability", availabilityValue());
   form.append("why", why);
   form.append("answers", JSON.stringify(answers));
 
