@@ -884,8 +884,9 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
               ${FIELD_ICONS.user}
               <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" autocomplete="off" />
             </div>
-            <button type="button" class="field-clear" id="searchDiscordBtn" title="Fill in from a Discord account that's signed in here before">${FIELD_ICONS.discord}</button>
+            <button type="button" class="field-clear" id="searchDiscordBtn" title="Link a Discord account that's signed in here before">${FIELD_ICONS.discord}</button>
           </div>
+          <p class="hint" id="discordLinkedHint" style="margin-top:6px" hidden></p>
         </div>
 
         <div class="more-grid">
@@ -1037,27 +1038,37 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   document.getElementById("fName").focus();
 }
 
-// Fills Name/Discord ID/Avatar from a Discord account that's signed in on
-// the site before, instead of typing them by hand — same house-scoped
-// search openAddSpouseFlow uses, just filling this form's fields instead of
-// skipping straight to Api.addMember. Also pre-checks "Make them Lord"
-// (see submitMember) since picking someone here is usually exactly why
-// you're doing this — it's still an ordinary checkbox, so unchecking it
-// before saving leaves the house's Lord untouched.
+// Links a Discord account that's signed in on the site before — same
+// house-scoped search openAddSpouseFlow uses — without touching Name.
+// Their Discord username almost never IS the character's name, so Name
+// stays whatever's already typed (or blank) and gets focused right after,
+// ready to type the actual name into; only Discord ID/Avatar come from the
+// pick, plus a small confirmation of who got linked. Also pre-checks
+// "Make them Lord" (see submitMember) since picking someone here is
+// usually exactly why you're doing this — it's still an ordinary
+// checkbox, so unchecking it before saving leaves the house's Lord
+// untouched.
 async function searchDiscordForMember() {
   const result = await Dialog.search({
     kicker: entityLabel(house),
-    title: "Fill in from a Discord account",
+    title: "Link a Discord account",
     message: "Search a Discord account that's signed in here before.",
     fetchResults: (query) => Api.searchHouseDiscordUsers(slug, query, sessionPassword)
   });
   if (!result) return;
 
-  document.getElementById("fName").value = result.username;
   document.getElementById("fDiscordId").value = result.id;
   document.getElementById("fAvatar").value = discordAvatarUrl(result);
   document.getElementById("fMakeLord").checked = true;
   updateAvatarPreview();
+
+  const hint = document.getElementById("discordLinkedHint");
+  hint.textContent = `Linked to ${result.username} on Discord. Give them their character's name below.`;
+  hint.hidden = false;
+
+  const nameInput = document.getElementById("fName");
+  nameInput.focus();
+  nameInput.select();
 }
 
 async function handleAvatarFileChange(e) {
