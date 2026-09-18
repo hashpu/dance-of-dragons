@@ -169,14 +169,6 @@ async function openApplyModal(deptKey) {
             <div class="input-wrap">${DEPT_ICONS.clock}<input id="q_availability" placeholder="e.g. 10hrs/week, EST" /></div>
           </div>
         </div>
-        <div class="field">
-          <label>Attach an image <span class="hint">(optional: portfolio, screenshot, etc.)</span></label>
-          <div class="avatar-field-row">
-            <input type="file" id="q_image" accept="image/*" style="flex:1" />
-            <img id="imagePreview" class="avatar-preview" alt="" hidden />
-            <button type="button" class="field-clear" id="clearImageBtn" title="Remove image" hidden>${DEPT_ICONS.x}</button>
-          </div>
-        </div>
       `;
     }
     if (step.type === "why") {
@@ -229,30 +221,6 @@ async function openApplyModal(deptKey) {
 
   document.getElementById("modalOverlay").addEventListener("click", (e) => {
     if (e.target.id === "modalOverlay") closeModal();
-  });
-
-  document.getElementById("q_image").addEventListener("change", (e) => {
-    const file = e.target.files[0];
-    const preview = document.getElementById("imagePreview");
-    const clearBtn = document.getElementById("clearImageBtn");
-    if (!file) {
-      preview.hidden = true;
-      clearBtn.hidden = true;
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = () => {
-      preview.src = reader.result;
-      preview.hidden = false;
-    };
-    reader.readAsDataURL(file);
-    clearBtn.hidden = false;
-  });
-
-  document.getElementById("clearImageBtn").addEventListener("click", () => {
-    document.getElementById("q_image").value = "";
-    document.getElementById("imagePreview").hidden = true;
-    document.getElementById("clearImageBtn").hidden = true;
   });
 
   document.querySelectorAll("[data-custom-select]").forEach((select) => wireCustomSelect(select.id));
@@ -375,8 +343,6 @@ async function submitApplication(deptKey) {
   form.append("availability", fieldValue("q_availability"));
   form.append("why", why);
   form.append("answers", JSON.stringify(answers));
-  const imageFile = document.getElementById("q_image").files[0];
-  if (imageFile) form.append("image", imageFile);
 
   try {
     await Api.submitApplication(form);
