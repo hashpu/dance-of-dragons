@@ -23,7 +23,7 @@ let sessionPassword = null;
 function renderHeader() {
   document.title = `${house.name} · Family Tree`;
   document.getElementById("houseHeader").innerHTML = `
-    <div class="house-banner" style="--card-color:${house.color}">
+    <div class="house-banner">
       <h1>${entityLabel(house)}</h1>
       <p class="house-tagline">${house.tagline}</p>
     </div>
@@ -48,7 +48,7 @@ function renderStatus() {
     document.getElementById("changePasswordBtn").onclick = changeLordPassword;
   } else if (house.locked) {
     el.innerHTML = `
-      <div class="locked-card" style="--card-color:${house.color}">
+      <div class="locked-card">
         <div class="lock-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg></div>
         <h3>This tree is locked</h3>
         <p>Enter ${entityLabel(house)}'s password to view its family tree.</p>
@@ -147,7 +147,7 @@ async function changeLordPassword() {
     type: "password",
     placeholder: "••••••••",
     confirmText: "Change password",
-    cardColor: house.color
+    cardColor: "var(--red)"
   });
   if (!pw) return;
   try {
@@ -160,7 +160,7 @@ async function changeLordPassword() {
     title: "Password changed",
     message: `${entityLabel(house)}'s password has been updated.`,
     icon: "lock",
-    cardColor: house.color
+    cardColor: "var(--red)"
   });
   await refresh();
 }
@@ -223,7 +223,7 @@ let nodeRenderIndex = 0;
 // belong to whichever member actually holds the tree position (see
 // nodeHtml), not to a spouse who only married in.
 function personCardHtml(person) {
-  const fallback = generatedAvatar(person.name, house.color);
+  const fallback = generatedAvatar(person.name);
   const avatar = person.avatarUrl || fallback;
   const avatarImg = `<img class="node-avatar" src="${avatar}" alt="${person.name}" onerror="this.onerror=null;this.src='${fallback}'" />`;
   const avatarHtml = person.robloxProfile
@@ -323,7 +323,7 @@ function renderTree() {
   if (!forest.length) {
     el.innerHTML = `
       ${toolbar}
-      <div class="tree-panel" style="--card-color:${house.color}">
+      <div class="tree-panel">
         <div class="empty-tree">No members yet. Be the first to add one to ${entityLabel(house)}.</div>
       </div>
     `;
@@ -332,7 +332,7 @@ function renderTree() {
 
   el.innerHTML = `
     ${toolbar}
-    <div class="tree-panel" style="--card-color:${house.color}">
+    <div class="tree-panel">
       <ul class="tree">
         ${forest.map((n) => `<li>${nodeHtml(n)}</li>`).join("")}
       </ul>
@@ -527,16 +527,6 @@ async function loadPickerMembers(houseSlug) {
   }
 }
 
-// The color to tint a generated fallback avatar with in the parent/spouse
-// picker — the picked house's own color when "Parent's/Spouse's house" points
-// elsewhere (marrying in from another house), else this house's own color.
-// Mirrors what updateParentPreview already does for the single selected row.
-function pickedHouseColor(houseSelectId) {
-  const slugSel = document.getElementById(houseSelectId).value;
-  const picked = parentPickerHouses.find((h) => h.slug === slugSel);
-  return picked ? picked.color : house.color;
-}
-
 function excludedParentIds(houseSlug) {
   // Reparent loops are only possible within this same house's own tree —
   // a cross-house parent can never end up as one of this member's own
@@ -585,7 +575,7 @@ function elFromHtml(html) {
 // avatar+name row per available member, filtered live by `query` (a plain
 // case-insensitive substring match on name — this list is at most a
 // house's worth of members, never large enough to need anything fancier).
-function personPickerRowsHtml(members, excluded, selectedId, noneLabel, query, fallbackColor) {
+function personPickerRowsHtml(members, excluded, selectedId, noneLabel, query) {
   const q = query.trim().toLowerCase();
   const matches = members.filter((m) => !excluded.has(m.id)).filter((m) => !q || m.name.toLowerCase().includes(q));
   const showNone = !q || noneLabel.toLowerCase().includes(q);
@@ -597,7 +587,7 @@ function personPickerRowsHtml(members, excluded, selectedId, noneLabel, query, f
     );
   }
   matches.forEach((m) => {
-    const avatar = m.avatarUrl || generatedAvatar(m.name, fallbackColor);
+    const avatar = m.avatarUrl || generatedAvatar(m.name);
     rows.push(`
       <button type="button" class="person-picker-row${m.id === selectedId ? " active" : ""}" data-id="${m.id}">
         <img src="${avatar}" alt="" />
@@ -647,7 +637,7 @@ function ensurePersonPickerOutsideClickHandling() {
 // trigger's own screen coordinates, and torn down completely on close() —
 // simpler than tracking a persistent floating element's visibility, and it
 // means there's never a stale panel left over to worry about cleaning up.
-function wirePersonPicker(fieldId, { getMembers, getExcluded, getColor = () => house.color, noneLabel, onSelect }) {
+function wirePersonPicker(fieldId, { getMembers, getExcluded, noneLabel, onSelect }) {
   const trigger = document.getElementById(`${fieldId}Trigger`);
   const triggerLabel = document.getElementById(`${fieldId}TriggerLabel`);
   const hiddenInput = document.getElementById(fieldId);
@@ -663,7 +653,7 @@ function wirePersonPicker(fieldId, { getMembers, getExcluded, getColor = () => h
 
   function renderRows(query) {
     const list = panelEl.querySelector(".person-picker-list");
-    list.innerHTML = personPickerRowsHtml(getMembers(), getExcluded(), hiddenInput.value, noneLabel, query, getColor());
+    list.innerHTML = personPickerRowsHtml(getMembers(), getExcluded(), hiddenInput.value, noneLabel, query);
     list.querySelectorAll(".person-picker-row").forEach((row) => {
       row.onclick = () => {
         hiddenInput.value = row.dataset.id;
@@ -757,7 +747,7 @@ function updateParentPreview() {
   if (!m) return;
   const houseSlugSel = document.getElementById("fParentHouse").value;
   const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlugSel);
-  const fallback = generatedAvatar(m.name, pickedHouse ? pickedHouse.color : house.color);
+  const fallback = generatedAvatar(m.name);
   const avatar = m.avatarUrl || fallback;
   const houseNote = houseSlugSel !== slug && pickedHouse ? ` (${entityLabel(pickedHouse)})` : "";
   preview.className = "parent-preview";
@@ -925,7 +915,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
             </div>
           </div>
           <div class="field">
-            <label>Spouse <span class="hint">(optional — pairs them together in the tree)</span></label>
+            <label>Spouse <span class="hint">(optional, pairs them together in the tree)</span></label>
             ${personPickerFieldHtml("fSpouse", initialSpouseId, FIELD_ICONS.heart)}
             <p class="hint" id="spouseHouseLockedHint"${showSpouseLockedHint ? "" : " hidden"}>This house is locked, so its members aren't available to pick from.</p>
           </div>
@@ -993,7 +983,6 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   parentPickerControl = wirePersonPicker("fParent", {
     getMembers: () => parentPickerMembers,
     getExcluded: () => excludedParentIds(document.getElementById("fParentHouse").value),
-    getColor: () => pickedHouseColor("fParentHouse"),
     noneLabel: "Nobody, they start a new branch",
     onSelect: updateParentPreview
   });
@@ -1005,7 +994,6 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   spousePickerControl = wirePersonPicker("fSpouse", {
     getMembers: () => spousePickerMembers,
     getExcluded: () => excludedSpouseIds(document.getElementById("fSpouseHouse").value),
-    getColor: () => pickedHouseColor("fSpouseHouse"),
     noneLabel: "No spouse"
   });
   document.getElementById("fSpouseHouse").addEventListener("change", (e) => {

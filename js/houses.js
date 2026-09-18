@@ -80,14 +80,14 @@ async function runSearch(query) {
       <div class="member-results-title">People matching "${query}"</div>
       ${memberHits
         .map(({ member, house }) => {
-          const fallback = generatedAvatar(member.name, house.color);
+          const fallback = generatedAvatar(member.name);
           const avatar = member.avatarUrl || fallback;
           return `
           <a class="member-hit" href="/house?h=${house.slug}&highlight=${member.id}">
             <img src="${avatar}" alt="" onerror="this.onerror=null;this.src='${fallback}'" />
             <div>
               <div class="member-hit-name">${member.name}${member.role ? ` · ${member.role}` : ""}</div>
-              <div class="member-hit-house" style="color:${house.color}">${house.faction === "CROWN" ? house.name : "House " + house.name}</div>
+              <div class="member-hit-house">${house.faction === "CROWN" ? house.name : "House " + house.name}</div>
             </div>
           </a>`;
         })

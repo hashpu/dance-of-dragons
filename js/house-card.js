@@ -4,7 +4,7 @@ const HOUSE_CARD_LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="curre
 function houseCardHtml(h) {
   const count = h.memberCount;
   return `
-  <div class="house-card" style="--card-color:${h.color}">
+  <div class="house-card">
     <span class="house-card-corner house-card-corner-tl" aria-hidden="true"></span>
     <span class="house-card-corner house-card-corner-br" aria-hidden="true"></span>
     ${h.locked ? `<span class="house-lock-badge" title="Locked">${HOUSE_CARD_LOCK_ICON}</span>` : ""}

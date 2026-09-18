@@ -347,7 +347,7 @@ function ticketAnswersHtml(dept, answers) {
 
 function ticketHtml(app) {
   const dept = DEPARTMENTS.find((d) => d.key === app.department);
-  const color = dept ? dept.color : "var(--a-muted)";
+  const color = "var(--a-accent)";
   let answers = app.answers || {};
   if (typeof answers === "string") {
     try {
@@ -439,7 +439,7 @@ function renderTickets() {
         title: "Application approved",
         message: dmSent
           ? "They've been DMed on Discord to let them know."
-          : "Saved — they weren't signed in with Discord when they applied, so no DM could be sent. The staff webhook still got it.",
+          : "Saved. They weren't signed in with Discord when they applied, so no DM could be sent. The staff webhook still got it.",
         icon: dmSent ? "discord" : "info"
       });
     };
@@ -467,7 +467,7 @@ function renderTickets() {
         title: "Application declined",
         message: dmSent
           ? "They've been DMed the reason on Discord."
-          : "Reason saved — they weren't signed in with Discord when they applied, so no DM could be sent. They'll still see it if they sign in on the site.",
+          : "Reason saved. They weren't signed in with Discord when they applied, so no DM could be sent. They'll still see it if they sign in on the site.",
         icon: dmSent ? "discord" : "info"
       });
     };
@@ -737,7 +737,7 @@ function renderDashboard() {
       const user = await Dialog.search({
         kicker: "Staff",
         title: "Add staff by Discord account",
-        message: "Only accounts that have signed in with Discord on the site before show up here. Whoever you pick can open the admin dashboard right away — no password needed.",
+        message: "Only accounts that have signed in with Discord on the site before show up here. Whoever you pick can open the admin dashboard right away, no password needed.",
         fetchResults: (query) => Api.searchDiscordUsers(query, adminSecret)
       });
       if (!user) return;

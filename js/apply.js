@@ -1,6 +1,6 @@
 function deptCardHtml(dept) {
   return `
-  <div class="house-card" style="--card-color:${dept.color}">
+  <div class="house-card">
     <span class="house-card-corner house-card-corner-tl" aria-hidden="true"></span>
     <span class="house-card-corner house-card-corner-br" aria-hidden="true"></span>
     <div class="house-card-head">
@@ -101,7 +101,7 @@ async function openApplyModal(deptKey) {
       message: "You need to sign in with Discord before starting an application.",
       confirmText: "Sign in with Discord",
       icon: "discord",
-      cardColor: dept.color
+      cardColor: "var(--red)"
     });
     if (ok) beginDiscordLogin();
     return;
@@ -109,7 +109,7 @@ async function openApplyModal(deptKey) {
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal modal-wide" style="--card-color:${dept.color}">
+      <div class="modal modal-wide">
         <div class="modal-header">
           <div class="modal-crest">${DEPT_ICONS[dept.icon]}</div>
           <div>

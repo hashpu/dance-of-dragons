@@ -1021,7 +1021,7 @@ html { scrollbar-color: #3a3a3d var(--bg); scrollbar-width: thin; }
 .member-hit:hover { background: #202022; }
 .member-hit img { width: 34px; height: 34px; border-radius: 50%; }
 .member-hit-name { font-family: "Cinzel", serif; font-size: 14px; font-weight: 600; }
-.member-hit-house { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; }
+.member-hit-house { font-size: 11px; font-weight: 600; letter-spacing: 0.5px; color: var(--muted); }
 
 /* House grid — auto-fills as many columns as fit (each at least 280px)
    instead of a fixed 3, so the wider .container actually puts the extra
