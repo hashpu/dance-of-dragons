@@ -98,7 +98,15 @@ async function runSearch(query) {
 
 renderHouseGrid();
 
-document.getElementById("houseSearch").addEventListener("input", (e) => runSearch(e.target.value));
+function expandHouseGrid() {
+  document.getElementById("houseGridWrap")?.classList.remove("collapsed");
+}
+document.getElementById("exploreHousesBtn").addEventListener("click", expandHouseGrid);
+
+document.getElementById("houseSearch").addEventListener("input", (e) => {
+  if (e.target.value.trim()) expandHouseGrid();
+  runSearch(e.target.value);
+});
 
 document.getElementById("resetAllBtn").onclick = async () => {
   const ok = await Dialog.confirm({

@@ -29,7 +29,7 @@
           family trees, crown orders, and the history of <strong>the Dance</strong> itself.
         </p>
         <div class="hero-actions">
-          <a href="#houseGrid" class="btn btn-primary">Explore the Houses</a>
+          <a href="#houseGrid" class="btn btn-primary" onclick="if (typeof expandHouseGrid === 'function') expandHouseGrid();">Explore the Houses</a>
           <a href="/apply" class="btn btn-outline">Apply to Join</a>
         </div>
       </div>
@@ -55,7 +55,12 @@
     </div>
 
     <div id="searchResults"></div>
-    <div class="house-grid" id="houseGrid"></div>
+    <div class="house-grid-wrap collapsed" id="houseGridWrap">
+      <div class="house-grid" id="houseGrid"></div>
+      <div class="house-grid-fade" id="houseGridFade">
+        <button type="button" class="btn btn-primary" id="exploreHousesBtn">Explore Houses ↓</button>
+      </div>
+    </div>
 
     <div class="ornament-divider" aria-hidden="true"><span></span></div>
 
