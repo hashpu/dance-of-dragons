@@ -263,6 +263,16 @@
   font-size: 14px;
 }
 .ticket-why-label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--a-muted); margin-bottom: 6px; }
+.ticket-messages { margin: 6px 0 4px; display: flex; flex-direction: column; gap: 8px; }
+.ticket-message {
+  padding: 10px 14px;
+  border-left: 3px solid var(--a-accent);
+  background: var(--a-panel-2);
+  border-radius: 0 6px 6px 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+.ticket-message-date { display: block; font-size: 10.5px; color: var(--a-muted); margin-bottom: 4px; }
 .ticket-image-link { display: inline-block; margin: 14px 0 4px; }
 .ticket-image {
   max-width: 180px;

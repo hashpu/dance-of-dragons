@@ -144,3 +144,20 @@ ALTER TABLE applications ADD COLUMN IF NOT EXISTS decline_reason TEXT NOT NULL D
 -- applications" panel (see POST /:id/seen) — drives the unread dot on their
 -- profile menu. Reset to false whenever a new decision is made.
 ALTER TABLE applications ADD COLUMN IF NOT EXISTS seen_by_applicant BOOLEAN NOT NULL DEFAULT false;
+
+-- One-way notes an admin sends an applicant about their application (a
+-- clarifying question, an update — anything short of an approve/decline
+-- decision, which stays on applications.decline_reason instead). Delivered
+-- the same way a decision is: a DM if we know their discord_user_id (see
+-- POST /:id/message), and it shows up as its own dismissible card in the
+-- "my applications" panel even if the DM never lands. Unlike a decision,
+-- there can be several of these per application over time, so they get
+-- their own table instead of a single column.
+CREATE TABLE IF NOT EXISTS application_messages (
+  id SERIAL PRIMARY KEY,
+  application_id INTEGER NOT NULL REFERENCES applications(id) ON DELETE CASCADE,
+  body TEXT NOT NULL,
+  seen_by_applicant BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS application_messages_app_idx ON application_messages(application_id);

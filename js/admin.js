@@ -392,6 +392,23 @@ function ticketHtml(app) {
             : ""
         }
         ${
+          app.messages && app.messages.length
+            ? `<div class="ticket-messages">
+                 <span class="ticket-why-label">Messages sent</span>
+                 ${app.messages
+                   .map(
+                     (m) => `
+                   <div class="ticket-message">
+                     <span class="ticket-message-date">${new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>
+                     ${escapeHtml(m.body)}
+                   </div>
+                 `
+                   )
+                   .join("")}
+               </div>`
+            : ""
+        }
+        ${
           app.image_path
             ? `<a class="ticket-image-link" href="${app.image_path}" target="_blank" rel="noopener">
                  <img class="ticket-image" src="${app.image_path}" alt="Attached image" />
@@ -409,6 +426,7 @@ function ticketHtml(app) {
                   <button class="a-btn a-btn-danger" data-action="decline-ticket" data-id="${app.id}">Decline</button>
                 `
           }
+          <button class="a-btn" data-action="message-ticket" data-id="${app.id}">Message</button>
           <button class="a-btn a-btn-danger" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
         </div>
       </div>
@@ -468,6 +486,32 @@ function renderTickets() {
         message: dmSent
           ? "They've been DMed the reason on Discord."
           : "Reason saved. They weren't signed in with Discord when they applied, so no DM could be sent. They'll still see it if they sign in on the site.",
+        icon: dmSent ? "discord" : "info"
+      });
+    };
+  });
+
+  el.querySelectorAll('[data-action="message-ticket"]').forEach((btn) => {
+    btn.onclick = async (e) => {
+      e.preventDefault();
+      const id = btn.dataset.id;
+      const message = await Dialog.prompt({
+        kicker: "Admin only",
+        title: "Message the applicant",
+        label: "Message",
+        placeholder: "A note or question about their application...",
+        multiline: true,
+        required: true,
+        confirmText: "Send"
+      });
+      if (!message) return;
+      const { dmSent } = await Api.messageApplicant(id, message, adminSecret);
+      await refreshApplications();
+      await Dialog.alert({
+        title: "Message sent",
+        message: dmSent
+          ? "They've been DMed on Discord."
+          : "Saved. They weren't signed in with Discord when they applied, so no DM could be sent. They'll still see it if they sign in on the site.",
         icon: dmSent ? "discord" : "info"
       });
     };

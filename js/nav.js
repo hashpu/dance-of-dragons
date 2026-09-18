@@ -77,6 +77,18 @@ function navEscapeHtml(str) {
   }
 
   function applicationUpdateHtml(a) {
+    if (a.type === "message") {
+      return `
+        <div class="app-update-card app-update-message" data-id="${a.id}" data-type="message">
+          <div class="app-update-head">
+            <span class="app-update-status">💬 Message</span>
+            <span class="app-update-dept">${navEscapeHtml(a.departmentName)}</span>
+          </div>
+          <p class="app-update-reason">${navEscapeHtml(a.body)}</p>
+          <button class="btn-link app-update-dismiss" data-action="dismiss-app-update" data-id="${a.id}" data-type="message">Dismiss</button>
+        </div>
+      `;
+    }
     const approved = a.status === "approved";
     return `
       <div class="app-update-card ${approved ? "app-update-approved" : "app-update-declined"}" data-id="${a.id}">
@@ -97,7 +109,8 @@ function navEscapeHtml(str) {
         const id = btn.dataset.id;
         btn.disabled = true;
         try {
-          await Api.markApplicationSeen(id);
+          if (btn.dataset.type === "message") await Api.markApplicationMessageSeen(id);
+          else await Api.markApplicationSeen(id);
         } catch (err) {
           btn.disabled = false;
           return;

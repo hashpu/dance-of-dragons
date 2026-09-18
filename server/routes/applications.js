@@ -119,6 +119,20 @@ function applicantDmEmbed({ approved, deptName, reason }) {
   };
 }
 
+function applicantMessageDmEmbed({ deptName, body }) {
+  return {
+    embeds: [
+      {
+        title: `${deptName} Application`,
+        description: `You have a new message about your **${deptName}** application.`,
+        fields: [{ name: "Message", value: truncate(body) }],
+        color: 0xb0b0b5,
+        timestamp: new Date().toISOString()
+      }
+    ]
+  };
+}
+
 // POST /api/applications — submit an application (multipart if it includes an image)
 router.post("/", upload.single("image"), async (req, res, next) => {
   try {
@@ -183,11 +197,20 @@ router.post("/", upload.single("image"), async (req, res, next) => {
   }
 });
 
-// GET /api/applications — admin only
+// GET /api/applications — admin only. Each row also carries its own
+// message history (see POST /:id/message), oldest first, so the dashboard
+// can show what's already been said before sending another one.
 router.get("/", requireAdmin, async (req, res, next) => {
   try {
     const { rows } = await pool.query("SELECT * FROM applications ORDER BY created_at DESC LIMIT 200");
-    res.json(rows);
+
+    const { rows: msgRows } = await pool.query("SELECT * FROM application_messages ORDER BY created_at ASC");
+    const messagesByApp = {};
+    msgRows.forEach((m) => {
+      (messagesByApp[m.application_id] = messagesByApp[m.application_id] || []).push(m);
+    });
+
+    res.json(rows.map((r) => ({ ...r, messages: messagesByApp[r.id] || [] })));
   } catch (err) {
     next(err);
   }
@@ -271,35 +294,93 @@ router.post("/:id/decline", requireAdmin, async (req, res, next) => {
   }
 });
 
+// POST /api/applications/:id/message { message } — admin only. A one-way
+// note about the application (a clarifying question, an update) that
+// isn't a decision — that stays on /approve and /decline. Same
+// notification path as those: a DM if we know who they are, and it's
+// stored either way so it still shows up in their "my applications" panel
+// (GET /mine) if the DM never lands.
+router.post("/:id/message", requireAdmin, async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.id)) return res.status(400).json({ error: "Invalid application ID." });
+    const body = (req.body.message || "").trim();
+    if (!body) return res.status(400).json({ error: "A message is required." });
+
+    const { rows: appRows } = await pool.query("SELECT * FROM applications WHERE id = $1", [req.params.id]);
+    const app = appRows[0];
+    if (!app) return res.status(404).json({ error: "Application not found." });
+
+    const { rows: msgRows } = await pool.query(
+      "INSERT INTO application_messages (application_id, body) VALUES ($1, $2) RETURNING *",
+      [app.id, body]
+    );
+
+    const dept = findDepartment(app.department);
+    const deptName = dept ? dept.name : app.department;
+
+    const dmSent = app.discord_user_id
+      ? await sendDiscordDM(app.discord_user_id, applicantMessageDmEmbed({ deptName, body }))
+      : false;
+
+    res.status(201).json({ ok: true, message: msgRows[0], dmSent });
+  } catch (err) {
+    next(err);
+  }
+});
+
 // GET /api/applications/mine — no admin secret: just whatever the caller's
-// own signed-in Discord identity has decided applications for. Only
-// decided (not pending) ones, since "pending" isn't a notification. Powers
-// the "my applications" panel in nav.js.
+// own signed-in Discord identity has updates for — decided (not pending)
+// applications, same as before, plus any one-way messages an admin sent
+// (see POST /:id/message), on ANY application regardless of its status.
+// Both come back tagged with `type` so nav.js can render/dismiss them
+// differently; the unread-dot filtering itself (apps.filter(a => !a.seen))
+// works unchanged on either since both carry a plain `seen` boolean.
 router.get("/mine", async (req, res, next) => {
   try {
     const discordUserId = await getRequestDiscordUserId(req);
     if (!discordUserId) return res.json([]);
 
-    const { rows } = await pool.query(
+    const { rows: decisionRows } = await pool.query(
       `SELECT id, department, status, decline_reason, seen_by_applicant, created_at
        FROM applications WHERE discord_user_id = $1 AND status != 'pending'
        ORDER BY created_at DESC LIMIT 50`,
       [discordUserId]
     );
-    res.json(
-      rows.map((r) => {
-        const dept = findDepartment(r.department);
-        return {
-          id: r.id,
-          department: r.department,
-          departmentName: dept ? dept.name : r.department,
-          status: r.status,
-          declineReason: r.decline_reason,
-          seen: r.seen_by_applicant,
-          createdAt: r.created_at
-        };
-      })
+    const { rows: messageRows } = await pool.query(
+      `SELECT m.id, m.body, m.seen_by_applicant, m.created_at, a.department
+       FROM application_messages m JOIN applications a ON a.id = m.application_id
+       WHERE a.discord_user_id = $1
+       ORDER BY m.created_at DESC LIMIT 50`,
+      [discordUserId]
     );
+
+    const decisions = decisionRows.map((r) => {
+      const dept = findDepartment(r.department);
+      return {
+        type: "decision",
+        id: r.id,
+        department: r.department,
+        departmentName: dept ? dept.name : r.department,
+        status: r.status,
+        declineReason: r.decline_reason,
+        seen: r.seen_by_applicant,
+        createdAt: r.created_at
+      };
+    });
+    const messages = messageRows.map((r) => {
+      const dept = findDepartment(r.department);
+      return {
+        type: "message",
+        id: r.id,
+        department: r.department,
+        departmentName: dept ? dept.name : r.department,
+        body: r.body,
+        seen: r.seen_by_applicant,
+        createdAt: r.created_at
+      };
+    });
+
+    res.json([...decisions, ...messages].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt)));
   } catch (err) {
     next(err);
   }
@@ -320,6 +401,29 @@ router.post("/:id/seen", async (req, res, next) => {
       [req.params.id, discordUserId]
     );
     if (!rows[0]) return res.status(404).json({ error: "Application not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/applications/messages/:messageId/seen — the message-update
+// equivalent of /:id/seen above. Ownership is checked through the
+// message's own application, not a URL param, so nobody can dismiss a
+// message that isn't theirs.
+router.post("/messages/:messageId/seen", async (req, res, next) => {
+  try {
+    if (!/^\d+$/.test(req.params.messageId)) return res.status(400).json({ error: "Invalid message ID." });
+    const discordUserId = await getRequestDiscordUserId(req);
+    if (!discordUserId) return res.status(401).json({ error: "Sign in with Discord first." });
+
+    const { rows } = await pool.query(
+      `UPDATE application_messages SET seen_by_applicant = true
+       WHERE id = $1 AND application_id IN (SELECT id FROM applications WHERE discord_user_id = $2)
+       RETURNING id`,
+      [req.params.messageId, discordUserId]
+    );
+    if (!rows[0]) return res.status(404).json({ error: "Message not found." });
     res.json({ ok: true });
   } catch (err) {
     next(err);

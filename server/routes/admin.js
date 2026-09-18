@@ -78,7 +78,11 @@ router.delete("/staff/:id", requireOwner, async (req, res, next) => {
 router.post("/reset", requireOwner, async (req, res, next) => {
   try {
     await seed(pool);
-    await pool.query("TRUNCATE applications RESTART IDENTITY");
+    // application_messages has a foreign key onto applications, so a plain
+    // TRUNCATE applications fails — Postgres refuses to truncate a
+    // referenced table even if the referencing one is empty. CASCADE also
+    // truncates application_messages automatically.
+    await pool.query("TRUNCATE applications RESTART IDENTITY CASCADE");
     res.json({ ok: true });
   } catch (err) {
     next(err);

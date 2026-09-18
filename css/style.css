@@ -243,7 +243,7 @@ html { scrollbar-color: #3a3a3d var(--bg); scrollbar-width: thin; }
   background: rgba(255, 255, 255, 0.03);
 }
 .app-update-approved { border-color: rgba(62, 207, 142, 0.4); background: rgba(62, 207, 142, 0.08); }
-.app-update-declined { border-color: rgba(176, 176, 181, 0.4); background: rgba(176, 176, 181, 0.08); }
+.app-update-declined, .app-update-message { border-color: rgba(176, 176, 181, 0.4); background: rgba(176, 176, 181, 0.08); }
 .app-update-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12.5px; font-weight: 700; }
 .app-update-dept { color: var(--muted); font-weight: 500; }
 .app-update-reason { margin: 6px 0 0; font-size: 12px; color: var(--muted); line-height: 1.5; }

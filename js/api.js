@@ -63,8 +63,11 @@ const Api = {
   approveApplication: (id, secret) => apiFetch(`/applications/${id}/approve`, { method: "POST", headers: { "x-admin-secret": secret } }),
   declineApplication: (id, reason, secret) =>
     apiFetch(`/applications/${id}/decline`, { method: "POST", body: { reason }, headers: { "x-admin-secret": secret } }),
+  messageApplicant: (id, message, secret) =>
+    apiFetch(`/applications/${id}/message`, { method: "POST", body: { message }, headers: { "x-admin-secret": secret } }),
   getMyApplications: () => apiFetch("/applications/mine"),
   markApplicationSeen: (id) => apiFetch(`/applications/${id}/seen`, { method: "POST" }),
+  markApplicationMessageSeen: (messageId) => apiFetch(`/applications/messages/${messageId}/seen`, { method: "POST" }),
   whoami: (secret) => apiFetch("/admin/whoami", { headers: { "x-admin-secret": secret } }),
   getStaff: (secret) => apiFetch("/admin/staff", { headers: { "x-admin-secret": secret } }),
   addStaffByDiscord: (discordUserId, secret) =>

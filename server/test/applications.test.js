@@ -264,6 +264,95 @@ test("an applicant signed in with Discord when they applied gets DMed and can se
   }
 });
 
+test("an admin can message an applicant on a still-pending application, and they can see/dismiss it via /mine", async () => {
+  const realFetch = global.fetch;
+  process.env.DISCORD_BOT_TOKEN = "test-bot-token";
+  global.fetch = async (url, opts) => {
+    const urlStr = String(url);
+    const authHeader = (opts && opts.headers && opts.headers.Authorization) || "";
+    if (urlStr === "https://discord.com/api/users/@me") {
+      const token = authHeader.replace("Bearer ", "");
+      if (token === "msg-applicant-token") return { ok: true, json: async () => ({ id: "msg-applicant-1", username: "MsgApplicant" }) };
+      if (token === "msg-other-token") return { ok: true, json: async () => ({ id: "msg-applicant-2", username: "Other" }) };
+      return { ok: false, status: 401 };
+    }
+    if (urlStr === "https://discord.com/api/v10/users/@me/channels") {
+      return { ok: true, json: async () => ({ id: "dm-channel-2" }) };
+    }
+    if (urlStr === "https://discord.com/api/v10/channels/dm-channel-2/messages") {
+      return { ok: true, json: async () => ({}) };
+    }
+    return realFetch(url, opts);
+  };
+
+  try {
+    const created = await request
+      .post("/api/applications")
+      .set("Authorization", "Bearer msg-applicant-token")
+      .field("department", "lore")
+      .field("robloxUsername", "MsgApplicantRblx")
+      .field("discordUsername", "whatever-they-typed")
+      .field("why", "Testing messages")
+      .field(
+        "answers",
+        JSON.stringify({
+          experience: "N/A",
+          readBooks: "N/A",
+          viserysQuestion: "N/A",
+          dorneQuestion: "N/A",
+          northQuestion: "N/A",
+          acDescription: "N/A",
+          creativeStory: "N/A"
+        })
+      );
+    assert.equal(created.status, 201);
+    const id = created.body.id;
+
+    const empty = await request.post(`/api/applications/${id}/message`).set("x-admin-secret", "test-secret").send({ message: "" });
+    assert.equal(empty.status, 400);
+
+    const noSecret = await request.post(`/api/applications/${id}/message`).send({ message: "hi" });
+    assert.equal(noSecret.status, 401);
+
+    const sent = await request
+      .post(`/api/applications/${id}/message`)
+      .set("x-admin-secret", "test-secret")
+      .send({ message: "Can you clarify your availability?" });
+    assert.equal(sent.status, 201);
+    assert.equal(sent.body.dmSent, true);
+    const messageId = sent.body.message.id;
+
+    // Shows up even though the application itself is still pending — a
+    // message is independent of a decision.
+    const mine = await request.get("/api/applications/mine").set("Authorization", "Bearer msg-applicant-token");
+    assert.equal(mine.status, 200);
+    assert.equal(mine.body.length, 1);
+    assert.equal(mine.body[0].type, "message");
+    assert.equal(mine.body[0].body, "Can you clarify your availability?");
+    assert.equal(mine.body[0].seen, false);
+
+    const list = await request.get("/api/applications").set("x-admin-secret", "test-secret");
+    const found = list.body.find((a) => a.id === id);
+    assert.equal(found.messages.length, 1);
+    assert.equal(found.messages[0].body, "Can you clarify your availability?");
+
+    // Ownership is enforced the same way as /:id/seen.
+    const wrongOwner = await request.post(`/api/applications/messages/${messageId}/seen`).set("Authorization", "Bearer msg-other-token");
+    assert.equal(wrongOwner.status, 404);
+
+    const dismissed = await request
+      .post(`/api/applications/messages/${messageId}/seen`)
+      .set("Authorization", "Bearer msg-applicant-token");
+    assert.equal(dismissed.status, 200);
+
+    const mineAfter = await request.get("/api/applications/mine").set("Authorization", "Bearer msg-applicant-token");
+    assert.equal(mineAfter.body[0].seen, true);
+  } finally {
+    global.fetch = realFetch;
+    delete process.env.DISCORD_BOT_TOKEN;
+  }
+});
+
 test("rejects an unknown department", async () => {
   const res = await request
     .post("/api/applications")
