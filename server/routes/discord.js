@@ -1,7 +1,27 @@
 const express = require("express");
-const { getRequestDiscordUser } = require("../discord");
+const { getRequestDiscordUser, getGuildMemberRoles, getGuildRoles } = require("../discord");
 
 const router = express.Router();
+
+// A signed-in visitor's own Discord server roles (name + color), for display
+// on their profile card — id/name pairs only, the @everyone role stripped,
+// highest role first. Empty (never null) when the bot isn't configured or
+// the lookup fails, so the caller never has to distinguish "no roles" from
+// "couldn't check."
+async function getDisplayRoles(userId) {
+  const guildId = process.env.DISCORD_GUILD_ID;
+  if (!guildId || !process.env.DISCORD_BOT_TOKEN) return [];
+
+  const [memberRoleIds, guildRoles] = await Promise.all([getGuildMemberRoles(userId, guildId), getGuildRoles(guildId)]);
+  if (!memberRoleIds || !guildRoles) return [];
+
+  const rolesById = new Map(guildRoles.map((r) => [r.id, r]));
+  return memberRoleIds
+    .map((id) => rolesById.get(id))
+    .filter((r) => r && r.id !== guildId)
+    .sort((a, b) => b.position - a.position)
+    .map((r) => ({ id: r.id, name: r.name, color: r.color }));
+}
 
 // GET /api/discord/me — verifies whoever's Discord token is attached (if
 // any) and reports their identity. The verification itself is what matters
@@ -18,7 +38,9 @@ const router = express.Router();
 router.get("/me", async (req, res, next) => {
   try {
     const user = await getRequestDiscordUser(req);
-    res.json(user ? { signedIn: true, id: user.id, username: user.username } : { signedIn: false });
+    if (!user) return res.json({ signedIn: false });
+    const roles = await getDisplayRoles(user.id);
+    res.json({ signedIn: true, id: user.id, username: user.username, roles });
   } catch (err) {
     next(err);
   }

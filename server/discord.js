@@ -102,6 +102,29 @@ async function getGuildMemberRoles(userId, guildId) {
   }
 }
 
+// The guild's full role list (id/name/color), so a member's role IDs (from
+// getGuildMemberRoles) can be turned into something displayable — used by
+// GET /api/discord/me to show a signed-in visitor their own server roles.
+async function getGuildRoles(guildId) {
+  const botToken = process.env.DISCORD_BOT_TOKEN;
+  if (!botToken) return null;
+  try {
+    const res = await fetch(`https://discord.com/api/v10/guilds/${guildId}/roles`, {
+      headers: { Authorization: `Bot ${botToken}` }
+    });
+    if (!res.ok) return null;
+    const roles = await res.json();
+    return roles.map((r) => ({
+      id: r.id,
+      name: r.name,
+      color: r.color ? "#" + r.color.toString(16).padStart(6, "0") : null,
+      position: r.position
+    }));
+  } catch (e) {
+    return null;
+  }
+}
+
 // The verified Discord identity of whoever is making this request, if any.
 async function getRequestDiscordUser(req) {
   const token = getBearerToken(req);
@@ -162,5 +185,7 @@ module.exports = {
   getRequestDiscordUser,
   getRequestDiscordUserId,
   getRequestOwnerDiscordUser,
+  getGuildMemberRoles,
+  getGuildRoles,
   sendDiscordDM
 };

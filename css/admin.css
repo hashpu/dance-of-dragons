@@ -2,12 +2,13 @@
    fantasy styling (no Cinzel/serif, no embers) so this reads as an internal
    tool rather than another page of the fan site. Fully monochrome by
    design: --a-accent is a light grey used for chrome emphasis (active tab,
-   focus ring, primary button, links), not a hue. --a-danger/--a-success are
-   kept as real colors but reserved ONLY for a house's own locked/unlocked
-   status (see .a-badge-locked/.a-badge-unlocked below) — that's the one
-   place color still carries meaning; everything else, including the old
-   gold "Lord" badge, reads in grey now. Everything here is scoped under
-   .admin-page so it can't leak elsewhere. */
+   focus ring, primary button, links), not a hue. --a-success is kept as a
+   real color, reserved ONLY for a house's own unlocked status (see
+   .a-badge-unlocked below). --a-danger used to be red for the locked-status
+   counterpart, but the site is grey-only now — it's a light grey instead,
+   distinguishable from --a-success by not being green rather than by hue.
+   Everything else, including the old gold "Lord" badge, reads in grey too.
+   Everything here is scoped under .admin-page so it can't leak elsewhere. */
 .admin-page {
   --a-bg: #0b0c0f;
   --a-panel: #14161b;
@@ -18,8 +19,8 @@
   --a-muted: #8a8f9c;
   --a-accent: #aab0bd;
   --a-accent-soft: rgba(170, 176, 189, 0.14);
-  --a-danger: #ef5b5b;
-  --a-danger-soft: rgba(239, 91, 91, 0.12);
+  --a-danger: #c9c9ce;
+  --a-danger-soft: rgba(201, 201, 206, 0.12);
   --a-success: #3ecf8e;
   --a-success-soft: rgba(62, 207, 142, 0.12);
   font-family: "Inter", system-ui, sans-serif;
@@ -199,7 +200,7 @@
   white-space: nowrap;
 }
 .a-badge .dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
-.a-badge-locked { color: #ffb4b4; background: var(--a-danger-soft); }
+.a-badge-locked { color: #d8d8dc; background: var(--a-danger-soft); }
 .a-badge-locked .dot { background: var(--a-danger); }
 .a-badge-unlocked { color: #9be8c4; background: var(--a-success-soft); }
 .a-badge-unlocked .dot { background: var(--a-success); }

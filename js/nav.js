@@ -35,8 +35,23 @@ function navEscapeHtml(str) {
   // way, even though they're genuinely signed in. This runs once per page
   // load whenever a token is present, so being signed in anywhere on the
   // site is enough to show up in the admin/house "add spouse" search.
-  // Fire-and-forget: a network hiccup here shouldn't affect page load.
-  if (user && typeof Api !== "undefined") Api.discordMe().catch(() => {});
+  // Fire-and-forget: a network hiccup here shouldn't affect page load. Also
+  // doubles as how the profile card learns the signed-in visitor's actual
+  // Discord server roles (identify-scope alone can't see those — only the
+  // site's bot can, via the guild member lookup this endpoint runs).
+  if (user && typeof Api !== "undefined") {
+    Api.discordMe()
+      .then((me) => {
+        const section = document.getElementById("profileRolesSection");
+        const rolesEl = document.getElementById("profileDiscordRoles");
+        if (!section || !rolesEl || !me || !Array.isArray(me.roles) || !me.roles.length) return;
+        rolesEl.innerHTML = me.roles
+          .map((r) => `<span class="profile-badge profile-badge-role" style="${discordRoleBadgeCss(r.color)}">${navEscapeHtml(r.name)}</span>`)
+          .join("");
+        section.hidden = false;
+      })
+      .catch(() => {});
+  }
 
   // Application decisions (approved/declined) the applicant hasn't dismissed
   // yet — the site-side half of notifying them, alongside the Discord DM
@@ -102,6 +117,7 @@ function navEscapeHtml(str) {
         <button class="user-chip" id="profileTrigger" type="button" aria-expanded="false">
           <img src="${discordAvatarUrl(user)}" alt="" />
           <span>${user.username}</span>
+          <svg class="user-chip-caret" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
           <span class="user-chip-dot" id="userChipDot" hidden></span>
         </button>
         <div class="profile-card" id="profileCard" hidden style="--profile-accent:${discordAccentColorCss(user) || "var(--red)"}">
@@ -110,6 +126,10 @@ function navEscapeHtml(str) {
             <img class="profile-avatar" src="${discordAvatarUrl(user)}" alt="" />
             <div class="profile-name">${user.username}</div>
             ${memberSince ? `<div class="profile-meta">Discord member since ${memberSince.toLocaleDateString(undefined, { month: "short", year: "numeric" })}</div>` : ""}
+            <div id="profileRolesSection" hidden>
+              <div class="profile-divider"></div>
+              <div class="profile-badges" id="profileDiscordRoles"></div>
+            </div>
             <div id="appUpdatesSection" hidden>
               <div class="profile-divider"></div>
               <div class="app-updates" id="appUpdates"></div>

@@ -176,3 +176,11 @@ function discordBadges(user) {
   const flags = user.publicFlags || 0;
   return DISCORD_BADGE_FLAGS.filter(([bit]) => (flags & bit) !== 0);
 }
+
+// CSS for a single Discord server-role badge, tinted to that role's actual
+// Discord color (hex, e.g. "#5865f2"). Roles with no color set (Discord's
+// default) fall back to the badge's own neutral styling.
+function discordRoleBadgeCss(hexColor) {
+  if (!hexColor) return "";
+  return `color:${hexColor}; border-color:${hexColor}66; background:${hexColor}1f;`;
+}

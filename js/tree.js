@@ -511,6 +511,12 @@ let parentPickerMembers = [];
 let spousePickerMembers = [];
 let parentPickerHouses = [];
 
+// The wired person-pickers themselves (see wirePersonPicker) — set once per
+// openMemberModal() call, so refreshParentPersonSelect/refreshSpousePersonSelect
+// (fired when the "pick another house" dropdown changes) can reset them.
+let parentPickerControl = null;
+let spousePickerControl = null;
+
 async function loadPickerMembers(houseSlug) {
   if (houseSlug === slug) return house.members;
   try {
@@ -519,6 +525,16 @@ async function loadPickerMembers(houseSlug) {
   } catch (e) {
     return [];
   }
+}
+
+// The color to tint a generated fallback avatar with in the parent/spouse
+// picker — the picked house's own color when "Parent's/Spouse's house" points
+// elsewhere (marrying in from another house), else this house's own color.
+// Mirrors what updateParentPreview already does for the single selected row.
+function pickedHouseColor(houseSelectId) {
+  const slugSel = document.getElementById(houseSelectId).value;
+  const picked = parentPickerHouses.find((h) => h.slug === slugSel);
+  return picked ? picked.color : house.color;
 }
 
 function excludedParentIds(houseSlug) {
@@ -535,12 +551,198 @@ function excludedSpouseIds(houseSlug) {
   return new Set([editingMemberId]);
 }
 
-function personOptionsHtml(members, excluded, selectedId, noneLabel = "Nobody, they start a new branch") {
-  const opts = [`<option value="">${noneLabel}</option>`];
-  members
-    .filter((m) => !excluded.has(m.id))
-    .forEach((m) => opts.push(`<option value="${m.id}"${m.id === selectedId ? " selected" : ""}>${m.name}</option>`));
-  return opts.join("");
+// The static shell for a "who is their parent / spouse" field: just a
+// closed trigger button (looks like the old <select>) plus a hidden input
+// holding the actual value. The search-and-pick panel itself is NOT nested
+// in here — see wirePersonPicker's open(), which appends it straight to
+// <body> instead. This field sits inside .modal, and .modal has
+// overflow:hidden (so its banner/gradient corners clip cleanly) — a panel
+// nested inside it would get sliced off wherever it overflows the modal's
+// box instead of floating over the rest of the form. Appending to <body>
+// and positioning it from the trigger's own getBoundingClientRect() (see
+// position() below) sidesteps that entirely, the same way any portal-based
+// dropdown escapes a scroll/clip ancestor.
+function personPickerFieldHtml(fieldId, selectedId, icon = FIELD_ICONS.user) {
+  return `
+    <div class="person-picker" id="${fieldId}Picker">
+      <button type="button" class="person-picker-trigger input-wrap" id="${fieldId}Trigger" aria-haspopup="listbox" aria-expanded="false">
+        ${icon}
+        <span class="person-picker-trigger-label" id="${fieldId}TriggerLabel"></span>
+        <span class="chevron">${FIELD_ICONS.chevron}</span>
+      </button>
+      <input type="hidden" id="${fieldId}" value="${selectedId || ""}" />
+    </div>
+  `;
+}
+
+function elFromHtml(html) {
+  const t = document.createElement("template");
+  t.innerHTML = html.trim();
+  return t.content.firstElementChild;
+}
+
+// Row markup for a person-picker's open panel: a "none" row plus one
+// avatar+name row per available member, filtered live by `query` (a plain
+// case-insensitive substring match on name — this list is at most a
+// house's worth of members, never large enough to need anything fancier).
+function personPickerRowsHtml(members, excluded, selectedId, noneLabel, query, fallbackColor) {
+  const q = query.trim().toLowerCase();
+  const matches = members.filter((m) => !excluded.has(m.id)).filter((m) => !q || m.name.toLowerCase().includes(q));
+  const showNone = !q || noneLabel.toLowerCase().includes(q);
+
+  const rows = [];
+  if (showNone) {
+    rows.push(
+      `<button type="button" class="person-picker-row person-picker-row-none${selectedId ? "" : " active"}" data-id="">${noneLabel}</button>`
+    );
+  }
+  matches.forEach((m) => {
+    const avatar = m.avatarUrl || generatedAvatar(m.name, fallbackColor);
+    rows.push(`
+      <button type="button" class="person-picker-row${m.id === selectedId ? " active" : ""}" data-id="${m.id}">
+        <img src="${avatar}" alt="" />
+        <span class="member-hit-name">${m.name}</span>
+      </button>`);
+  });
+
+  if (!rows.length) return `<div class="dialog-search-status">No one matches "${escapeAttr(query.trim())}".</div>`;
+  return rows.join("");
+}
+
+// Currently-open person-pickers (their control objects — see wirePersonPicker),
+// for the single shared outside-click handler below. A picker adds itself
+// on open and removes itself on close, so this only ever holds what's
+// actually on screen right now.
+const openPersonPickers = new Set();
+
+// Closes any open person-picker's floating panel when a click lands outside
+// both its trigger and its panel. Registered once (module scope, guarded by
+// the flag below) rather than once per wirePersonPicker() call —
+// openMemberModal() re-wires fresh pickers every time the Add/Edit Member
+// modal opens, and a per-instance document listener would just keep piling
+// up across a session.
+let personPickerOutsideClickWired = false;
+function ensurePersonPickerOutsideClickHandling() {
+  if (personPickerOutsideClickWired) return;
+  personPickerOutsideClickWired = true;
+  document.addEventListener("click", (e) => {
+    // Copy to an array first — a picker's close() mutates openPersonPickers
+    // mid-iteration otherwise, which Set#forEach handles fine per spec, but
+    // this is clearer to read as "decide, then act."
+    [...openPersonPickers].forEach((picker) => {
+      if (!picker.containsTarget(e.target)) picker.close();
+    });
+  });
+}
+
+// Wires a person-picker's open/close, live search filter, and row-click
+// select behavior. getMembers/getExcluded are re-invoked every time the
+// panel opens or its list is refreshed, so switching the "pick another
+// house" dropdown next to it (which reloads parentPickerMembers/
+// spousePickerMembers and narrows the excluded set) is picked up with no
+// need to re-wire anything.
+//
+// The panel itself is built fresh on every open() and appended straight to
+// <body> (see personPickerFieldHtml's comment for why), positioned from the
+// trigger's own screen coordinates, and torn down completely on close() —
+// simpler than tracking a persistent floating element's visibility, and it
+// means there's never a stale panel left over to worry about cleaning up.
+function wirePersonPicker(fieldId, { getMembers, getExcluded, getColor = () => house.color, noneLabel, onSelect }) {
+  const trigger = document.getElementById(`${fieldId}Trigger`);
+  const triggerLabel = document.getElementById(`${fieldId}TriggerLabel`);
+  const hiddenInput = document.getElementById(fieldId);
+
+  let panelEl = null;
+
+  function renderLabel() {
+    const id = hiddenInput.value;
+    const m = id ? getMembers().find((x) => x.id === id) : null;
+    triggerLabel.textContent = m ? m.name : noneLabel;
+    triggerLabel.classList.toggle("person-picker-trigger-label-none", !m);
+  }
+
+  function renderRows(query) {
+    const list = panelEl.querySelector(".person-picker-list");
+    list.innerHTML = personPickerRowsHtml(getMembers(), getExcluded(), hiddenInput.value, noneLabel, query, getColor());
+    list.querySelectorAll(".person-picker-row").forEach((row) => {
+      row.onclick = () => {
+        hiddenInput.value = row.dataset.id;
+        renderLabel();
+        close();
+        trigger.focus();
+        if (onSelect) onSelect();
+      };
+    });
+  }
+
+  function position() {
+    const r = trigger.getBoundingClientRect();
+    panelEl.style.left = `${r.left}px`;
+    panelEl.style.top = `${r.bottom + 6}px`;
+    panelEl.style.width = `${r.width}px`;
+  }
+  function repositionIfOpen() {
+    if (panelEl) position();
+  }
+
+  function open() {
+    if (panelEl) return;
+    trigger.setAttribute("aria-expanded", "true");
+    panelEl = elFromHtml(`
+      <div class="person-picker-panel">
+        <div class="input-wrap person-picker-search-wrap">
+          <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+          <input type="text" class="person-picker-search" placeholder="Search by name…" autocomplete="off" />
+        </div>
+        <div class="person-picker-list"></div>
+      </div>
+    `);
+    document.body.appendChild(panelEl);
+    position();
+    renderRows("");
+
+    const searchInput = panelEl.querySelector(".person-picker-search");
+    searchInput.addEventListener("input", () => renderRows(searchInput.value));
+    searchInput.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") {
+        close();
+        trigger.focus();
+      }
+    });
+    window.addEventListener("resize", repositionIfOpen);
+    window.addEventListener("scroll", repositionIfOpen, true);
+
+    openPersonPickers.add(control);
+    searchInput.focus();
+  }
+  function close() {
+    if (!panelEl) return;
+    panelEl.remove();
+    panelEl = null;
+    trigger.setAttribute("aria-expanded", "false");
+    window.removeEventListener("resize", repositionIfOpen);
+    window.removeEventListener("scroll", repositionIfOpen, true);
+    openPersonPickers.delete(control);
+  }
+
+  trigger.addEventListener("click", () => (panelEl ? close() : open()));
+  ensurePersonPickerOutsideClickHandling();
+  renderLabel();
+
+  const control = {
+    containsTarget: (target) => trigger.contains(target) || (panelEl && panelEl.contains(target)),
+    close,
+    // Called after the "pick another house" dropdown changes and the
+    // available member list has been reloaded — resets the selection (a
+    // person from the old house wouldn't be valid here) and refreshes
+    // whatever's currently on screen.
+    reset(selectedId) {
+      hiddenInput.value = selectedId || "";
+      renderLabel();
+      if (panelEl) renderRows(panelEl.querySelector(".person-picker-search").value);
+    }
+  };
+  return control;
 }
 
 function updateParentPreview() {
@@ -565,8 +767,7 @@ function updateParentPreview() {
 async function refreshParentPersonSelect(houseSlug, selectedId) {
   parentPickerMembers = await loadPickerMembers(houseSlug);
   const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlug);
-  const personSelect = document.getElementById("fParent");
-  personSelect.innerHTML = personOptionsHtml(parentPickerMembers, excludedParentIds(houseSlug), selectedId || "");
+  parentPickerControl.reset(selectedId || "");
   const lockedHint = document.getElementById("parentHouseLockedHint");
   lockedHint.hidden = !(pickedHouse && pickedHouse.locked && !parentPickerMembers.length && pickedHouse.memberCount > 0);
   updateParentPreview();
@@ -575,8 +776,7 @@ async function refreshParentPersonSelect(houseSlug, selectedId) {
 async function refreshSpousePersonSelect(houseSlug, selectedId) {
   spousePickerMembers = await loadPickerMembers(houseSlug);
   const pickedHouse = parentPickerHouses.find((h) => h.slug === houseSlug);
-  const personSelect = document.getElementById("fSpouse");
-  personSelect.innerHTML = personOptionsHtml(spousePickerMembers, excludedSpouseIds(houseSlug), selectedId || "", "No spouse");
+  spousePickerControl.reset(selectedId || "");
   const lockedHint = document.getElementById("spouseHouseLockedHint");
   lockedHint.hidden = !(pickedHouse && pickedHouse.locked && !spousePickerMembers.length && pickedHouse.memberCount > 0);
 }
@@ -710,11 +910,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
 
         <div class="field">
           <label>Who is their parent?</label>
-          <div class="input-wrap">
-            ${FIELD_ICONS.user}
-            <select id="fParent">${personOptionsHtml(parentPickerMembers, excludedParentIds(initialHouseSlug), parentId)}</select>
-            <span class="chevron">${FIELD_ICONS.chevron}</span>
-          </div>
+          ${personPickerFieldHtml("fParent", parentId)}
           <p class="hint" id="parentHouseLockedHint"${showLockedHint ? "" : " hidden"}>This house is locked, so its members aren't available to pick from.</p>
           <div class="parent-preview" id="parentPreview"></div>
         </div>
@@ -730,11 +926,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
           </div>
           <div class="field">
             <label>Spouse <span class="hint">(optional — pairs them together in the tree)</span></label>
-            <div class="input-wrap">
-              ${FIELD_ICONS.heart}
-              <select id="fSpouse">${personOptionsHtml(spousePickerMembers, excludedSpouseIds(initialSpouseHouseSlug), initialSpouseId, "No spouse")}</select>
-              <span class="chevron">${FIELD_ICONS.chevron}</span>
-            </div>
+            ${personPickerFieldHtml("fSpouse", initialSpouseId, FIELD_ICONS.heart)}
             <p class="hint" id="spouseHouseLockedHint"${showSpouseLockedHint ? "" : " hidden"}>This house is locked, so its members aren't available to pick from.</p>
           </div>
         </div>
@@ -797,12 +989,25 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   document.getElementById("modalOverlay").addEventListener("click", (e) => {
     if (e.target.id === "modalOverlay") closeModal();
   });
-  document.getElementById("fParent").addEventListener("change", updateParentPreview);
+
+  parentPickerControl = wirePersonPicker("fParent", {
+    getMembers: () => parentPickerMembers,
+    getExcluded: () => excludedParentIds(document.getElementById("fParentHouse").value),
+    getColor: () => pickedHouseColor("fParentHouse"),
+    noneLabel: "Nobody, they start a new branch",
+    onSelect: updateParentPreview
+  });
   document.getElementById("fParentHouse").addEventListener("change", (e) => {
     refreshParentPersonSelect(e.target.value, "");
   });
   updateParentPreview();
 
+  spousePickerControl = wirePersonPicker("fSpouse", {
+    getMembers: () => spousePickerMembers,
+    getExcluded: () => excludedSpouseIds(document.getElementById("fSpouseHouse").value),
+    getColor: () => pickedHouseColor("fSpouseHouse"),
+    noneLabel: "No spouse"
+  });
   document.getElementById("fSpouseHouse").addEventListener("change", (e) => {
     refreshSpousePersonSelect(e.target.value, "");
   });
@@ -946,7 +1151,7 @@ if (typeof getDiscordUser === "function" && getDiscordUser()) {
   document.getElementById("treeArea").innerHTML = '<div class="tree-panel"><div class="skeleton-line">Loading house…</div></div>';
   refresh().catch(() => {
     document.querySelector("main").innerHTML =
-      '<p style="color:#9a9a9e">House not found. <a href="/" style="color:#e0483e">Go back</a>.</p>';
+      '<p style="color:#9a9a9e">House not found. <a href="/" style="color:#b0b0b5">Go back</a>.</p>';
   });
 } else {
   renderSignInGate();

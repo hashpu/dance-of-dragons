@@ -21,7 +21,7 @@ test.before(async () => {
 //   - Roblox userinfo (visitor's Roblox OAuth token -> their Roblox user ID)
 //   - Roblox username resolution (admin assignment -> a numeric user ID)
 const realFetch = global.fetch;
-function mockNetwork({ discordTokens = {}, robloxTokens = {}, robloxUsernames = {} } = {}) {
+function mockNetwork({ discordTokens = {}, robloxTokens = {}, robloxUsernames = {}, guildRoles = [] } = {}) {
   global.fetch = async (url, opts) => {
     const urlStr = String(url);
     const authHeader = (opts && opts.headers && opts.headers.Authorization) || "";
@@ -30,6 +30,10 @@ function mockNetwork({ discordTokens = {}, robloxTokens = {}, robloxUsernames = 
       const entry = discordTokens[authHeader.replace("Bearer ", "")];
       if (!entry) return { ok: false, status: 401 };
       return { ok: true, json: async () => ({ id: entry.userId, username: entry.username }) };
+    }
+    if (urlStr.includes("discord.com") && urlStr.includes("/guilds/") && urlStr.endsWith("/roles")) {
+      assert.equal(authHeader, `Bot ${process.env.DISCORD_BOT_TOKEN}`);
+      return { ok: true, json: async () => guildRoles };
     }
     if (urlStr.includes("discord.com") && urlStr.includes("/guilds/") && urlStr.includes("/members/")) {
       assert.equal(authHeader, `Bot ${process.env.DISCORD_BOT_TOKEN}`);
@@ -319,10 +323,28 @@ test("GET /api/discord/me records a signed-in visitor without needing a house, L
   mockNetwork({ discordTokens: { "me-token": { userId: "me-user-1", username: "JustBrowsing" } } });
   const withToken = await request.get("/api/discord/me").set("Authorization", "Bearer me-token");
   assert.equal(withToken.status, 200);
-  assert.deepEqual(withToken.body, { signedIn: true, id: "me-user-1", username: "JustBrowsing" });
+  assert.deepEqual(withToken.body, { signedIn: true, id: "me-user-1", username: "JustBrowsing", roles: [] });
 
   const found = await request.get("/api/admin/discord-users?q=JustBrowsing").set("x-admin-secret", "test-secret");
   assert.equal(found.status, 200);
   assert.equal(found.body.length, 1);
   assert.equal(found.body[0].id, "me-user-1");
+});
+
+test("GET /api/discord/me reports the signed-in user's own Discord roles, highest first, with @everyone stripped out", async () => {
+  mockNetwork({
+    discordTokens: { "role-token": { userId: "role-user-1", username: "Rolebearer", roles: ["role-member", "role-lord"] } },
+    guildRoles: [
+      { id: "guild-123", name: "@everyone", color: 0, position: 0 },
+      { id: "role-member", name: "Member", color: 0, position: 1 },
+      { id: "role-lord", name: "House Stark Lord", color: 0x336699, position: 3 }
+    ]
+  });
+
+  const res = await request.get("/api/discord/me").set("Authorization", "Bearer role-token");
+  assert.equal(res.status, 200);
+  assert.deepEqual(res.body.roles, [
+    { id: "role-lord", name: "House Stark Lord", color: "#336699" },
+    { id: "role-member", name: "Member", color: null }
+  ]);
 });
