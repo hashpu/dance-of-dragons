@@ -80,17 +80,20 @@ function questionValue(q) {
   return document.getElementById(`q_${q.id}`).value.trim();
 }
 
-// Questions can share an optional `section` label (e.g. "Lore Knowledge")
-// to group them under a heading instead of one flat list of fields. Two
-// consecutive short (non-textarea) questions in the same section sit side
-// by side instead of stacking, to keep long forms from feeling endless.
-function questionsHtml(questions) {
-  let lastSection = null;
+function fieldValue(id) {
+  const el = document.getElementById(id);
+  return el ? el.value.trim() : "";
+}
+
+// Two consecutive short (non-textarea/yesno) questions sit side by side
+// instead of stacking, to keep long forms from feeling endless. showHeading
+// is off inside a wizard step, since the step's own progress label already
+// names the section.
+function questionsHtml(questions, showHeading) {
   let html = "";
   for (let i = 0; i < questions.length; i++) {
     const q = questions[i];
-    const heading = q.section && q.section !== lastSection ? `<div class="form-section-heading">${q.section}</div>` : "";
-    lastSection = q.section || lastSection;
+    const heading = showHeading && i === 0 ? `<div class="form-section-heading">${q.section}</div>` : "";
 
     const isPairable = (type) => type !== "textarea" && type !== "yesno";
     const next = questions[i + 1];
@@ -103,6 +106,22 @@ function questionsHtml(questions) {
     html += heading + questionFieldHtml(q);
   }
   return html;
+}
+
+// Groups a department's questions by their shared `section` label,
+// preserving first-appearance order — the basis for one wizard step per
+// section, instead of one endless scroll of every question at once.
+function groupQuestionsBySection(questions) {
+  const groups = [];
+  questions.forEach((q) => {
+    let group = groups.find((g) => g.section === q.section);
+    if (!group) {
+      group = { section: q.section, questions: [] };
+      groups.push(group);
+    }
+    group.questions.push(q);
+  });
+  return groups;
 }
 
 // Starting an application now requires being signed in with Discord first
@@ -125,6 +144,52 @@ async function openApplyModal(deptKey) {
     return;
   }
 
+  // One wizard step per question section, plus a fixed first ("Basics") and
+  // last ("Why you want to join") step — so a department with lots of
+  // questions (e.g. House Blackfyre HVC) doesn't become one endless scroll.
+  // A small department still gets a short, quick multi-step flow rather
+  // than a special-cased single page, so every application feels the same.
+  const sections = groupQuestionsBySection(dept.questions);
+  const steps = [
+    { title: "Basics", type: "basics" },
+    ...sections.map((s) => ({ title: s.section, type: "section", questions: s.questions })),
+    { title: "Why You Want to Join", type: "why" }
+  ];
+
+  const stepBodyHtml = (step, i) => {
+    if (step.type === "basics") {
+      return `
+        <div class="more-grid">
+          <div class="field">
+            <label>Roblox username</label>
+            <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
+          </div>
+          <div class="field">
+            <label>Availability <span class="hint">(hours/week, timezone)</span></label>
+            <div class="input-wrap">${DEPT_ICONS.clock}<input id="q_availability" placeholder="e.g. 10hrs/week, EST" /></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>Attach an image <span class="hint">(optional: portfolio, screenshot, etc.)</span></label>
+          <div class="avatar-field-row">
+            <input type="file" id="q_image" accept="image/*" style="flex:1" />
+            <img id="imagePreview" class="avatar-preview" alt="" hidden />
+            <button type="button" class="field-clear" id="clearImageBtn" title="Remove image" hidden>${DEPT_ICONS.x}</button>
+          </div>
+        </div>
+      `;
+    }
+    if (step.type === "why") {
+      return `
+        <div class="field">
+          <label>Why do you want to join ${dept.name}?</label>
+          <textarea id="q_why"></textarea>
+        </div>
+      `;
+    }
+    return questionsHtml(step.questions, false);
+  };
+
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
       <div class="modal modal-wide">
@@ -144,37 +209,18 @@ async function openApplyModal(deptKey) {
               <div class="applying-as-name">${escapeHtml(getDiscordUser().username)}</div>
             </div>
           </div>
-          <div class="more-grid">
-            <div class="field">
-              <label>Roblox username</label>
-              <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
-            </div>
-            <div class="field">
-              <label>Availability <span class="hint">(hours/week, timezone)</span></label>
-              <div class="input-wrap">${DEPT_ICONS.clock}<input id="q_availability" placeholder="e.g. 10hrs/week, EST" /></div>
-            </div>
+
+          <div class="apply-progress">
+            <div class="apply-progress-track"><div class="apply-progress-fill" id="applyProgressFill"></div></div>
+            <div class="apply-progress-label" id="applyProgressLabel"></div>
           </div>
 
-          <div class="field">
-            <label>Attach an image <span class="hint">(optional: portfolio, screenshot, etc.)</span></label>
-            <div class="avatar-field-row">
-              <input type="file" id="q_image" accept="image/*" style="flex:1" />
-              <img id="imagePreview" class="avatar-preview" alt="" hidden />
-              <button type="button" class="field-clear" id="clearImageBtn" title="Remove image" hidden>${DEPT_ICONS.x}</button>
-            </div>
-          </div>
-
-          ${questionsHtml(dept.questions)}
-
-          <div class="field">
-            <label>Why do you want to join ${dept.name}?</label>
-            <textarea id="q_why"></textarea>
-          </div>
+          ${steps.map((step, i) => `<div class="apply-step" data-step="${i}"${i === 0 ? "" : " hidden"}>${stepBodyHtml(step, i)}</div>`).join("")}
 
           <p class="error-text" id="applyError" style="display:none"></p>
           <div class="modal-actions">
-            <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
-            <button class="btn btn-primary" onclick="submitApplication('${dept.key}')">Submit application</button>
+            <button class="btn btn-outline" id="applyBackBtn"></button>
+            <button class="btn btn-primary" id="applyNextBtn"></button>
           </div>
         </div>
       </div>
@@ -210,6 +256,64 @@ async function openApplyModal(deptKey) {
   });
 
   document.querySelectorAll("[data-custom-select]").forEach((select) => wireCustomSelect(select.id));
+
+  const stepEls = Array.from(document.querySelectorAll(".apply-step"));
+  const backBtn = document.getElementById("applyBackBtn");
+  const nextBtn = document.getElementById("applyNextBtn");
+  const progressFill = document.getElementById("applyProgressFill");
+  const progressLabel = document.getElementById("applyProgressLabel");
+  const applyErrorEl = document.getElementById("applyError");
+  let currentStep = 0;
+
+  function validateStep(i) {
+    const step = steps[i];
+    const missing = [];
+    if (step.type === "basics") {
+      if (!fieldValue("q_roblox")) missing.push("Roblox username");
+    } else if (step.type === "why") {
+      if (!fieldValue("q_why")) missing.push("Why you want to join");
+    } else {
+      step.questions.forEach((q) => {
+        if (q.required && !questionValue(q)) missing.push(q.label);
+      });
+    }
+    return missing;
+  }
+
+  function renderStep() {
+    stepEls.forEach((el, i) => (el.hidden = i !== currentStep));
+    progressFill.style.width = `${((currentStep + 1) / steps.length) * 100}%`;
+    progressLabel.textContent = `Step ${currentStep + 1} of ${steps.length} · ${steps[currentStep].title}`;
+    backBtn.textContent = currentStep === 0 ? "Cancel" : "Back";
+    nextBtn.textContent = currentStep === steps.length - 1 ? "Submit application" : "Next";
+    applyErrorEl.style.display = "none";
+  }
+
+  backBtn.addEventListener("click", () => {
+    if (currentStep === 0) {
+      closeModal();
+      return;
+    }
+    currentStep--;
+    renderStep();
+  });
+
+  nextBtn.addEventListener("click", () => {
+    const missing = validateStep(currentStep);
+    if (missing.length) {
+      applyErrorEl.textContent = "Please fill in: " + missing.join(", ");
+      applyErrorEl.style.display = "block";
+      return;
+    }
+    if (currentStep === steps.length - 1) {
+      submitApplication(dept.key);
+      return;
+    }
+    currentStep++;
+    renderStep();
+  });
+
+  renderStep();
 }
 
 function closeModal() {
@@ -244,13 +348,12 @@ async function submitApplication(deptKey) {
   }
 
   const dept = DEPARTMENTS.find((d) => d.key === deptKey);
-  const val = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : "");
 
   const answers = {};
   dept.questions.forEach((q) => (answers[q.id] = questionValue(q)));
 
-  const roblox = val("q_roblox");
-  const why = val("q_why");
+  const roblox = fieldValue("q_roblox");
+  const why = fieldValue("q_why");
 
   const missing = [];
   if (!roblox) missing.push("Roblox username");
@@ -269,7 +372,7 @@ async function submitApplication(deptKey) {
   const form = new FormData();
   form.append("department", deptKey);
   form.append("robloxUsername", roblox);
-  form.append("availability", val("q_availability"));
+  form.append("availability", fieldValue("q_availability"));
   form.append("why", why);
   form.append("answers", JSON.stringify(answers));
   const imageFile = document.getElementById("q_image").files[0];

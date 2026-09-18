@@ -2210,6 +2210,28 @@ input[type="file"]::file-selector-button:hover { background: color-mix(in srgb, 
 
 .modal h3 { margin: 0; font-size: 21px; }
 
+.apply-progress { margin-bottom: 22px; }
+.apply-progress-track {
+  height: 4px;
+  border-radius: 2px;
+  background: var(--surface-1);
+  overflow: hidden;
+  margin-bottom: 8px;
+}
+.apply-progress-fill {
+  height: 100%;
+  background: var(--card-color, var(--red));
+  border-radius: 2px;
+  transition: width 0.25s ease;
+}
+.apply-progress-label {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
 .form-section-heading {
   font-family: "Cinzel", serif;
   font-weight: 700;
