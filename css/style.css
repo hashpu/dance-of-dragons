@@ -527,6 +527,8 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   text-transform: uppercase;
 }
 
+.featured-dept-eyebrow { margin: 40px 0 16px; }
+
 .page-title {
   font-family: "Game of Thrones", "Cinzel", serif;
   font-weight: 400;

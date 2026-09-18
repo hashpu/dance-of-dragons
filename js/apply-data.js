@@ -115,6 +115,7 @@ const DEPARTMENTS = [
     name: "House Blackfyre HVC",
     color: "#7a1f1f",
     icon: "star",
+    featured: true,
     blurb: "“The King Who Bore the Sword.” Portray a key Blackfyre figure, Daemon, Bittersteel, Fireball, and more, driving the group's overarching campaign.",
     questions: [
       { id: "robloxProfile", label: "Roblox profile link", type: "text", placeholder: "https://www.roblox.com/users/.../profile", required: true, section: "Application Details" },

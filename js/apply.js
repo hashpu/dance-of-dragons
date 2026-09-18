@@ -18,10 +18,36 @@ function deptCardHtml(dept) {
   </div>`;
 }
 
+// A featured department (currently just House Blackfyre HVC) gets its own
+// wide banner below the regular grid instead of a slot inside it — the same
+// pattern as the homepage's "Ready to rally one?" callout. Keeps it from
+// landing as an odd one-card-alone row once the grid's column count doesn't
+// divide evenly, and gives a character-roleplay application real weight
+// instead of blending in with the generic staff department cards.
+function featuredDeptHtml(dept) {
+  return `
+  <div class="rally-cta featured-dept-cta">
+    <div class="rally-cta-icon">${DEPT_ICONS[dept.icon]}</div>
+    <div class="rally-cta-text">
+      <strong>${dept.name}</strong>
+      <p>${dept.blurb}</p>
+    </div>
+    <button class="btn btn-primary" onclick="openApplyModal('${dept.key}')">Apply →</button>
+  </div>`;
+}
+
 function renderDeptGrid() {
+  const regular = DEPARTMENTS.filter((d) => !d.featured);
+  const featured = DEPARTMENTS.filter((d) => d.featured);
+
   const grid = document.getElementById("deptGrid");
-  grid.innerHTML = DEPARTMENTS.map(deptCardHtml).join("");
+  grid.innerHTML = regular.map(deptCardHtml).join("");
   scrollReveal(".house-card", grid);
+
+  const featuredSection = document.getElementById("featuredDeptSection");
+  featuredSection.innerHTML = featured.length
+    ? `<div class="eyebrow featured-dept-eyebrow">Character Roleplay</div>${featured.map(featuredDeptHtml).join("")}`
+    : "";
 }
 
 function questionFieldHtml(q) {
