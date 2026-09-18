@@ -547,11 +547,34 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
 .featured-dept-eyebrow { margin: 40px 0 16px; }
 
 .page-title {
+  position: relative;
   font-family: "Game of Thrones", "Cinzel", serif;
   font-weight: 400;
   font-size: clamp(32px, 8vw, 44px);
   letter-spacing: 1.5px;
   margin: 8px 0 12px;
+  animation: pageHeaderIn 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.page-title::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: -40px;
+  width: 460px;
+  height: 240px;
+  transform: translateY(-50%);
+  background: radial-gradient(ellipse at left, color-mix(in srgb, var(--red) 13%, transparent), transparent 70%);
+  z-index: -1;
+  pointer-events: none;
+}
+.page-desc { animation: pageHeaderIn 0.6s 0.08s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+
+@keyframes pageHeaderIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-title, .page-desc { animation: none; }
 }
 
 .section-title {
@@ -734,6 +757,12 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   border-radius: 4px;
   padding: 20px 24px;
   margin: 24px 0 30px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+.rally-cta:hover {
+  border-color: var(--red);
+  transform: translateY(-3px);
+  box-shadow: 0 16px 34px -18px var(--red);
 }
 .rally-cta-icon {
   width: 48px;
@@ -747,7 +776,9 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   align-items: center;
   justify-content: center;
   box-shadow: 0 0 0 4px rgba(176, 176, 181, 0.07);
+  transition: transform 0.2s ease;
 }
+.rally-cta:hover .rally-cta-icon { transform: scale(1.08); }
 .rally-cta-icon svg { width: 50%; height: 50%; }
 .rally-cta-text { flex: 1; min-width: 220px; }
 .rally-cta-text strong { display: block; font-family: "Cinzel", serif; font-size: 16px; margin-bottom: 4px; }
