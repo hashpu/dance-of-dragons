@@ -970,12 +970,36 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   overflow: hidden;
 }
 
+/* A soft spotlight glow behind the title, like light falling on the crest
+   from above — the difference between a flat dark page and a hero that
+   feels like the center of the site. */
+.hero::before {
+  content: "";
+  position: absolute;
+  top: -10%;
+  left: 50%;
+  width: min(900px, 140vw);
+  height: 640px;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at center, color-mix(in srgb, var(--red) 16%, transparent), transparent 68%);
+  pointer-events: none;
+  z-index: 0;
+}
+
 .hero-content {
   position: relative;
   z-index: 1;
   max-width: 720px;
   margin: 0 auto;
   padding: 44px clamp(22px, 6vw, 56px);
+  animation: heroContentIn 0.8s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+@keyframes heroContentIn {
+  from { opacity: 0; transform: translateY(16px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-content { animation: none; }
 }
 
 /* Corner-bracket frame around the hero text, matching the house cards' and
@@ -987,7 +1011,8 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   position: absolute;
   inset: 0;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.7;
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--red) 50%, transparent));
   background:
     linear-gradient(var(--red), var(--red)) top left / 26px 2px no-repeat,
     linear-gradient(var(--red), var(--red)) top left / 2px 26px no-repeat,
@@ -1001,7 +1026,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
 
 .hero-title {
   font-family: "Game of Thrones", "Cinzel", serif;
-  font-size: clamp(34px, 7vw, 68px);
+  font-size: clamp(36px, 7.5vw, 76px);
   font-weight: 400;
   letter-spacing: 2px;
   line-height: 1.08;
@@ -1035,6 +1060,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   gap: 14px;
   flex-wrap: wrap;
 }
+.hero-actions .btn { padding: 15px 26px; font-size: 13.5px; }
 
 .hero-scroll-cue {
   position: absolute;
