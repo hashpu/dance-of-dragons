@@ -1,6 +1,34 @@
 /* Set your server's invite link here to activate the "Join Discord" button. */
 const DISCORD_INVITE_URL = "https://discord.gg/eRHDDrnJZk";
 
+const THEME_STORAGE_KEY = "got-theme";
+const THEME_ICONS = {
+  light: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.2M12 19.3v2.2M4.2 4.2l1.6 1.6M18.2 18.2l1.6 1.6M2.5 12h2.2M19.3 12h2.2M4.2 19.8l1.6-1.6M18.2 5.8l1.6-1.6"/></svg>`,
+  dark: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a7 7 0 0 0 10.5 10.5z"/></svg>`,
+  system: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4.5" width="18" height="12" rx="1.5"/><path d="M8 20h8M12 16.5V20"/></svg>`
+};
+const THEME_CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
+const THEME_OPTIONS = [
+  { value: "light", label: "Light" },
+  { value: "dark", label: "Dark" },
+  { value: "system", label: "System" }
+];
+
+function getThemePref() {
+  try {
+    return localStorage.getItem(THEME_STORAGE_KEY) || "system";
+  } catch (e) {
+    return "system";
+  }
+}
+
+function setThemePref(value) {
+  try {
+    localStorage.setItem(THEME_STORAGE_KEY, value);
+  } catch (e) {}
+  document.documentElement.setAttribute("data-theme", value);
+}
+
 const NAV_ICONS = {
   houses: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>`,
   factions: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4l6 6-9 9-3 1 1-3 9-9z"/><path d="M13.5 8.5l2 2M4 20l3.5-3.5"/></svg>`,
@@ -177,6 +205,21 @@ function navEscapeHtml(str) {
         .join("")}
     </nav>
     <div class="topbar-actions">
+      <div class="theme-menu" id="themeMenu">
+        <button class="theme-trigger" id="themeTrigger" type="button" aria-label="Theme" aria-expanded="false">
+          ${THEME_ICONS[getThemePref()]}
+        </button>
+        <div class="theme-card" id="themeCard" hidden>
+          ${THEME_OPTIONS.map(
+            (o) => `
+            <button type="button" class="theme-option" data-theme-value="${o.value}">
+              <span class="theme-option-icon">${THEME_ICONS[o.value]}</span>
+              <span class="theme-option-label">${o.label}</span>
+              <span class="theme-option-check">${THEME_CHECK_ICON}</span>
+            </button>`
+          ).join("")}
+        </div>
+      </div>
       ${authHtml}
       <a class="btn btn-primary" href="${DISCORD_INVITE_URL || "#"}">Join Discord</a>
     </div>
@@ -204,6 +247,37 @@ function navEscapeHtml(str) {
       }
     });
   }
+
+  const themeTrigger = document.getElementById("themeTrigger");
+  const themeCard = document.getElementById("themeCard");
+  function markActiveThemeOption() {
+    const current = getThemePref();
+    themeCard.querySelectorAll(".theme-option").forEach((btn) => {
+      btn.classList.toggle("active", btn.dataset.themeValue === current);
+    });
+  }
+  markActiveThemeOption();
+  themeTrigger.addEventListener("click", (e) => {
+    e.stopPropagation();
+    const isOpen = themeCard.hidden;
+    themeCard.hidden = !isOpen;
+    themeTrigger.setAttribute("aria-expanded", String(isOpen));
+  });
+  themeCard.querySelectorAll(".theme-option").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      setThemePref(btn.dataset.themeValue);
+      themeTrigger.innerHTML = THEME_ICONS[btn.dataset.themeValue];
+      markActiveThemeOption();
+      themeCard.hidden = true;
+      themeTrigger.setAttribute("aria-expanded", "false");
+    });
+  });
+  document.addEventListener("click", (e) => {
+    if (!themeCard.hidden && !e.target.closest("#themeMenu")) {
+      themeCard.hidden = true;
+      themeTrigger.setAttribute("aria-expanded", "false");
+    }
+  });
 
   const robloxBadgesEl = document.getElementById("profileRobloxBadges");
   if (robloxBadgesEl && robloxUser) {
