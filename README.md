@@ -95,6 +95,15 @@ platforms built for that directly — [Render](https://render.com),
 with an add-on/managed Postgres. Point `DATABASE_URL` at that database, run
 `npm run migrate && npm run seed` once, then start the app.
 
+Deploying via the included `render.yaml` blueprint runs the migration for
+you on every deploy instead: its `startCommand` is `npm run migrate && npm
+start`, using Render's own internal network access — no external DB
+connection or IP allowlisting needed, and no manual migration step ever
+again for schema changes (seeding is still a one-time manual step). Safe to
+run on every deploy since `schema.sql` is all `CREATE TABLE IF NOT EXISTS`/
+`ADD COLUMN IF NOT EXISTS`. Deploying elsewhere without that blueprint still
+needs the manual `npm run migrate` step above for schema changes.
+
 Uploaded application images are stored on local disk under `server/uploads/` —
 on hosts with an ephemeral filesystem (e.g. free-tier Render), that folder is
 wiped on redeploy. For images to persist long-term in production, attach a
