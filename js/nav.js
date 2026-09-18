@@ -176,7 +176,7 @@ function navEscapeHtml(str) {
               <div class="app-updates" id="appUpdates"></div>
             </div>
             <div class="profile-badges">
-              <span class="profile-badge profile-badge-verified">✓ Verified via Discord</span>
+              <span class="profile-badge profile-badge-verified"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg> Verified via Discord</span>
               ${discordBadges(user)
                 .map(([, emoji, label]) => `<span class="profile-badge profile-badge-flag" title="${label}">${emoji} ${label}</span>`)
                 .join("")}
@@ -187,7 +187,8 @@ function navEscapeHtml(str) {
             <div class="profile-roblox-header"><span>🎮 ${robloxUser.username || robloxUser.id}</span><button class="btn-link" style="margin:0" onclick="signOutRoblox()">Unlink</button></div>
             <div class="profile-badges" id="profileRobloxBadges"></div>`
               : ""}
-            <button class="btn btn-outline btn-block" onclick="signOutDiscord()">Sign out</button>
+            <div class="profile-divider"></div>
+            <button class="btn-link profile-signout" onclick="signOutDiscord()">Sign out</button>
           </div>
         </div>
       </div>`
