@@ -1147,8 +1147,6 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
    room to use on a big screen instead of just stretching 3 cards wider. */
 .house-grid-wrap { scroll-margin-top: 90px; }
 .house-grid-wrap.collapsed .house-grid { display: none; }
-.house-explore-cta { display: none; }
-.house-grid-wrap.collapsed .house-explore-cta { display: flex; }
 
 .house-grid {
   display: grid;
