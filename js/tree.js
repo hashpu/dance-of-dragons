@@ -956,9 +956,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
             </div>
             <label class="checkbox-field">
               <input type="checkbox" id="fMakeLord" />
-              <span>Make them ${entityLabel(house)}'s ${leaderTitle(house)}
-                <span class="hint">(password-free access to this house from then on — replaces whoever currently holds it, if anyone. Owner-only; everyone else gets a clear "not allowed" instead of it silently doing nothing.)</span>
-              </span>
+              <span>Make them ${entityLabel(house)}'s ${leaderTitle(house)} <span class="hint">(password-free access, replacing whoever currently holds it)</span></span>
             </label>
           </div>
 
