@@ -165,7 +165,7 @@ function navEscapeHtml(str) {
     </nav>
     <div class="topbar-actions">
       ${authHtml}
-      <a class="btn btn-primary" href="${DISCORD_INVITE_URL || "#"}" target="_blank" rel="noopener">Join Discord</a>
+      <a class="btn btn-primary" href="${DISCORD_INVITE_URL || "#"}">Join Discord</a>
     </div>
   `;
 
@@ -217,7 +217,7 @@ function navEscapeHtml(str) {
         <nav class="footer-links">
           ${links.map((l) => `<a href="${l.href}">${l.label}</a>`).join("")}
         </nav>
-        <a class="footer-discord" href="${DISCORD_INVITE_URL || "#"}" target="_blank" rel="noopener">Join the Discord ↗</a>
+        <a class="footer-discord" href="${DISCORD_INVITE_URL || "#"}">Join the Discord</a>
       </div>
       <div class="footer-bottom">Fan-made lore site for a Roblox community. Not affiliated with HBO or George R. R. Martin.</div>
     </footer>
