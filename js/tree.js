@@ -883,14 +883,10 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
 
         <div class="field">
           <label>Name</label>
-          <div class="avatar-field-row">
-            <div class="input-wrap" style="flex:1">
-              ${FIELD_ICONS.user}
-              <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" autocomplete="off" />
-            </div>
-            <button type="button" class="field-clear" id="searchDiscordBtn" title="Link a Discord account that's signed in here before">${FIELD_ICONS.discord}</button>
+          <div class="input-wrap">
+            ${FIELD_ICONS.user}
+            <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" autocomplete="off" />
           </div>
-          <p class="hint" id="discordLinkedHint" style="margin-top:6px" hidden></p>
         </div>
 
         <div class="more-grid">
@@ -949,11 +945,9 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
           </div>
 
           <div class="field">
-            <label>Discord account ID <span class="hint">(the real person behind this character, optional)</span></label>
-            <div class="input-wrap">
-              ${FIELD_ICONS.discord}
-              <input id="fDiscordId" placeholder="e.g. 123456789012345678" value="${isEdit ? escapeAttr(member.discordId || "") : ""}" autocomplete="off" />
-            </div>
+            <label>Discord account <span class="hint">(the real person behind this character, optional)</span></label>
+            <input type="hidden" id="fDiscordId" value="${isEdit ? escapeAttr(member.discordId || "") : ""}" />
+            <div class="discord-account-row" id="discordAccountRow"></div>
             <label class="checkbox-field">
               <input type="checkbox" id="fMakeLord" />
               <span>Make them ${entityLabel(house)}'s ${leaderTitle(house)} <span class="hint">(password-free access, replacing whoever currently holds it)</span></span>
@@ -1035,38 +1029,86 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   document.getElementById("fAvatarFile").addEventListener("change", handleAvatarFileChange);
   updateAvatarPreview();
 
-  document.getElementById("searchDiscordBtn").addEventListener("click", searchDiscordForMember);
+  renderDiscordAccountRow();
 
   document.getElementById("fName").focus();
 }
 
-// Links a Discord account that's signed in on the site before — same
-// house-scoped search openAddSpouseFlow uses — without touching Name.
-// Their Discord username almost never IS the character's name, so Name
-// stays whatever's already typed (or blank) and gets focused right after,
-// ready to type the actual name into; only Discord ID/Avatar come from the
-// pick, plus a small confirmation of who got linked. Also pre-checks
-// "Make them Lord" (see submitMember) since picking someone here is
-// usually exactly why you're doing this — it's still an ordinary
-// checkbox, so unchecking it before saving leaves the house's Lord
-// untouched.
+// Renders the Discord account field's read-only state instead of a raw ID
+// text box — nobody should have to type an 18-digit snowflake by hand.
+// Not linked: a button that opens the search/manual-entry flow below.
+// Linked: a small badge (their username if this render just came from a
+// fresh pick, otherwise the last 4 digits of the stored ID — an existing
+// member's discordId alone doesn't tell us their username) plus Unlink.
+function renderDiscordAccountRow(knownUsername) {
+  const row = document.getElementById("discordAccountRow");
+  const id = document.getElementById("fDiscordId").value;
+
+  if (!id) {
+    row.innerHTML = `<button type="button" class="btn btn-outline" id="searchDiscordBtn">${FIELD_ICONS.discord} Link a Discord account</button>`;
+    document.getElementById("searchDiscordBtn").onclick = searchDiscordForMember;
+    return;
+  }
+
+  const labelHtml = knownUsername
+    ? `Linked to ${escapeAttr(knownUsername)}`
+    : `Linked <span class="mono">•••${escapeAttr(id.slice(-4))}</span>`;
+  row.innerHTML = `
+    <span class="discord-link-badge" title="Discord ID: ${escapeAttr(id)}">${FIELD_ICONS.discord}<span>${labelHtml}</span></span>
+    <button type="button" class="btn-link" id="unlinkDiscordBtn" style="margin:0">Unlink</button>
+  `;
+  document.getElementById("unlinkDiscordBtn").onclick = () => {
+    document.getElementById("fDiscordId").value = "";
+    document.getElementById("fMakeLord").checked = false;
+    renderDiscordAccountRow();
+  };
+}
+
+// Fills Discord ID/Avatar from an actual account instead of typing an ID by
+// hand — either picked from the house-scoped search openAddSpouseFlow also
+// uses, or, if they haven't signed in here yet, typed directly via the
+// "enter their Discord ID instead" fallback. Also pre-checks "Make them
+// Lord" (see submitMember) since linking someone here is usually exactly
+// why you're doing this — it's still an ordinary checkbox, so unchecking
+// it before saving leaves the house's Lord untouched.
 async function searchDiscordForMember() {
   const result = await Dialog.search({
     kicker: entityLabel(house),
     title: "Link a Discord account",
-    message: "Search a Discord account that's signed in here before.",
-    fetchResults: (query) => Api.searchHouseDiscordUsers(slug, query, sessionPassword)
+    message: "Search a Discord account that's signed in here before, or add their ID directly if they haven't.",
+    fetchResults: (query) => Api.searchHouseDiscordUsers(slug, query, sessionPassword),
+    allowManual: true,
+    manualLabel: "Enter their Discord ID instead"
   });
   if (!result) return;
 
-  document.getElementById("fDiscordId").value = result.id;
-  document.getElementById("fAvatar").value = discordAvatarUrl(result);
-  document.getElementById("fMakeLord").checked = true;
-  updateAvatarPreview();
+  if (result.manual) {
+    const id = await Dialog.prompt({
+      kicker: entityLabel(house),
+      title: "Enter a Discord ID",
+      message: "Only needed if they haven't signed in with Discord on the site before.",
+      label: "Discord account ID",
+      placeholder: "e.g. 123456789012345678",
+      icon: "discord",
+      confirmText: "Link",
+      required: true
+    });
+    if (!id) return;
+    linkDiscordAccount(id.trim(), null, null);
+    return;
+  }
 
-  const hint = document.getElementById("discordLinkedHint");
-  hint.textContent = `Linked to ${result.username} on Discord. Give them their character's name below.`;
-  hint.hidden = false;
+  linkDiscordAccount(result.id, result.username, discordAvatarUrl(result));
+}
+
+function linkDiscordAccount(discordId, username, avatarUrl) {
+  document.getElementById("fDiscordId").value = discordId;
+  if (avatarUrl) {
+    document.getElementById("fAvatar").value = avatarUrl;
+    updateAvatarPreview();
+  }
+  document.getElementById("fMakeLord").checked = true;
+  renderDiscordAccountRow(username);
 
   const nameInput = document.getElementById("fName");
   nameInput.focus();
