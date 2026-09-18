@@ -234,7 +234,11 @@ function personCardHtml(person) {
   const linksHtml = `
     ${person.buildLink ? `<a class="node-build-link" href="${escapeAttr(person.buildLink)}" target="_blank" rel="noopener">Roblox build ↗</a>` : ""}
     ${person.robloxProfile ? `<a class="node-build-link" href="${escapeAttr(person.robloxProfile)}" target="_blank" rel="noopener">Roblox profile ↗</a>` : ""}
-    ${person.discordId ? `<div class="node-discord">${FIELD_ICONS.discord} ${escapeAttr(person.discordId)}</div>` : ""}
+    ${
+      person.discordId
+        ? `<div class="node-discord" title="Discord ID: ${escapeAttr(person.discordId)}">${FIELD_ICONS.discord}<span>•••${escapeAttr(person.discordId.slice(-4))}</span></div>`
+        : ""
+    }
   `;
   const editRemoveButtons = lordOnlyAccess
     ? ""

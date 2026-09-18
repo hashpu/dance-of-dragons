@@ -1631,13 +1631,13 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 .node {
   position: relative;
-  background: linear-gradient(165deg, #212123, #1a1a1c 65%);
+  background: linear-gradient(165deg, #232326, #191919 65%);
   border: 1px solid #3a3a3d;
-  border-radius: 6px;
-  padding: 20px 16px 16px;
-  width: 168px;
+  border-radius: 10px;
+  padding: 22px 16px 18px;
+  width: 172px;
   text-align: center;
-  box-shadow: 0 4px 12px -6px rgba(0, 0, 0, 0.6);
+  box-shadow: 0 10px 22px -10px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.03);
   transition: box-shadow 0.2s ease, transform 0.15s ease-out, border-color 0.2s ease;
   animation: nodeFadeIn 0.45s ease both;
   animation-delay: calc(var(--node-i, 0) * 70ms);
@@ -1654,11 +1654,14 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 
 .node-crown-badge {
   position: absolute;
-  top: -10px;
+  top: -14px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
-  height: 20px;
+  width: 26px;
+  height: 26px;
+  padding: 5px;
+  border-radius: 50%;
+  background: radial-gradient(circle, #232326 55%, transparent);
   color: var(--card-color, var(--red));
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.6));
 }
@@ -1672,7 +1675,7 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   left: 0;
   right: 0;
   height: 3px;
-  border-radius: 6px 6px 0 0;
+  border-radius: 10px 10px 0 0;
   background: linear-gradient(90deg, transparent, var(--card-color, var(--red)), transparent);
   opacity: 0.7;
 }
@@ -1681,7 +1684,7 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   content: "";
   position: absolute;
   inset: 0;
-  border-radius: 6px;
+  border-radius: 10px;
   background: radial-gradient(circle at var(--tilt-mx) var(--tilt-my), color-mix(in srgb, var(--card-color, var(--red)) 20%, transparent), transparent 60%);
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -1689,9 +1692,9 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 }
 
 .node:hover {
-  transform: perspective(700px) rotateX(var(--tilt-rx)) rotateY(var(--tilt-ry)) translateY(-3px);
+  transform: perspective(700px) rotateX(var(--tilt-rx)) rotateY(var(--tilt-ry)) translateY(-4px);
   border-color: color-mix(in srgb, var(--card-color, var(--red)) 55%, var(--panel-border));
-  box-shadow: 0 16px 30px -16px color-mix(in srgb, var(--card-color, var(--red)) 60%, transparent);
+  box-shadow: 0 20px 36px -16px color-mix(in srgb, var(--card-color, var(--red)) 55%, transparent), 0 10px 22px -10px rgba(0, 0, 0, 0.7);
 }
 .node:hover::after { opacity: 1; }
 
@@ -1711,8 +1714,10 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 3px 8px -3px rgba(0, 0, 0, 0.6);
+  transition: background 0.15s, transform 0.15s;
 }
-.node-remove:hover { background: rgba(176, 176, 181, 0.3); }
+.node-remove:hover { background: rgba(176, 176, 181, 0.3); transform: scale(1.08); }
 
 .node-edit {
   position: absolute;
@@ -1728,9 +1733,11 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   display: flex;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 3px 8px -3px rgba(0, 0, 0, 0.6);
+  transition: color 0.15s, border-color 0.15s, transform 0.15s;
 }
 .node-edit svg { width: 13px; height: 13px; }
-.node-edit:hover { color: var(--text); border-color: #555; }
+.node-edit:hover { color: var(--text); border-color: #555; transform: scale(1.08); }
 
 @media (max-width: 560px) {
   .node-edit, .node-remove {
@@ -1750,27 +1757,35 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .node-highlight { animation: nodeHighlightPulse 1s ease-in-out 3; border-radius: 6px; }
 
 .node-avatar {
-  width: 64px;
-  height: 64px;
+  width: 66px;
+  height: 66px;
   border-radius: 50%;
   object-fit: cover;
   margin: 0 auto 10px;
   display: block;
   background: #2a2a2c;
-  border: 2px solid color-mix(in srgb, var(--card-color, var(--red)) 45%, var(--panel-border));
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 14%, transparent);
-  transition: box-shadow 0.15s, border-color 0.15s;
+  border: 2px solid #191919;
+  box-shadow:
+    0 0 0 2px color-mix(in srgb, var(--card-color, var(--red)) 55%, var(--panel-border)),
+    0 0 0 6px color-mix(in srgb, var(--card-color, var(--red)) 12%, transparent),
+    0 6px 14px -6px rgba(0, 0, 0, 0.7);
+  transition: box-shadow 0.2s, border-color 0.2s, transform 0.2s;
 }
 .node a:has(.node-avatar):hover .node-avatar {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--card-color, var(--red)) 35%, transparent);
-  border-color: var(--card-color, var(--red));
+  transform: scale(1.04);
+  box-shadow:
+    0 0 0 2px var(--card-color, var(--red)),
+    0 0 0 7px color-mix(in srgb, var(--card-color, var(--red)) 22%, transparent),
+    0 8px 18px -6px rgba(0, 0, 0, 0.75);
 }
 
 .node-root .node-avatar {
-  width: 72px;
-  height: 72px;
-  border-color: var(--card-color, var(--red));
-  box-shadow: 0 0 0 4px color-mix(in srgb, var(--card-color, var(--red)) 20%, transparent);
+  width: 76px;
+  height: 76px;
+  box-shadow:
+    0 0 0 2px var(--card-color, var(--red)),
+    0 0 0 7px color-mix(in srgb, var(--card-color, var(--red)) 18%, transparent),
+    0 8px 16px -6px rgba(0, 0, 0, 0.75);
 }
 
 /* Married couple: one wider card holding two person-halves side by side,
@@ -1795,16 +1810,16 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .node-spouse-divider svg { width: 100%; height: 100%; }
 .node-paired .node-avatar { width: 52px; height: 52px; }
 
-.node-actions-row { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
-.node-actions-row .btn { width: 100%; }
+.node-actions-row { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--panel-border); }
+.node-actions-row .btn { width: 100%; letter-spacing: 0.6px; }
 
-.node-name { font-family: "Cinzel", serif; font-weight: 700; font-size: 14px; }
+.node-name { font-family: "Cinzel", serif; font-weight: 700; font-size: 14.5px; letter-spacing: 0.2px; }
 .node-role {
   color: var(--muted);
   font-size: 10px;
-  letter-spacing: 1px;
+  letter-spacing: 1.5px;
   text-transform: uppercase;
-  margin: 3px 0 10px;
+  margin: 3px 0 12px;
 }
 
 .node-external-link {
@@ -1828,15 +1843,22 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .node-build-link:hover { text-decoration: underline; }
 
 .node-discord {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 5px;
-  font-size: 10px;
+  font-size: 10.5px;
   color: var(--muted);
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--panel-border);
+  border-radius: 20px;
+  padding: 3px 10px 3px 8px;
   margin-bottom: 8px;
+  cursor: default;
+  transition: border-color 0.15s, color 0.15s;
 }
-.node-discord svg { width: 12px; height: 12px; flex-shrink: 0; }
+.node-discord:hover { border-color: color-mix(in srgb, var(--card-color, var(--red)) 45%, var(--panel-border)); color: var(--text); }
+.node-discord svg { width: 11px; height: 11px; flex-shrink: 0; }
+.node-discord span { font-family: "SF Mono", "Cascadia Code", Consolas, monospace; letter-spacing: 0.5px; }
 
 /* Modal */
 @keyframes overlayFade { from { opacity: 0; } to { opacity: 1; } }
