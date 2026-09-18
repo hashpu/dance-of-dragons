@@ -768,7 +768,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
 
 .feature-widget { position: sticky; top: 90px; }
 .feature-widget-card {
-  background: linear-gradient(165deg, #1c1c1f, #131315 70%);
+  background: linear-gradient(165deg, var(--surface-2), var(--bg) 70%);
   border: 1px solid var(--panel-border);
   border-radius: 10px;
   padding: 16px;
@@ -786,7 +786,15 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   letter-spacing: 0.3px;
   color: var(--muted);
 }
-.feature-widget-tab { position: relative; padding-bottom: 11px; }
+.feature-widget-tab {
+  position: relative;
+  padding: 0 0 11px;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
 .feature-widget-tab.active { color: var(--text); }
 .feature-widget-tab.active::after {
   content: "";
@@ -798,6 +806,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   background: var(--red);
 }
 .feature-widget-preview { display: flex; flex-direction: column; align-items: flex-start; gap: 10px; }
+.feature-widget-preview .app-update-card { align-self: stretch; }
 .feature-widget-avatar {
   width: 40px;
   height: 40px;

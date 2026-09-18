@@ -110,12 +110,12 @@
 
       <aside class="feature-widget">
         <div class="feature-widget-card">
-          <div class="feature-widget-tabs">
-            <span class="feature-widget-tab active">Profile</span>
-            <span class="feature-widget-tab">Roles</span>
-            <span class="feature-widget-tab">Applications</span>
+          <div class="feature-widget-tabs" id="featureWidgetTabs" role="tablist">
+            <button type="button" class="feature-widget-tab active" data-tab="profile" role="tab" aria-selected="true">Profile</button>
+            <button type="button" class="feature-widget-tab" data-tab="roles" role="tab" aria-selected="false">Roles</button>
+            <button type="button" class="feature-widget-tab" data-tab="applications" role="tab" aria-selected="false">Applications</button>
           </div>
-          <div class="feature-widget-preview">
+          <div class="feature-widget-preview" data-panel="profile">
             <div class="feature-widget-avatar"></div>
             <div class="feature-widget-name">WinterfellKing</div>
             <div class="feature-widget-badges">
@@ -123,10 +123,28 @@
               <span class="feature-widget-badge feature-widget-badge-role">House Stark Lord</span>
             </div>
           </div>
+          <div class="feature-widget-preview" data-panel="roles" hidden>
+            <div class="feature-widget-avatar"></div>
+            <div class="feature-widget-name">WinterfellKing</div>
+            <div class="feature-widget-badges">
+              <span class="feature-widget-badge feature-widget-badge-role">House Stark Lord</span>
+              <span class="feature-widget-badge feature-widget-badge-role">Small Council</span>
+              <span class="feature-widget-badge feature-widget-badge-role">Kingsguard</span>
+            </div>
+          </div>
+          <div class="feature-widget-preview" data-panel="applications" hidden>
+            <div class="app-update-card app-update-approved">
+              <div class="app-update-head">
+                <span class="app-update-status">✅ Approved</span>
+                <span class="app-update-dept">Developer Corps</span>
+              </div>
+              <p class="app-update-reason">Welcome aboard, check #developer-onboarding on Discord.</p>
+            </div>
+          </div>
         </div>
-        <div class="eyebrow">Signed In, Everywhere</div>
-        <h3 class="feature-widget-heading">Your Discord Roles, Right On Your Profile</h3>
-        <p class="feature-widget-desc">
+        <div class="eyebrow" id="featureWidgetEyebrow">Signed In, Everywhere</div>
+        <h3 class="feature-widget-heading" id="featureWidgetHeading">Your Discord Roles, Right On Your Profile</h3>
+        <p class="feature-widget-desc" id="featureWidgetDesc">
           Sign in once and every house you visit already knows who you are: your server roles, your Roblox link, all of it, right in the profile card up top.
         </p>
       </aside>
@@ -271,6 +289,7 @@
   <script src="js/reveal.js"></script>
   <script src="js/tilt.js"></script>
   <script src="js/houses.js"></script>
+  <script src="js/feature-widget.js"></script>
   <script>scrollReveal(".feature-item, .feature-widget-card");</script>
 </body>
 </html>
