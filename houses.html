@@ -2,6 +2,18 @@
 <html lang="en">
 <head>
   <script src="js/theme-init.js"></script>
+  <script>
+    // A direct reload of /houses (not a click-through from the homepage or
+    // nav) sends the visitor back to the homepage instead — this page is
+    // meant to always be arrived at via "Explore Houses", not landed on
+    // cold. location.replace so it doesn't add a bounce-back history entry.
+    (function () {
+      try {
+        var nav = performance.getEntriesByType("navigation")[0];
+        if (nav && nav.type === "reload") location.replace("/");
+      } catch (e) {}
+    })();
+  </script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Houses · Dungeons &amp; Dragons</title>
