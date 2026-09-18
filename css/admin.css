@@ -315,25 +315,54 @@
 .admin-danger-actions { display: flex; gap: 12px; flex-wrap: wrap; }
 
 /* Secret gate */
-.admin-gate { max-width: 380px; margin: 70px auto; text-align: center; }
+.admin-gate {
+  max-width: 380px;
+  margin: 90px auto;
+  text-align: center;
+  background: var(--a-panel);
+  border: 1px solid var(--a-border);
+  border-radius: 14px;
+  padding: 40px 32px;
+  box-shadow: 0 24px 48px -24px rgba(0, 0, 0, 0.65);
+}
 .admin-gate-icon {
-  width: 44px;
-  height: 44px;
-  margin: 0 auto 18px;
-  border-radius: 10px;
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 20px;
+  border-radius: 50%;
   background: var(--a-accent-soft);
-  border: 1px solid rgba(91, 141, 239, 0.35);
+  border: 1px solid color-mix(in srgb, var(--a-accent) 35%, transparent);
+  box-shadow: 0 0 0 6px color-mix(in srgb, var(--a-accent) 8%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
   color: var(--a-accent);
 }
-.admin-gate-icon svg { width: 20px; height: 20px; }
-.admin-gate h2 { font-size: 18px; margin: 0 0 6px; }
-.admin-gate p { font-size: 13.5px; color: var(--a-muted); margin: 0 0 20px; }
+.admin-gate-icon svg { width: 24px; height: 24px; }
+.admin-gate h2 { font-size: 19px; margin: 0 0 8px; }
+.admin-gate p { font-size: 13.5px; color: var(--a-muted); margin: 0 0 26px; line-height: 1.55; }
 .admin-gate-row { display: flex; gap: 8px; }
-.admin-gate-row input { flex: 1; }
-.admin-gate-error { color: var(--a-text); font-weight: 600; font-size: 12.5px; margin-top: 10px; }
+.admin-gate-row input {
+  flex: 1;
+  background: var(--a-bg);
+  padding: 11px 14px;
+  font-size: 14px;
+}
+.admin-gate-row input:focus {
+  outline: none;
+  border-color: var(--a-accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--a-accent) 18%, transparent);
+}
+.admin-gate-row .a-btn { padding: 10px 20px; }
+.admin-gate-error {
+  color: var(--a-text);
+  font-weight: 600;
+  font-size: 12.5px;
+  margin: 16px 0 0;
+  padding: 9px 12px;
+  background: var(--a-danger-soft);
+  border-radius: 6px;
+}
 
 @media (max-width: 640px) {
   .admin-header { flex-direction: column; align-items: flex-start; }
