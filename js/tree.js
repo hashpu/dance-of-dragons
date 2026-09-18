@@ -879,9 +879,12 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
 
         <div class="field">
           <label>Name</label>
-          <div class="input-wrap">
-            ${FIELD_ICONS.user}
-            <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" autocomplete="off" />
+          <div class="avatar-field-row">
+            <div class="input-wrap" style="flex:1">
+              ${FIELD_ICONS.user}
+              <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" autocomplete="off" />
+            </div>
+            <button type="button" class="field-clear" id="searchDiscordBtn" title="Fill in from a Discord account that's signed in here before">${FIELD_ICONS.discord}</button>
           </div>
         </div>
 
@@ -946,6 +949,12 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
               ${FIELD_ICONS.discord}
               <input id="fDiscordId" placeholder="e.g. 123456789012345678" value="${isEdit ? escapeAttr(member.discordId || "") : ""}" autocomplete="off" />
             </div>
+            <label class="checkbox-field">
+              <input type="checkbox" id="fMakeLord" />
+              <span>Make them ${entityLabel(house)}'s ${leaderTitle(house)}
+                <span class="hint">(password-free access to this house from then on — replaces whoever currently holds it, if anyone. Owner-only; everyone else gets a clear "not allowed" instead of it silently doing nothing.)</span>
+              </span>
+            </label>
           </div>
 
           <div class="field">
@@ -1023,7 +1032,32 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   document.getElementById("fAvatarFile").addEventListener("change", handleAvatarFileChange);
   updateAvatarPreview();
 
+  document.getElementById("searchDiscordBtn").addEventListener("click", searchDiscordForMember);
+
   document.getElementById("fName").focus();
+}
+
+// Fills Name/Discord ID/Avatar from a Discord account that's signed in on
+// the site before, instead of typing them by hand — same house-scoped
+// search openAddSpouseFlow uses, just filling this form's fields instead of
+// skipping straight to Api.addMember. Also pre-checks "Make them Lord"
+// (see submitMember) since picking someone here is usually exactly why
+// you're doing this — it's still an ordinary checkbox, so unchecking it
+// before saving leaves the house's Lord untouched.
+async function searchDiscordForMember() {
+  const result = await Dialog.search({
+    kicker: entityLabel(house),
+    title: "Fill in from a Discord account",
+    message: "Search a Discord account that's signed in here before.",
+    fetchResults: (query) => Api.searchHouseDiscordUsers(slug, query, sessionPassword)
+  });
+  if (!result) return;
+
+  document.getElementById("fName").value = result.username;
+  document.getElementById("fDiscordId").value = result.id;
+  document.getElementById("fAvatar").value = discordAvatarUrl(result);
+  document.getElementById("fMakeLord").checked = true;
+  updateAvatarPreview();
 }
 
 async function handleAvatarFileChange(e) {
@@ -1080,6 +1114,7 @@ async function submitMember() {
   const buildLink = document.getElementById("fBuildLink").value.trim();
   const robloxProfile = document.getElementById("fRobloxProfile").value.trim();
   const discordId = document.getElementById("fDiscordId").value.trim();
+  const makeLord = document.getElementById("fMakeLord").checked;
   const noteHouseVal = document.getElementById("fNoteHouseSelect").value;
   let note = "";
   if (noteHouseVal === NOTE_CUSTOM_VALUE) {
@@ -1095,6 +1130,12 @@ async function submitMember() {
     err.style.display = "block";
     return;
   }
+  if (makeLord && !discordId) {
+    const err = document.getElementById("fError");
+    err.textContent = "Add a Discord account ID first — that's who becomes " + leaderTitle(house) + ".";
+    err.style.display = "block";
+    return;
+  }
 
   const payload = { name, role, parentId, spouseId, avatarUrl, buildLink, robloxProfile, discordId, note };
 
@@ -1104,12 +1145,37 @@ async function submitMember() {
     } else {
       await Api.addMember(slug, payload, sessionPassword);
     }
-    closeModal();
-    await refresh();
   } catch (e) {
     const err = document.getElementById("fError");
     err.textContent = e.message;
     err.style.display = "block";
+    return;
+  }
+
+  closeModal();
+  await refresh();
+
+  // A second, independent step after the member itself is safely saved —
+  // this is owner-only server-side (see POST /houses/:slug/lord-discord),
+  // so it can fail on its own (e.g. a Lord/password-holder who isn't the
+  // site owner tried it) without the member add/edit above being undone.
+  if (makeLord) {
+    try {
+      await Api.setLordDiscordId(slug, discordId);
+      await Dialog.alert({
+        kicker: entityLabel(house),
+        title: `${leaderTitle(house)} assigned`,
+        message: `${name} can now manage ${entityLabel(house)} without its password.`,
+        icon: "discord"
+      });
+    } catch (e) {
+      await Dialog.alert({
+        title: "Couldn't assign " + leaderTitle(house),
+        message: `${name} was saved, but assigning them as ${leaderTitle(house)} failed: ${e.message}`,
+        icon: "warning",
+        cardColor: "var(--red)"
+      });
+    }
   }
 }
 
