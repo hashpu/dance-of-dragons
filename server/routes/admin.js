@@ -38,24 +38,37 @@ router.get("/staff", requireOwner, async (req, res, next) => {
   }
 });
 
-// POST /api/admin/staff { discordUserId } — owner only: grants staff access
-// to a Discord account that has already signed in on the site at least once
-// (looked up in discord_users — this is the check that enforces it). No
-// password: being signed in with that exact Discord account is the login.
+// POST /api/admin/staff — owner only: grants staff access, either
+// { discordUserId } (to an account that's already signed in on the site at
+// least once — no password, being signed in as that account is the login),
+// or { name, password } (a standalone login for someone without a Discord
+// account to link, or who'd rather not use one for this).
 router.post("/staff", requireOwner, async (req, res, next) => {
   try {
     const discordUserId = (req.body.discordUserId || "").trim();
-    if (!discordUserId) return res.status(400).json({ error: "Pick a Discord account." });
+    const name = (req.body.name || "").trim();
+    const password = req.body.password || "";
 
-    const { rows: du } = await pool.query("SELECT id, username FROM discord_users WHERE id = $1", [discordUserId]);
-    if (!du[0]) return res.status(400).json({ error: "That account hasn't signed in on the site yet." });
+    if (discordUserId) {
+      const { rows: du } = await pool.query("SELECT id, username FROM discord_users WHERE id = $1", [discordUserId]);
+      if (!du[0]) return res.status(400).json({ error: "That account hasn't signed in on the site yet." });
 
-    const { rows: existing } = await pool.query("SELECT id FROM staff_accounts WHERE discord_user_id = $1", [discordUserId]);
-    if (existing[0]) return res.status(400).json({ error: "That account already has staff access." });
+      const { rows: existing } = await pool.query("SELECT id FROM staff_accounts WHERE discord_user_id = $1", [discordUserId]);
+      if (existing[0]) return res.status(400).json({ error: "That account already has staff access." });
 
-    const id = crypto.randomUUID();
-    await pool.query("INSERT INTO staff_accounts (id, name, discord_user_id) VALUES ($1,$2,$3)", [id, du[0].username, discordUserId]);
-    res.status(201).json({ id, name: du[0].username });
+      const id = crypto.randomUUID();
+      await pool.query("INSERT INTO staff_accounts (id, name, discord_user_id) VALUES ($1,$2,$3)", [id, du[0].username, discordUserId]);
+      return res.status(201).json({ id, name: du[0].username });
+    }
+
+    if (name && password) {
+      const hash = await bcrypt.hash(password, 10);
+      const id = crypto.randomUUID();
+      await pool.query("INSERT INTO staff_accounts (id, name, password_hash) VALUES ($1,$2,$3)", [id, name, hash]);
+      return res.status(201).json({ id, name });
+    }
+
+    res.status(400).json({ error: "Pick a Discord account, or provide a name and password." });
   } catch (err) {
     next(err);
   }
