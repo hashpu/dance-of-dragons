@@ -872,7 +872,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
 
   document.getElementById("modalRoot").innerHTML = `
     <div class="modal-overlay" id="modalOverlay">
-      <div class="modal modal-wide" style="--card-color:var(--gold, #d4af37)">
+      <div class="modal modal-wide" style="--card-color:var(--red)">
         <div class="modal-header">
           <div class="modal-crest">${HOUSE_ICONS[house.slug]}</div>
           <div>
@@ -1205,7 +1205,7 @@ function renderSignInGate() {
   document.title = "Sign in required · Family Tree";
   document.getElementById("houseHeader").innerHTML = "";
   document.getElementById("statusArea").innerHTML = `
-    <div class="locked-card" style="--card-color:var(--gold)">
+    <div class="locked-card" style="--card-color:var(--red)">
       <div class="lock-icon">${DISCORD_GATE_ICON}</div>
       <h3>Sign in to view this house</h3>
       <p>Family trees are only visible to signed-in visitors. Sign in with Discord to keep going.</p>

@@ -77,7 +77,7 @@ const Dialog = (() => {
     confirmText = "OK",
     cancelText = "Cancel",
     icon = "lock",
-    cardColor = "var(--gold, #d4af37)",
+    cardColor = "var(--red)",
     required = false
   }) {
     return new Promise((resolve) => {
@@ -151,7 +151,7 @@ const Dialog = (() => {
     placeholder = "Search by Discord username…",
     cancelText = "Cancel",
     icon = "discord",
-    cardColor = "var(--gold, #d4af37)",
+    cardColor = "var(--red)",
     fetchResults, // async (query) => [{ id, username, avatar }]
     allowManual = false,
     manualLabel = "Can't find them? Enter details manually"
@@ -254,7 +254,7 @@ const Dialog = (() => {
     icon = "warning",
     cardColor
   }) {
-    cardColor = cardColor || (danger ? "var(--red)" : "var(--gold, #d4af37)");
+    cardColor = cardColor || "var(--red)";
     return new Promise((resolve) => {
       const overlay = shell({
         kicker,
@@ -283,7 +283,7 @@ const Dialog = (() => {
     });
   }
 
-  function alertDialog({ title, kicker = "", message = "", okText = "OK", icon = "info", cardColor = "var(--gold, #d4af37)" }) {
+  function alertDialog({ title, kicker = "", message = "", okText = "OK", icon = "info", cardColor = "var(--red)" }) {
     return new Promise((resolve) => {
       const overlay = shell({
         kicker,
