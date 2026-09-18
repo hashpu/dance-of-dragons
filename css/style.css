@@ -2175,6 +2175,18 @@ input:focus, select:focus, textarea:focus {
 .person-picker-row img { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 .person-picker-row-none { font-style: italic; color: var(--muted); }
 
+/* Optgroup headers inside a wireCustomSelect() panel (see Role/Title's
+   Royal/Council/Realm groupings) — plain labels, not clickable rows. */
+.custom-select-group-label {
+  padding: 10px 8px 4px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.custom-select-group-label:first-child { padding-top: 4px; }
+
 .more-options {
   border-top: 1px solid var(--panel-border);
   padding-top: 18px;

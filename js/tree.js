@@ -739,6 +739,110 @@ function wirePersonPicker(fieldId, { getMembers, getExcluded, noneLabel, onSelec
   return control;
 }
 
+// Native <select> dropdowns render their OPEN list using OS/browser chrome
+// that plain CSS can't restyle (system font, platform highlight color) —
+// exactly what stuck out against this site's own dark theme. This hides
+// the real <select> (still the source of truth: value, existing "change"
+// listeners on it keep firing unchanged, since picking a row here just
+// sets .value and dispatches a real change event) behind a themed trigger
+// + floating panel built by reading the select's own <option>/<optgroup>
+// children — so whatever built those elsewhere (roleFieldHtml,
+// marriedInFieldHtml, the plain house-option lists) doesn't need to
+// change at all. Reuses the same trigger/panel/row classes and the
+// outside-click registry as wirePersonPicker, just reading option text
+// instead of an avatar+name.
+function wireCustomSelect(selectId) {
+  const select = document.getElementById(selectId);
+  const wrap = select.closest(".input-wrap");
+  wrap.classList.add("person-picker-trigger");
+  wrap.setAttribute("role", "button");
+  wrap.setAttribute("tabindex", "0");
+  wrap.setAttribute("aria-haspopup", "listbox");
+  wrap.setAttribute("aria-expanded", "false");
+
+  const label = document.createElement("span");
+  label.className = "person-picker-trigger-label";
+  wrap.insertBefore(label, select);
+  select.hidden = true;
+
+  let panelEl = null;
+
+  function renderLabel() {
+    const opt = select.options[select.selectedIndex];
+    label.textContent = opt ? opt.textContent : "";
+  }
+
+  function rowHtml(opt) {
+    return `<button type="button" class="person-picker-row${opt.value === select.value ? " active" : ""}" data-value="${escapeAttr(opt.value)}">${opt.textContent}</button>`;
+  }
+  function renderRows() {
+    let html = "";
+    Array.from(select.children).forEach((child) => {
+      if (child.tagName === "OPTGROUP") {
+        html += `<div class="custom-select-group-label">${child.label}</div>`;
+        Array.from(child.children).forEach((opt) => (html += rowHtml(opt)));
+      } else if (child.tagName === "OPTION") {
+        html += rowHtml(child);
+      }
+    });
+    return html;
+  }
+
+  function position() {
+    const r = wrap.getBoundingClientRect();
+    panelEl.style.left = `${r.left}px`;
+    panelEl.style.top = `${r.bottom + 6}px`;
+    panelEl.style.width = `${r.width}px`;
+  }
+  function repositionIfOpen() {
+    if (panelEl) position();
+  }
+
+  function open() {
+    if (panelEl) return;
+    wrap.setAttribute("aria-expanded", "true");
+    panelEl = elFromHtml(`<div class="person-picker-panel"><div class="person-picker-list">${renderRows()}</div></div>`);
+    document.body.appendChild(panelEl);
+    position();
+    panelEl.querySelectorAll(".person-picker-row").forEach((row) => {
+      row.onclick = () => {
+        select.value = row.dataset.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+        renderLabel();
+        close();
+        wrap.focus();
+      };
+    });
+    window.addEventListener("resize", repositionIfOpen);
+    window.addEventListener("scroll", repositionIfOpen, true);
+    openPersonPickers.add(control);
+  }
+  function close() {
+    if (!panelEl) return;
+    panelEl.remove();
+    panelEl = null;
+    wrap.setAttribute("aria-expanded", "false");
+    window.removeEventListener("resize", repositionIfOpen);
+    window.removeEventListener("scroll", repositionIfOpen, true);
+    openPersonPickers.delete(control);
+  }
+
+  wrap.addEventListener("click", () => (panelEl ? close() : open()));
+  wrap.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      panelEl ? close() : open();
+    } else if (e.key === "Escape") {
+      close();
+    }
+  });
+  ensurePersonPickerOutsideClickHandling();
+  renderLabel();
+
+  const control = { containsTarget: (target) => wrap.contains(target) || (panelEl && panelEl.contains(target)), close };
+  return control;
+}
+
 function updateParentPreview() {
   const preview = document.getElementById("parentPreview");
   const val = document.getElementById("fParent").value;
@@ -995,6 +1099,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   document.getElementById("fParentHouse").addEventListener("change", (e) => {
     refreshParentPersonSelect(e.target.value, "");
   });
+  wireCustomSelect("fParentHouse");
   updateParentPreview();
 
   spousePickerControl = wirePersonPicker("fSpouse", {
@@ -1005,18 +1110,21 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
   document.getElementById("fSpouseHouse").addEventListener("change", (e) => {
     refreshSpousePersonSelect(e.target.value, "");
   });
+  wireCustomSelect("fSpouseHouse");
 
   document.getElementById("fRoleSelect").addEventListener("change", (e) => {
     const isCustom = e.target.value === ROLE_CUSTOM_VALUE;
     document.getElementById("fRoleCustomWrap").hidden = !isCustom;
     if (isCustom) document.getElementById("fRoleCustom").focus();
   });
+  wireCustomSelect("fRoleSelect");
 
   document.getElementById("fNoteHouseSelect").addEventListener("change", (e) => {
     const isCustom = e.target.value === NOTE_CUSTOM_VALUE;
     document.getElementById("fNoteCustomWrap").hidden = !isCustom;
     if (isCustom) document.getElementById("fNoteCustom").focus();
   });
+  wireCustomSelect("fNoteHouseSelect");
 
   document.getElementById("fAvatar").addEventListener("input", updateAvatarPreview);
   document.getElementById("clearAvatarBtn").addEventListener("click", () => {
