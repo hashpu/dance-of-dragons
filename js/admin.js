@@ -440,11 +440,13 @@ function ticketHtml(app) {
 function renderTickets() {
   const query = (document.getElementById("appSearchInput")?.value || "").trim().toLowerCase();
   const deptFilter = document.getElementById("appDeptFilter")?.value || "";
+  const statusFilter = document.getElementById("appStatusFilter")?.value || "";
 
   const filtered = allApplications.filter((app) => {
     const matchesQuery = !query || app.roblox_username.toLowerCase().includes(query) || app.discord_username.toLowerCase().includes(query);
     const matchesDept = !deptFilter || app.department === deptFilter;
-    return matchesQuery && matchesDept;
+    const matchesStatus = !statusFilter || (app.status || "pending") === statusFilter;
+    return matchesQuery && matchesDept && matchesStatus;
   });
 
   const el = document.getElementById("adminTicketsList");
@@ -544,13 +546,17 @@ function renderTickets() {
 function renderStats() {
   const locked = allHouses.filter((h) => h.locked).length;
   const totalMembers = allHouses.reduce((sum, h) => sum + h.memberCount, 0);
-  document.getElementById("adminStats").innerHTML = `
-    <div class="admin-stat admin-stat-accent"><div class="admin-stat-value">${allHouses.length}</div><div class="admin-stat-label">Houses</div></div>
-    <div class="admin-stat admin-stat-danger"><div class="admin-stat-value">${locked}</div><div class="admin-stat-label">Locked</div></div>
-    <div class="admin-stat admin-stat-success"><div class="admin-stat-value">${allHouses.length - locked}</div><div class="admin-stat-label">Unlocked</div></div>
-    <div class="admin-stat"><div class="admin-stat-value">${totalMembers}</div><div class="admin-stat-label">Family tree members</div></div>
-    <div class="admin-stat admin-stat-accent"><div class="admin-stat-value">${allApplications.length}</div><div class="admin-stat-label">Applications</div></div>
+  const statHtml = (value, label, modifier, tab) => `
+    <button type="button" class="admin-stat${modifier ? ` admin-stat-${modifier}` : ""}" onclick="switchTab('${tab}')">
+      <div class="admin-stat-value">${value}</div><div class="admin-stat-label">${label}</div>
+    </button>
   `;
+  document.getElementById("adminStats").innerHTML =
+    statHtml(allHouses.length, "Houses", "accent", "houses") +
+    statHtml(locked, "Locked", "danger", "houses") +
+    statHtml(allHouses.length - locked, "Unlocked", "success", "houses") +
+    statHtml(totalMembers, "Family tree members", "", "houses") +
+    statHtml(allApplications.length, "Applications", "accent", "applications");
 }
 
 function updateTabCounts() {
@@ -704,6 +710,12 @@ function renderDashboard() {
     <div class="admin-panel" data-panel="applications">
       <div class="admin-toolbar">
         <input type="text" id="appSearchInput" class="admin-search" placeholder="Search by Roblox or Discord username..." />
+        <select id="appStatusFilter" class="admin-filter-select">
+          <option value="">All statuses</option>
+          <option value="pending">Pending</option>
+          <option value="approved">Approved</option>
+          <option value="declined">Declined</option>
+        </select>
         <select id="appDeptFilter" class="admin-filter-select">
           <option value="">All departments</option>
           ${deptOptions}
@@ -757,6 +769,7 @@ function renderDashboard() {
   document.getElementById("houseSearchInput").addEventListener("input", renderHouseTable);
   document.getElementById("appSearchInput").addEventListener("input", renderTickets);
   document.getElementById("appDeptFilter").addEventListener("change", renderTickets);
+  document.getElementById("appStatusFilter").addEventListener("change", renderTickets);
   document.getElementById("discordUserSearchInput").addEventListener("input", renderDiscordUsersList);
 
   if (isOwner) {
