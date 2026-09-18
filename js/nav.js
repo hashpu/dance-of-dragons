@@ -311,4 +311,19 @@ function navEscapeHtml(str) {
     </footer>
   `
   );
+
+  // Rules especially runs long — a quick way back up rather than a slow
+  // manual scroll, on every page since any of them can grow past a screen.
+  const scrollTopBtn = document.createElement("button");
+  scrollTopBtn.type = "button";
+  scrollTopBtn.className = "scroll-top-btn";
+  scrollTopBtn.setAttribute("aria-label", "Scroll to top");
+  scrollTopBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>`;
+  document.body.appendChild(scrollTopBtn);
+  window.addEventListener(
+    "scroll",
+    () => scrollTopBtn.classList.toggle("visible", window.scrollY > 700),
+    { passive: true }
+  );
+  scrollTopBtn.addEventListener("click", () => window.scrollTo({ top: 0, behavior: "smooth" }));
 })();

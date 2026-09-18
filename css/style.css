@@ -114,7 +114,43 @@ summary:focus-visible,
 ::-webkit-scrollbar-track { background: var(--bg); }
 ::-webkit-scrollbar-thumb { background: var(--panel-border); border-radius: 6px; border: 2px solid var(--bg); }
 ::-webkit-scrollbar-thumb:hover { background: var(--red); }
-html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
+html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+}
+
+::selection { background: color-mix(in srgb, var(--red) 45%, transparent); color: var(--text); }
+
+.scroll-top-btn {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--panel);
+  border: 1px solid var(--panel-border);
+  color: var(--text);
+  cursor: pointer;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.75);
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease, border-color 0.2s ease, background 0.2s ease;
+  z-index: 40;
+}
+.scroll-top-btn.visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.scroll-top-btn:hover { border-color: var(--red); background: var(--surface-1); }
+.scroll-top-btn svg { width: 18px; height: 18px; }
+@media (max-width: 560px) {
+  .scroll-top-btn { right: 16px; bottom: 16px; width: 40px; height: 40px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .scroll-top-btn { transition: opacity 0.2s ease; transform: none; }
+}
 
 /* Ambient background layer: a subtle grain texture behind all real content */
 .bg-fx {
