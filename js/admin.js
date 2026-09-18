@@ -26,6 +26,12 @@ function escapeHtml(str) {
 
 const CHEVRON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg>`;
 const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg>`;
+const COPY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>`;
+const CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
+
+function copyBtnHtml(value, label) {
+  return `<button type="button" class="ticket-copy-btn" data-copy="${escapeHtml(value)}" title="Copy ${label}" aria-label="Copy ${label}">${COPY_ICON}</button>`;
+}
 
 // Crown Orders aren't "Houses" and don't have "Lords" — each has its own
 // title for the person recognized via Discord ID/role. Real noble houses
@@ -377,7 +383,10 @@ function ticketHtml(app) {
         <div class="ticket-icon" style="--card-color:${color}">${dept ? DEPT_ICONS[dept.icon] || "" : ""}</div>
         <div class="ticket-summary-main">
           <div class="ticket-dept-name" style="color:${color}">${escapeHtml(dept ? dept.name : app.department)}</div>
-          <div class="ticket-applicant">${escapeHtml(app.roblox_username)}<span class="ticket-applicant-sub">Discord: ${escapeHtml(app.discord_username)}</span></div>
+          <div class="ticket-applicant">
+            ${escapeHtml(app.roblox_username)}${copyBtnHtml(app.roblox_username, "Roblox username")}
+            <span class="ticket-applicant-sub">Discord: ${escapeHtml(app.discord_username)}${copyBtnHtml(app.discord_username, "Discord username")}</span>
+          </div>
         </div>
         <div class="ticket-summary-meta">
           ${app.status === "approved" ? `<span class="a-badge a-badge-approved">Approved</span>` : ""}
@@ -771,6 +780,28 @@ function renderDashboard() {
   document.getElementById("appDeptFilter").addEventListener("change", renderTickets);
   document.getElementById("appStatusFilter").addEventListener("change", renderTickets);
   document.getElementById("discordUserSearchInput").addEventListener("input", renderDiscordUsersList);
+
+  // Delegated on the list itself (stable across renderTickets() re-renders)
+  // rather than per-row — the copy buttons live inside a <summary>, so this
+  // also has to stop the click from toggling the ticket open/closed.
+  document.getElementById("adminTicketsList").addEventListener("click", async (e) => {
+    const btn = e.target.closest(".ticket-copy-btn");
+    if (!btn) return;
+    e.preventDefault();
+    e.stopPropagation();
+    try {
+      await navigator.clipboard.writeText(btn.dataset.copy);
+    } catch (err) {
+      return;
+    }
+    const original = btn.innerHTML;
+    btn.innerHTML = CHECK_ICON;
+    btn.classList.add("copied");
+    setTimeout(() => {
+      btn.innerHTML = original;
+      btn.classList.remove("copied");
+    }, 1200);
+  });
 
   if (isOwner) {
     document.getElementById("adminSeedMissingBtn").onclick = async () => {
