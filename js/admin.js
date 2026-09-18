@@ -329,6 +329,16 @@ function bindHouseActions() {
   });
 }
 
+function ticketMessageHtml(m) {
+  const when = new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" });
+  return `
+    <div class="ticket-message">
+      ${escapeHtml(m.body)}
+      <span class="ticket-message-date">You · ${when}</span>
+    </div>
+  `;
+}
+
 function ticketAnswersHtml(dept, answers) {
   const entries = dept
     ? dept.questions.map((q) => [q.label, answers[q.id], q.type === "textarea"])
@@ -392,23 +402,6 @@ function ticketHtml(app) {
             : ""
         }
         ${
-          app.messages && app.messages.length
-            ? `<div class="ticket-messages">
-                 <span class="ticket-why-label">Messages sent</span>
-                 ${app.messages
-                   .map(
-                     (m) => `
-                   <div class="ticket-message">
-                     <span class="ticket-message-date">${new Date(m.created_at).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}</span>
-                     ${escapeHtml(m.body)}
-                   </div>
-                 `
-                   )
-                   .join("")}
-               </div>`
-            : ""
-        }
-        ${
           app.image_path
             ? `<a class="ticket-image-link" href="${app.image_path}" target="_blank" rel="noopener">
                  <img class="ticket-image" src="${app.image_path}" alt="Attached image" />
@@ -426,8 +419,18 @@ function ticketHtml(app) {
                   <button class="a-btn a-btn-danger" data-action="decline-ticket" data-id="${app.id}">Decline</button>
                 `
           }
-          <button class="a-btn" data-action="message-ticket" data-id="${app.id}">Message</button>
           <button class="a-btn a-btn-danger" data-action="dismiss-ticket" data-id="${app.id}">Dismiss ticket</button>
+        </div>
+
+        <div class="ticket-thread">
+          <span class="ticket-why-label">Messages</span>
+          <div class="ticket-message-list" id="ticketMessages-${app.id}">${(app.messages || []).map(ticketMessageHtml).join("")}</div>
+          <div class="ticket-reply">
+            <textarea class="ticket-reply-input" id="ticketReply-${app.id}" placeholder="Write your reply here."></textarea>
+            <div class="ticket-reply-actions">
+              <button class="a-btn a-btn-primary" data-action="send-ticket-message" data-id="${app.id}">Send reply</button>
+            </div>
+          </div>
         </div>
       </div>
     </details>
@@ -491,29 +494,32 @@ function renderTickets() {
     };
   });
 
-  el.querySelectorAll('[data-action="message-ticket"]').forEach((btn) => {
+  el.querySelectorAll('[data-action="send-ticket-message"]').forEach((btn) => {
     btn.onclick = async (e) => {
       e.preventDefault();
       const id = btn.dataset.id;
-      const message = await Dialog.prompt({
-        kicker: "Admin only",
-        title: "Message the applicant",
-        label: "Message",
-        placeholder: "A note or question about their application...",
-        multiline: true,
-        required: true,
-        confirmText: "Send"
-      });
-      if (!message) return;
-      const { dmSent } = await Api.messageApplicant(id, message, adminSecret);
-      await refreshApplications();
-      await Dialog.alert({
-        title: "Message sent",
-        message: dmSent
-          ? "They've been DMed on Discord."
-          : "Saved. They weren't signed in with Discord when they applied, so no DM could be sent. They'll still see it if they sign in on the site.",
-        icon: dmSent ? "discord" : "info"
-      });
+      const textarea = document.getElementById(`ticketReply-${id}`);
+      const body = textarea.value.trim();
+      if (!body) return;
+
+      btn.disabled = true;
+      try {
+        const { message } = await Api.messageApplicant(id, body, adminSecret);
+        // Append in place instead of a full refreshApplications() re-render
+        // — that would collapse this <details> back closed, losing the
+        // thread the admin's mid-conversation with.
+        const app = allApplications.find((a) => String(a.id) === String(id));
+        if (app) {
+          app.messages = app.messages || [];
+          app.messages.push(message);
+        }
+        document.getElementById(`ticketMessages-${id}`).insertAdjacentHTML("beforeend", ticketMessageHtml(message));
+        textarea.value = "";
+      } catch (err) {
+        await Dialog.alert({ title: "Couldn't send", message: err.message, icon: "warning", cardColor: "var(--red)" });
+      } finally {
+        btn.disabled = false;
+      }
     };
   });
 

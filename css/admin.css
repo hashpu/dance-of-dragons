@@ -263,16 +263,38 @@
   font-size: 14px;
 }
 .ticket-why-label { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.5px; color: var(--a-muted); margin-bottom: 6px; }
-.ticket-messages { margin: 6px 0 4px; display: flex; flex-direction: column; gap: 8px; }
+/* The reply thread — always visible under the actions row, not a popup,
+   so sending a message reads like a chat/ticket thread instead of an
+   isolated action. Bubbles are right-aligned ("you" is always the admin
+   here — this is one-way, applicants never reply on-site). */
+.ticket-thread { margin-top: 14px; padding-top: 14px; border-top: 1px solid var(--a-border); }
+.ticket-message-list { display: flex; flex-direction: column; gap: 8px; margin-bottom: 10px; }
 .ticket-message {
+  align-self: flex-end;
+  max-width: 85%;
   padding: 10px 14px;
-  border-left: 3px solid var(--a-accent);
-  background: var(--a-panel-2);
-  border-radius: 0 6px 6px 0;
+  background: var(--a-accent-soft);
+  border-radius: 12px 12px 2px 12px;
   font-size: 13px;
   line-height: 1.5;
 }
-.ticket-message-date { display: block; font-size: 10.5px; color: var(--a-muted); margin-bottom: 4px; }
+.ticket-message-date { display: block; font-size: 10.5px; color: var(--a-muted); margin-top: 4px; }
+.ticket-reply { display: flex; flex-direction: column; gap: 8px; }
+.ticket-reply-input {
+  width: 100%;
+  min-height: 68px;
+  resize: vertical;
+  background: var(--a-panel-2);
+  border: 1px solid var(--a-border);
+  border-radius: 8px;
+  padding: 10px 12px;
+  color: var(--a-text);
+  font-family: inherit;
+  font-size: 13.5px;
+}
+.ticket-reply-input:focus { outline: none; border-color: var(--a-accent); }
+.ticket-reply-input::placeholder { color: var(--a-muted); }
+.ticket-reply-actions { display: flex; justify-content: flex-end; }
 .ticket-image-link { display: inline-block; margin: 14px 0 4px; }
 .ticket-image {
   max-width: 180px;
