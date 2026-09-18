@@ -4,16 +4,16 @@
   <script src="js/theme-init.js"></script>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Dungeons &amp; Dragons · House Archives</title>
-  <meta name="description" content="Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or build its family tree." />
+  <title>Dungeons &amp; Dragons</title>
+  <meta name="description" content="A Game of Thrones community site: house family trees, the Dance of the Dragons, and how to sign in and join." />
   <meta name="theme-color" content="#b0b0b5" />
   <meta property="og:type" content="website" />
   <meta property="og:site_name" content="Dungeons &amp; Dragons" />
-  <meta property="og:title" content="Dungeons &amp; Dragons · House Archives" />
-  <meta property="og:description" content="Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or build its family tree." />
+  <meta property="og:title" content="Dungeons &amp; Dragons" />
+  <meta property="og:description" content="A Game of Thrones community site: house family trees, the Dance of the Dragons, and how to sign in and join." />
   <meta name="twitter:card" content="summary" />
-  <meta name="twitter:title" content="Dungeons &amp; Dragons · House Archives" />
-  <meta name="twitter:description" content="Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or build its family tree." />
+  <meta name="twitter:title" content="Dungeons &amp; Dragons" />
+  <meta name="twitter:description" content="A Game of Thrones community site: house family trees, the Dance of the Dragons, and how to sign in and join." />
   <link rel="icon" type="image/svg+xml" href="favicon.svg" />
   <link rel="stylesheet" href="css/style.css" />
 </head>
@@ -29,39 +29,18 @@
           family trees, crown orders, and the history of <strong>the Dance</strong> itself.
         </p>
         <div class="hero-actions">
-          <a href="#houseGridWrap" class="btn btn-primary" id="exploreHousesBtn">Explore Houses</a>
+          <a href="/houses" class="btn btn-primary">Explore Houses</a>
           <a href="/apply" class="btn btn-outline">Apply to Join</a>
         </div>
       </div>
-      <a class="hero-scroll-cue" href="#houseGridWrap" aria-label="Scroll to the houses">
+      <a class="hero-scroll-cue" href="#howItWorks" aria-label="Scroll to learn how it works">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>
       </a>
     </section>
 
     <div class="ornament-divider" aria-hidden="true"><span></span></div>
 
-    <h1 class="page-title">Houses</h1>
-    <p class="page-desc">
-      Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or
-      add to its family tree. Some houses have builds available already.
-    </p>
-
-    <div class="search-stats-row">
-      <div class="input-wrap search-wrap">
-        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
-        <input id="houseSearch" placeholder="Search houses or members..." />
-      </div>
-      <div class="stats-row" id="statsRow"></div>
-    </div>
-
-    <div id="searchResults"></div>
-    <div class="house-grid-wrap collapsed" id="houseGridWrap">
-      <div class="house-grid" id="houseGrid"></div>
-    </div>
-
-    <div class="ornament-divider" aria-hidden="true"><span></span></div>
-
-    <div class="eyebrow">How It Works</div>
+    <div class="eyebrow" id="howItWorks">How It Works</div>
     <h2 class="section-title">Sign In Once, Run Everything From Here</h2>
 
     <div class="features-section">
@@ -269,28 +248,15 @@
         </ul>
       </div>
     </div>
-
-    <details class="admin-tools">
-      <summary><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span> Admin tools</summary>
-      <div class="admin-tools-actions">
-        <button class="btn-link" id="seedMissingBtn">Add any new houses (safe, doesn't touch existing data)</button>
-        <button class="btn-link" id="resetAllBtn">Reset all house data to defaults</button>
-      </div>
-    </details>
   </main>
 
   <script src="js/api.js"></script>
   <script src="js/bg-fx.js"></script>
   <script src="js/icons.js"></script>
-  <script src="js/dialog.js"></script>
   <script src="js/auth.js"></script>
   <script src="js/roblox-auth.js"></script>
   <script src="js/nav.js"></script>
-  <script src="js/avatar.js"></script>
-  <script src="js/house-card.js"></script>
   <script src="js/reveal.js"></script>
-  <script src="js/tilt.js"></script>
-  <script src="js/houses.js"></script>
   <script src="js/feature-widget.js"></script>
   <script>scrollReveal(".feature-item, .feature-widget-card");</script>
 </body>

@@ -46,7 +46,7 @@ function navEscapeHtml(str) {
   if (typeof consumeAuthRedirectHash === "function") await consumeAuthRedirectHash();
   const active = el.dataset.active || "";
   const links = [
-    { href: "/", label: "Houses", icon: "houses" },
+    { href: "/houses", label: "Houses", icon: "houses" },
     { href: "/factions", label: "Crown Orders", icon: "factions" },
     { href: "/apply", label: "Apply", icon: "apply" },
     { href: "/rules", label: "Rules", icon: "rules" }

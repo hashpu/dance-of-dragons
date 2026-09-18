@@ -1050,6 +1050,8 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   .hero-scroll-cue { animation: none; }
 }
 
+#howItWorks { scroll-margin-top: 90px; }
+
 .notfound-links {
   display: flex;
   flex-wrap: wrap;
@@ -1145,9 +1147,6 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
 /* House grid — auto-fills as many columns as fit (each at least 280px)
    instead of a fixed 3, so the wider .container actually puts the extra
    room to use on a big screen instead of just stretching 3 cards wider. */
-.house-grid-wrap { scroll-margin-top: 90px; }
-.house-grid-wrap.collapsed .house-grid { display: none; }
-
 .house-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));

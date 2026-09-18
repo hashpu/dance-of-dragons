@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <script src="js/theme-init.js"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Houses · Dungeons &amp; Dragons</title>
+  <meta name="description" content="Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or build its family tree." />
+  <meta name="theme-color" content="#b0b0b5" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Dungeons &amp; Dragons" />
+  <meta property="og:title" content="Houses · Dungeons &amp; Dragons" />
+  <meta property="og:description" content="Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or build its family tree." />
+  <meta name="twitter:card" content="summary" />
+  <meta name="twitter:title" content="Houses · Dungeons &amp; Dragons" />
+  <meta name="twitter:description" content="Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or build its family tree." />
+  <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+  <header class="topbar" id="topbar" data-active="/houses"></header>
+
+  <main class="container">
+    <h1 class="page-title">Houses</h1>
+    <p class="page-desc">
+      Every Great House of Westeros drawn into the Dance of the Dragons. Click a house to view or
+      add to its family tree. Some houses have builds available already.
+    </p>
+
+    <div class="search-stats-row">
+      <div class="input-wrap search-wrap">
+        <svg class="field-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>
+        <input id="houseSearch" placeholder="Search houses or members..." />
+      </div>
+      <div class="stats-row" id="statsRow"></div>
+    </div>
+
+    <div id="searchResults"></div>
+    <div class="house-grid" id="houseGrid"></div>
+
+    <details class="admin-tools">
+      <summary><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span> Admin tools</summary>
+      <div class="admin-tools-actions">
+        <button class="btn-link" id="seedMissingBtn">Add any new houses (safe, doesn't touch existing data)</button>
+        <button class="btn-link" id="resetAllBtn">Reset all house data to defaults</button>
+      </div>
+    </details>
+  </main>
+
+  <script src="js/api.js"></script>
+  <script src="js/bg-fx.js"></script>
+  <script src="js/icons.js"></script>
+  <script src="js/dialog.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/roblox-auth.js"></script>
+  <script src="js/nav.js"></script>
+  <script src="js/avatar.js"></script>
+  <script src="js/house-card.js"></script>
+  <script src="js/reveal.js"></script>
+  <script src="js/tilt.js"></script>
+  <script src="js/houses.js"></script>
+</body>
+</html>
