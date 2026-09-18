@@ -309,7 +309,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
 
 .profile-banner {
   height: 72px;
-  background: linear-gradient(135deg, var(--red), #2a2a2c);
+  background: linear-gradient(135deg, var(--red), var(--surface-3));
   position: relative;
 }
 .profile-banner::before {
@@ -605,7 +605,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   gap: 13px;
   margin-bottom: 16px;
   padding-bottom: 16px;
-  border-bottom: 1px solid #2c2c2e;
+  border-bottom: 1px solid var(--panel-border);
 }
 .rally-tier-icon {
   position: relative;
@@ -811,7 +811,7 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
   width: 40px;
   height: 40px;
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--red), #2a2a2c);
+  background: linear-gradient(135deg, var(--red), var(--surface-3));
 }
 .feature-widget-name { font-weight: 700; font-size: 14px; }
 .feature-widget-badges { display: flex; flex-wrap: wrap; gap: 6px; }
@@ -1743,7 +1743,7 @@ input[type="file"]::file-selector-button {
   font-family: inherit;
   font-size: 13px;
 }
-input[type="file"]::file-selector-button:hover { background: #333335; }
+input[type="file"]::file-selector-button:hover { background: color-mix(in srgb, var(--surface-3) 80%, white); }
 
 .unlock-row input { width: 100%; max-width: 240px; }
 
@@ -1952,7 +1952,7 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
   width: 24px;
   height: 24px;
   border-radius: 50%;
-  background: #262626;
+  background: var(--surface-2);
   border: 1px solid rgba(176, 176, 181, 0.6);
   color: var(--red);
   font-size: 13px;
@@ -2136,7 +2136,7 @@ input[type="file"]::file-selector-button:hover { background: #333335; }
 .modal {
   --card-color: var(--red);
   position: relative;
-  background: linear-gradient(180deg, #1a1a1c, var(--panel) 140px);
+  background: linear-gradient(180deg, var(--surface-1), var(--panel) 140px);
   border: 1px solid color-mix(in srgb, var(--card-color) 30%, var(--panel-border));
   border-radius: 4px;
   padding: 30px;
