@@ -44,6 +44,20 @@ function questionFieldHtml(q) {
       </div>
     `;
   }
+  if (q.type === "select") {
+    return `
+      <div class="field">
+        <label>${q.label}${q.required ? "" : ' <span class="hint">(optional)</span>'}</label>
+        <div class="input-wrap">
+          <select id="q_${q.id}" data-custom-select>
+            <option value="">Select one…</option>
+            ${q.options.map((o) => `<option value="${o}">${o}</option>`).join("")}
+          </select>
+          <span class="chevron">${DEPT_ICONS.chevron}</span>
+        </div>
+      </div>
+    `;
+  }
   const field =
     q.type === "textarea"
       ? `<textarea id="q_${q.id}" placeholder="${q.placeholder || ""}"></textarea>`
@@ -194,6 +208,8 @@ async function openApplyModal(deptKey) {
     document.getElementById("imagePreview").hidden = true;
     document.getElementById("clearImageBtn").hidden = true;
   });
+
+  document.querySelectorAll("[data-custom-select]").forEach((select) => wireCustomSelect(select.id));
 }
 
 function closeModal() {

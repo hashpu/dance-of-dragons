@@ -82,6 +82,63 @@ test("accepts a complete application and stores it", async () => {
   assert.equal(list.body[0].department, "lore");
 });
 
+test("accepts a complete House Blackfyre HVC application with all of its extra questions", async () => {
+  const res = await request
+    .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
+    .field("department", "blackfyre")
+    .field("robloxUsername", "Tester")
+    .field("availability", "10hrs/week, EST")
+    .field("why", "I want to portray a Blackfyre pretender")
+    .field(
+      "answers",
+      JSON.stringify({
+        robloxProfile: "https://www.roblox.com/users/1/profile",
+        experience: "NA",
+        character: "Daemon Blackfyre (Lord)",
+        daemonClaim: "He sees himself as Aegon IV's eldest trueborn-in-all-but-name son.",
+        characterMotivation: "Daeron II's Dornish blood and policies alienated the old military nobility.",
+        characterTraits: "Charismatic and a brilliant warrior, but prideful and impulsive.",
+        storylines: "A Redgrass Field-style pitched battle and a legitimacy propaganda campaign.",
+        oocDispute: "Take it to DMs, remind them it's a story, and de-escalate before it spreads.",
+        acceptLosses: "Yes",
+        persuasionLetter: "To the Lord of a hesitating house... ".repeat(10),
+        monologue: "A sworn brother's final thoughts before the charge... ".repeat(10),
+        ackDenial: "Yes",
+        ackRemoval: "Yes",
+        ackStoryTeamOversight: "Yes",
+        ackStoryTeamApproval: "Yes"
+      })
+    );
+
+  assert.equal(res.status, 201);
+  assert.ok(res.body.id);
+
+  const list = await request.get("/api/applications").set("x-admin-secret", "test-secret");
+  const blackfyreApp = list.body.find((a) => a.id === res.body.id);
+  assert.equal(blackfyreApp.department, "blackfyre");
+  assert.equal(blackfyreApp.answers.character, "Daemon Blackfyre (Lord)");
+});
+
+test("rejects a House Blackfyre HVC application missing one of its required questions", async () => {
+  const res = await request
+    .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
+    .field("department", "blackfyre")
+    .field("robloxUsername", "Tester")
+    .field("why", "I want to portray a Blackfyre pretender")
+    .field(
+      "answers",
+      JSON.stringify({
+        robloxProfile: "https://www.roblox.com/users/1/profile",
+        experience: "NA",
+        character: "Aegor Rivers"
+        // every other required question left unanswered
+      })
+    );
+  assert.equal(res.status, 400);
+});
+
 test("GET /api/applications requires the admin secret", async () => {
   const res = await request.get("/api/applications");
   assert.equal(res.status, 401);

@@ -109,5 +109,36 @@ const DEPARTMENTS = [
       { id: "pricingScenario", label: "A new item isn't selling well. How would you reprice or promote it to turn that around?", type: "textarea", required: true, section: "Selling" },
       { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", type: "text", required: true, section: "Selling" }
     ]
+  },
+  {
+    key: "blackfyre",
+    name: "House Blackfyre HVC",
+    color: "#7a1f1f",
+    icon: "star",
+    blurb: "“The King Who Bore the Sword.” Portray a key Blackfyre figure, Daemon, Bittersteel, Fireball, and more, driving the group's overarching campaign.",
+    questions: [
+      { id: "robloxProfile", label: "Roblox profile link", type: "text", placeholder: "https://www.roblox.com/users/.../profile", required: true, section: "Application Details" },
+      { id: "experience", label: "Past relevant experience (if none, put NA)", type: "textarea", required: true, section: "Application Details" },
+      {
+        id: "character",
+        label: "Character you are applying for",
+        type: "select",
+        required: true,
+        section: "Application Details",
+        options: ["Daemon Blackfyre (Lord)", "Aegor Rivers", "Ser Quentyn Ball", "Aegon Blackfyre", "Aemon Blackfyre"]
+      },
+      { id: "daemonClaim", label: "In your own words, why does Daemon Blackfyre believe his claim to the Iron Throne is superior to Daeron II's?", type: "textarea", required: true, section: "Lore & Character Mastery" },
+      { id: "characterMotivation", label: "In your own words, why does your chosen character support the Black Dragon (Daemon) over King Daeron II? Cite specific lore reasons.", type: "textarea", required: true, section: "Lore & Character Mastery" },
+      { id: "characterTraits", label: "What do you believe are your character's defining personality traits, strengths, and fatal flaws? How will you portray them accurately without reducing them to a one-dimensional shell of a character?", type: "textarea", required: true, section: "Lore & Character Mastery" },
+      { id: "storylines", label: "What specific lore events, military drills, or storylines will you run/attempt to run for House Blackfyre?", type: "textarea", required: true, section: "Lore & Character Mastery" },
+      { id: "oocDispute", label: "A member of House Blackfyre threatens to quit and accuses another player of metagaming after losing a skirmish. How do you handle this Out-of-Character (OOC) without damaging group morale?", type: "textarea", required: true, section: "Judgment & OOC Conduct" },
+      { id: "acceptLosses", label: "In-lore setbacks are essential for good storytelling. Are you comfortable accepting IC losses or taking historical damage to your character/house if required for the group's lore?", type: "yesno", required: true, section: "Judgment & OOC Conduct" },
+      { id: "persuasionLetter", label: "Write an in-lore letter where your character attempts to convince a neutral or hesitating house to support the Blackfyre cause. (150 words minimum)", type: "textarea", required: true, section: "Creative Writing" },
+      { id: "monologue", label: "Prior to a major engagement, your character encounters a close relative, former friend, or sworn brother who remained loyal to King Daeron II. Write their short internal monologue right before they draw their blade.", type: "textarea", required: true, section: "Creative Writing" },
+      { id: "ackDenial", label: "Do you acknowledge that your application can be denied for any reason, even reasons that do not relate to something you have written in this application?", type: "yesno", required: true, section: "Acknowledgements" },
+      { id: "ackRemoval", label: "Do you acknowledge that if selected for a character, you can be removed from that character for any reason?", type: "yesno", required: true, section: "Acknowledgements" },
+      { id: "ackStoryTeamOversight", label: "Do you acknowledge that story team holds oversight jurisdiction over House Blackfyre, and may give the house specific directives?", type: "yesno", required: true, section: "Acknowledgements" },
+      { id: "ackStoryTeamApproval", label: "Do you acknowledge that House Blackfyre will still need Story Team approval for major lore decisions?", type: "yesno", required: true, section: "Acknowledgements" }
+    ]
   }
 ];

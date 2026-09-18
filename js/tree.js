@@ -201,10 +201,6 @@ function buildForest(members) {
   return (byParent.root || []).map(attach);
 }
 
-function escapeAttr(str) {
-  return String(str).replace(/"/g, "&quot;");
-}
-
 const PENCIL_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 4.5l3 3L7 20H4v-3z"/></svg>`;
 const CROWN_BADGE_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 8l4.5 3L12 4l4.5 7L21 8l-2 11H5L3 8zm4 12h10v1.5H7V20z"/></svg>`;
 const NODE_HEART_ICON = `<svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 20.3s-7.2-4.4-9.4-8.7C1.2 8.4 2.8 5 6.2 5c2 0 3.4 1.2 5.8 4 2.4-2.8 3.8-4 5.8-4 3.4 0 5 3.4 3.6 6.6-2.2 4.3-9.4 8.7-9.4 8.7z"/></svg>`;
@@ -569,12 +565,6 @@ function personPickerFieldHtml(fieldId, selectedId, icon = FIELD_ICONS.user) {
   `;
 }
 
-function elFromHtml(html) {
-  const t = document.createElement("template");
-  t.innerHTML = html.trim();
-  return t.content.firstElementChild;
-}
-
 // Row markup for a person-picker's open panel: a "none" row plus one
 // avatar+name row per available member, filtered live by `query` (a plain
 // case-insensitive substring match on name — this list is at most a
@@ -603,31 +593,8 @@ function personPickerRowsHtml(members, excluded, selectedId, noneLabel, query) {
   return rows.join("");
 }
 
-// Currently-open person-pickers (their control objects — see wirePersonPicker),
-// for the single shared outside-click handler below. A picker adds itself
-// on open and removes itself on close, so this only ever holds what's
-// actually on screen right now.
-const openPersonPickers = new Set();
-
-// Closes any open person-picker's floating panel when a click lands outside
-// both its trigger and its panel. Registered once (module scope, guarded by
-// the flag below) rather than once per wirePersonPicker() call —
-// openMemberModal() re-wires fresh pickers every time the Add/Edit Member
-// modal opens, and a per-instance document listener would just keep piling
-// up across a session.
-let personPickerOutsideClickWired = false;
-function ensurePersonPickerOutsideClickHandling() {
-  if (personPickerOutsideClickWired) return;
-  personPickerOutsideClickWired = true;
-  document.addEventListener("click", (e) => {
-    // Copy to an array first — a picker's close() mutates openPersonPickers
-    // mid-iteration otherwise, which Set#forEach handles fine per spec, but
-    // this is clearer to read as "decide, then act."
-    [...openPersonPickers].forEach((picker) => {
-      if (!picker.containsTarget(e.target)) picker.close();
-    });
-  });
-}
+// openPersonPickers / ensurePersonPickerOutsideClickHandling now live in
+// custom-select.js (loaded before this file), shared with wireCustomSelect.
 
 // Wires a person-picker's open/close, live search filter, and row-click
 // select behavior. getMembers/getExcluded are re-invoked every time the
@@ -739,109 +706,7 @@ function wirePersonPicker(fieldId, { getMembers, getExcluded, noneLabel, onSelec
   return control;
 }
 
-// Native <select> dropdowns render their OPEN list using OS/browser chrome
-// that plain CSS can't restyle (system font, platform highlight color) —
-// exactly what stuck out against this site's own dark theme. This hides
-// the real <select> (still the source of truth: value, existing "change"
-// listeners on it keep firing unchanged, since picking a row here just
-// sets .value and dispatches a real change event) behind a themed trigger
-// + floating panel built by reading the select's own <option>/<optgroup>
-// children — so whatever built those elsewhere (roleFieldHtml,
-// marriedInFieldHtml, the plain house-option lists) doesn't need to
-// change at all. Reuses the same trigger/panel/row classes and the
-// outside-click registry as wirePersonPicker, just reading option text
-// instead of an avatar+name.
-function wireCustomSelect(selectId) {
-  const select = document.getElementById(selectId);
-  const wrap = select.closest(".input-wrap");
-  wrap.classList.add("person-picker-trigger");
-  wrap.setAttribute("role", "button");
-  wrap.setAttribute("tabindex", "0");
-  wrap.setAttribute("aria-haspopup", "listbox");
-  wrap.setAttribute("aria-expanded", "false");
-
-  const label = document.createElement("span");
-  label.className = "person-picker-trigger-label";
-  wrap.insertBefore(label, select);
-  select.hidden = true;
-
-  let panelEl = null;
-
-  function renderLabel() {
-    const opt = select.options[select.selectedIndex];
-    label.textContent = opt ? opt.textContent : "";
-  }
-
-  function rowHtml(opt) {
-    return `<button type="button" class="person-picker-row${opt.value === select.value ? " active" : ""}" data-value="${escapeAttr(opt.value)}">${opt.textContent}</button>`;
-  }
-  function renderRows() {
-    let html = "";
-    Array.from(select.children).forEach((child) => {
-      if (child.tagName === "OPTGROUP") {
-        html += `<div class="custom-select-group-label">${child.label}</div>`;
-        Array.from(child.children).forEach((opt) => (html += rowHtml(opt)));
-      } else if (child.tagName === "OPTION") {
-        html += rowHtml(child);
-      }
-    });
-    return html;
-  }
-
-  function position() {
-    const r = wrap.getBoundingClientRect();
-    panelEl.style.left = `${r.left}px`;
-    panelEl.style.top = `${r.bottom + 6}px`;
-    panelEl.style.width = `${r.width}px`;
-  }
-  function repositionIfOpen() {
-    if (panelEl) position();
-  }
-
-  function open() {
-    if (panelEl) return;
-    wrap.setAttribute("aria-expanded", "true");
-    panelEl = elFromHtml(`<div class="person-picker-panel"><div class="person-picker-list">${renderRows()}</div></div>`);
-    document.body.appendChild(panelEl);
-    position();
-    panelEl.querySelectorAll(".person-picker-row").forEach((row) => {
-      row.onclick = () => {
-        select.value = row.dataset.value;
-        select.dispatchEvent(new Event("change", { bubbles: true }));
-        renderLabel();
-        close();
-        wrap.focus();
-      };
-    });
-    window.addEventListener("resize", repositionIfOpen);
-    window.addEventListener("scroll", repositionIfOpen, true);
-    openPersonPickers.add(control);
-  }
-  function close() {
-    if (!panelEl) return;
-    panelEl.remove();
-    panelEl = null;
-    wrap.setAttribute("aria-expanded", "false");
-    window.removeEventListener("resize", repositionIfOpen);
-    window.removeEventListener("scroll", repositionIfOpen, true);
-    openPersonPickers.delete(control);
-  }
-
-  wrap.addEventListener("click", () => (panelEl ? close() : open()));
-  wrap.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" || e.key === " ") {
-      e.preventDefault();
-      panelEl ? close() : open();
-    } else if (e.key === "Escape") {
-      close();
-    }
-  });
-  ensurePersonPickerOutsideClickHandling();
-  renderLabel();
-
-  const control = { containsTarget: (target) => wrap.contains(target) || (panelEl && panelEl.contains(target)), close };
-  return control;
-}
+// wireCustomSelect now lives in custom-select.js (loaded before this file).
 
 function updateParentPreview() {
   const preview = document.getElementById("parentPreview");

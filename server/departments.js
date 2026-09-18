@@ -44,7 +44,23 @@ const DEPARTMENTS = [
     questions: [{ id: "experience", label: "Experience with sales, marketing, or running a shop/storefront (in Roblox or elsewhere)", required: true },
                 { id: "motivation", label: "What interests you about running the AFL Team's shop specifically?", required: true },
                 { id: "pricingScenario", label: "A new item isn't selling well. How would you reprice or promote it to turn that around?", required: true },
-                { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", required: true }] }
+                { id: "commitment", label: "How many hours per week can you commit to AFL Team activities?", required: true }] },
+  { key: "blackfyre", name: "House Blackfyre HVC", color: "#7a1f1f",
+    questions: [{ id: "robloxProfile", label: "Roblox profile link", required: true },
+                { id: "experience", label: "Past relevant experience (if none, put NA)", required: true },
+                { id: "character", label: "Character you are applying for", required: true },
+                { id: "daemonClaim", label: "Why does Daemon Blackfyre believe his claim to the Iron Throne is superior to Daeron II's?", required: true },
+                { id: "characterMotivation", label: "Why does your chosen character support the Black Dragon (Daemon) over King Daeron II? Cite specific lore reasons.", required: true },
+                { id: "characterTraits", label: "What are your character's defining personality traits, strengths, and fatal flaws, and how will you portray them without reducing them to a one-dimensional shell?", required: true },
+                { id: "storylines", label: "What specific lore events, military drills, or storylines will you run/attempt to run for House Blackfyre?", required: true },
+                { id: "oocDispute", label: "A member of House Blackfyre threatens to quit and accuses another player of metagaming after losing a skirmish. How do you handle this OOC without damaging group morale?", required: true },
+                { id: "acceptLosses", label: "Are you comfortable accepting IC losses or taking historical damage to your character/house if required for the group's lore?", required: true },
+                { id: "persuasionLetter", label: "In-lore letter convincing a neutral or hesitating house to support the Blackfyre cause (150 words minimum)", required: true },
+                { id: "monologue", label: "Internal monologue of a loyalist relative/friend/sworn brother right before your character's engagement with them", required: true },
+                { id: "ackDenial", label: "Acknowledge: this application can be denied for any reason, even ones unrelated to what you've written", required: true },
+                { id: "ackRemoval", label: "Acknowledge: if selected for a character, you can be removed from that character for any reason", required: true },
+                { id: "ackStoryTeamOversight", label: "Acknowledge: story team holds oversight jurisdiction over House Blackfyre and may give it specific directives", required: true },
+                { id: "ackStoryTeamApproval", label: "Acknowledge: House Blackfyre still needs Story Team approval for major lore decisions", required: true }] }
 ];
 
 function findDepartment(key) {
