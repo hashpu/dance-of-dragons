@@ -801,12 +801,37 @@ function renderDashboard() {
       const user = await Dialog.search({
         kicker: "Staff",
         title: "Add staff by Discord account",
-        message: "Only accounts that have signed in with Discord on the site before show up here. Whoever you pick can open the admin dashboard right away, no password needed.",
+        message: "Only accounts that have signed in with Discord on the site before show up here. Whoever you pick can open the admin dashboard right away, no password required.",
         fetchResults: (query) => Api.searchDiscordUsers(query, adminSecret)
       });
       if (!user) return;
+
+      const wantsPassword = await Dialog.confirm({
+        kicker: "Staff",
+        title: `Also give ${user.username} a password?`,
+        message: "Optional — lets them log in with a password too, not just by signing in with that Discord account.",
+        confirmText: "Set a password",
+        cancelText: "Skip",
+        icon: "lock"
+      });
+
+      let password;
+      if (wantsPassword) {
+        password = await Dialog.prompt({
+          kicker: "Staff",
+          title: `Set a password for ${user.username}`,
+          label: "Password",
+          type: "password",
+          placeholder: "••••••••",
+          confirmText: "Add staff",
+          icon: "lock",
+          required: true
+        });
+        if (!password) return;
+      }
+
       try {
-        await Api.addStaffByDiscord(user.id, adminSecret);
+        await Api.addStaffByDiscord(user.id, adminSecret, password);
         await refreshStaff();
       } catch (e) {
         await Dialog.alert({ title: "Couldn't add staff", message: e.message, icon: "warning", cardColor: "var(--red)" });

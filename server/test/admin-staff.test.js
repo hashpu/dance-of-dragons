@@ -3,7 +3,7 @@ const assert = require("node:assert");
 process.env.ADMIN_SECRET = "test-secret";
 
 const { setupTestDb } = require("../db-test-utils");
-setupTestDb();
+const memPool = setupTestDb();
 const app = require("../app");
 const request = require("supertest")(app);
 
@@ -53,4 +53,24 @@ test("the new staff account shows up in the staff list and can be revoked", asyn
 
   const whoamiAfterRevoke = await request.get("/api/admin/whoami").set("x-admin-secret", "needleneedle");
   assert.equal(whoamiAfterRevoke.status, 401);
+});
+
+test("a Discord-based staff account can also get a password, letting them log in either way", async () => {
+  await memPool.query(`INSERT INTO discord_users (id, username, avatar, last_seen_at) VALUES ($1, $2, $3, now())`, [
+    "staff-discord-1",
+    "SansaStark",
+    ""
+  ]);
+
+  const created = await request
+    .post("/api/admin/staff")
+    .set("x-admin-secret", "test-secret")
+    .send({ discordUserId: "staff-discord-1", password: "winterfell1" });
+  assert.equal(created.status, 201);
+  assert.equal(created.body.name, "SansaStark");
+
+  const whoami = await request.get("/api/admin/whoami").set("x-admin-secret", "winterfell1");
+  assert.equal(whoami.status, 200);
+  assert.equal(whoami.body.role, "staff");
+  assert.equal(whoami.body.name, "SansaStark");
 });

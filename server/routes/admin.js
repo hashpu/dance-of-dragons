@@ -38,11 +38,12 @@ router.get("/staff", requireOwner, async (req, res, next) => {
   }
 });
 
-// POST /api/admin/staff — owner only: grants staff access, either
+// POST /api/admin/staff — owner only: grants staff access. Either
 // { discordUserId } (to an account that's already signed in on the site at
-// least once — no password, being signed in as that account is the login),
-// or { name, password } (a standalone login for someone without a Discord
-// account to link, or who'd rather not use one for this).
+// least once), { name, password } (a standalone login for someone without a
+// Discord account to link), or discordUserId + password together — that
+// account can then log in either way, since identifyAdmin already checks
+// Discord first and falls back to the password hash.
 router.post("/staff", requireOwner, async (req, res, next) => {
   try {
     const discordUserId = (req.body.discordUserId || "").trim();
@@ -56,8 +57,12 @@ router.post("/staff", requireOwner, async (req, res, next) => {
       const { rows: existing } = await pool.query("SELECT id FROM staff_accounts WHERE discord_user_id = $1", [discordUserId]);
       if (existing[0]) return res.status(400).json({ error: "That account already has staff access." });
 
+      const passwordHash = password ? await bcrypt.hash(password, 10) : null;
       const id = crypto.randomUUID();
-      await pool.query("INSERT INTO staff_accounts (id, name, discord_user_id) VALUES ($1,$2,$3)", [id, du[0].username, discordUserId]);
+      await pool.query(
+        "INSERT INTO staff_accounts (id, name, discord_user_id, password_hash) VALUES ($1,$2,$3,$4)",
+        [id, du[0].username, discordUserId, passwordHash]
+      );
       return res.status(201).json({ id, name: du[0].username });
     }
 
