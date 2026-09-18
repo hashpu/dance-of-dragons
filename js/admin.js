@@ -739,7 +739,6 @@ function renderDashboard() {
       <p class="admin-section-desc">Staff can manage houses and applications. Only you can delete houses, manage staff, or reset data.</p>
       <div class="admin-toolbar">
         <button class="a-btn a-btn-primary" id="addStaffBtn">+ Add staff by Discord</button>
-        <button class="a-btn" id="addStaffPasswordBtn">+ Add staff with a password</button>
       </div>
       <div id="adminStaffList"></div>
     </div>`
@@ -832,36 +831,6 @@ function renderDashboard() {
 
       try {
         await Api.addStaffByDiscord(user.id, adminSecret, password);
-        await refreshStaff();
-      } catch (e) {
-        await Dialog.alert({ title: "Couldn't add staff", message: e.message, icon: "warning", cardColor: "var(--red)" });
-      }
-    };
-
-    document.getElementById("addStaffPasswordBtn").onclick = async () => {
-      const name = await Dialog.prompt({
-        kicker: "Staff",
-        title: "Add staff with a password",
-        label: "Their name",
-        placeholder: "e.g. Jon",
-        confirmText: "Next",
-        icon: "lock",
-        required: true
-      });
-      if (!name) return;
-      const password = await Dialog.prompt({
-        kicker: "Staff",
-        title: `Set a password for ${name}`,
-        label: "Password",
-        type: "password",
-        placeholder: "••••••••",
-        confirmText: "Add staff",
-        icon: "lock",
-        required: true
-      });
-      if (!password) return;
-      try {
-        await Api.addStaffByPassword(name, password, adminSecret);
         await refreshStaff();
       } catch (e) {
         await Dialog.alert({ title: "Couldn't add staff", message: e.message, icon: "warning", cardColor: "var(--red)" });
