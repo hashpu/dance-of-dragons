@@ -29,6 +29,8 @@ async function renderHouseGrid() {
   document.getElementById("houseGrid").innerHTML = houses.map(houseCardHtml).join("");
   scrollReveal(".house-card", document.getElementById("houseGrid"));
   renderStats(houses);
+  document.getElementById("houseExploreCtaDesc").textContent =
+    `${houses.length} houses, click through to browse each one and its family tree.`;
 
   const unlocked = houses.filter((h) => !h.locked && h.memberCount > 0);
   const details = await Promise.all(unlocked.map((h) => Api.getHouse(h.slug).catch(() => null)));

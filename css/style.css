@@ -1145,24 +1145,9 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; }
 /* House grid — auto-fills as many columns as fit (each at least 280px)
    instead of a fixed 3, so the wider .container actually puts the extra
    room to use on a big screen instead of just stretching 3 cards wider. */
-.house-grid-wrap { position: relative; }
-.house-grid-wrap.collapsed .house-grid {
-  max-height: 400px;
-  overflow: hidden;
-}
-.house-grid-fade {
-  display: none;
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  height: 160px;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 22px;
-  background: linear-gradient(180deg, transparent, var(--bg) 78%);
-}
-.house-grid-wrap.collapsed .house-grid-fade { display: flex; }
+.house-grid-wrap.collapsed .house-grid { display: none; }
+.house-explore-cta { display: none; }
+.house-grid-wrap.collapsed .house-explore-cta { display: flex; }
 
 .house-grid {
   display: grid;
