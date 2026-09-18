@@ -446,7 +446,7 @@ function roleFieldHtml(currentRole) {
         <span class="chevron">${FIELD_ICONS.chevron}</span>
       </div>
       <div class="field-custom-wrap" id="fRoleCustomWrap"${isCustom ? "" : " hidden"}>
-        <input id="fRoleCustom" placeholder="Type a custom title" value="${isCustom ? escapeAttr(currentRole) : ""}" />
+        <input id="fRoleCustom" placeholder="Type a custom title" value="${isCustom ? escapeAttr(currentRole) : ""}" autocomplete="off" />
       </div>
     </div>
   `;
@@ -483,7 +483,7 @@ function marriedInFieldHtml(currentNote, houses, currentHouseSlug) {
         <span class="chevron">${FIELD_ICONS.chevron}</span>
       </div>
       <div class="field-custom-wrap" id="fNoteCustomWrap"${isCustom ? "" : " hidden"}>
-        <input id="fNoteCustom" placeholder="e.g. Married into the family" value="${isCustom ? escapeAttr(currentNote) : ""}" />
+        <input id="fNoteCustom" placeholder="e.g. Married into the family" value="${isCustom ? escapeAttr(currentNote) : ""}" autocomplete="off" />
       </div>
     </div>
   `;
@@ -881,7 +881,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
           <label>Name</label>
           <div class="input-wrap">
             ${FIELD_ICONS.user}
-            <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" />
+            <input id="fName" placeholder="Who are you adding?" value="${isEdit ? escapeAttr(member.name) : ""}" autocomplete="off" />
           </div>
         </div>
 
@@ -928,14 +928,14 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
               <label>Roblox build link</label>
               <div class="input-wrap">
                 ${FIELD_ICONS.link}
-                <input id="fBuildLink" placeholder="https://www.roblox.com/games/..." value="${isEdit ? escapeAttr(member.buildLink || "") : ""}" />
+                <input id="fBuildLink" placeholder="https://www.roblox.com/games/..." value="${isEdit ? escapeAttr(member.buildLink || "") : ""}" autocomplete="off" />
               </div>
             </div>
             <div class="field">
               <label>Roblox profile link</label>
               <div class="input-wrap">
                 ${FIELD_ICONS.badge}
-                <input id="fRobloxProfile" placeholder="https://www.roblox.com/users/.../profile" value="${isEdit ? escapeAttr(member.robloxProfile || "") : ""}" />
+                <input id="fRobloxProfile" placeholder="https://www.roblox.com/users/.../profile" value="${isEdit ? escapeAttr(member.robloxProfile || "") : ""}" autocomplete="off" />
               </div>
             </div>
           </div>
@@ -944,7 +944,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
             <label>Discord account ID <span class="hint">(the real person behind this character, optional)</span></label>
             <div class="input-wrap">
               ${FIELD_ICONS.discord}
-              <input id="fDiscordId" placeholder="e.g. 123456789012345678" value="${isEdit ? escapeAttr(member.discordId || "") : ""}" />
+              <input id="fDiscordId" placeholder="e.g. 123456789012345678" value="${isEdit ? escapeAttr(member.discordId || "") : ""}" autocomplete="off" />
             </div>
           </div>
 
@@ -953,7 +953,7 @@ async function openMemberModal({ parentId, member, presetSpouseId }) {
             <div class="avatar-field-row">
               <div class="input-wrap" style="flex:1">
                 ${FIELD_ICONS.image}
-                <input id="fAvatar" placeholder="https://... .png / .gif" value="${isEdit ? escapeAttr(member.avatarUrl || "") : ""}" />
+                <input id="fAvatar" placeholder="https://... .png / .gif" value="${isEdit ? escapeAttr(member.avatarUrl || "") : ""}" autocomplete="off" />
               </div>
               <img id="avatarPreview" class="avatar-preview" alt="" hidden />
               <button type="button" class="field-clear" id="uploadAvatarBtn" title="Upload a photo or GIF">${FIELD_ICONS.upload}</button>
