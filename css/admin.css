@@ -256,8 +256,18 @@
 }
 .a-btn:disabled { opacity: 0.6; cursor: default; }
 .a-btn:disabled:hover { background: var(--a-panel-2); border-color: var(--a-border); }
+.a-btn-danger {
+  background: color-mix(in srgb, var(--a-danger) 14%, var(--a-panel-2));
+  border-color: color-mix(in srgb, var(--a-danger) 45%, var(--a-border));
+  color: var(--a-danger);
+}
+.a-btn-danger:hover {
+  background: color-mix(in srgb, var(--a-danger) 24%, var(--a-panel-2));
+  border-color: var(--a-danger);
+}
 .a-link { background: none; border: none; padding: 0; font: inherit; color: var(--a-accent); cursor: pointer; font-size: 12.5px; font-weight: 600; }
 .a-link:hover { text-decoration: underline; }
+.a-link-danger { color: var(--a-danger); }
 
 /* Houses table */
 .admin-table-wrap { border: 1px solid var(--a-border); border-radius: 8px; overflow: hidden; overflow-x: auto; box-shadow: 0 12px 28px -18px rgba(0, 0, 0, 0.7); }
