@@ -29,6 +29,8 @@ async function renderHouseGrid() {
   document.getElementById("houseGrid").innerHTML = houses.map(houseCardHtml).join("");
   scrollReveal(".house-card", document.getElementById("houseGrid"));
   renderStats(houses);
+  const ctaDesc = document.getElementById("houseExploreCtaDesc");
+  if (ctaDesc) ctaDesc.textContent = `${houses.length} houses, click through to browse each one and its family tree.`;
 
   const unlocked = houses.filter((h) => !h.locked && h.memberCount > 0);
   const details = await Promise.all(unlocked.map((h) => Api.getHouse(h.slug).catch(() => null)));
@@ -98,7 +100,15 @@ async function runSearch(query) {
 
 renderHouseGrid();
 
-document.getElementById("houseSearch").addEventListener("input", (e) => runSearch(e.target.value));
+function expandHouseGrid() {
+  document.getElementById("houseGridWrap")?.classList.remove("collapsed");
+}
+document.getElementById("exploreHousesBtn").addEventListener("click", expandHouseGrid);
+
+document.getElementById("houseSearch").addEventListener("input", (e) => {
+  if (e.target.value.trim()) expandHouseGrid();
+  runSearch(e.target.value);
+});
 
 document.getElementById("resetAllBtn").onclick = async () => {
   const ok = await Dialog.confirm({

@@ -36,7 +36,19 @@
     </div>
 
     <div id="searchResults"></div>
-    <div class="house-grid" id="houseGrid"></div>
+    <div class="house-grid-wrap collapsed" id="houseGridWrap">
+      <div class="house-grid" id="houseGrid"></div>
+    </div>
+    <div class="rally-cta house-explore-cta" id="houseExploreCta">
+      <div class="rally-cta-icon">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>
+      </div>
+      <div class="rally-cta-text">
+        <strong>Every Great House</strong>
+        <p id="houseExploreCtaDesc">Click through to browse each house and its family tree.</p>
+      </div>
+      <button type="button" class="btn btn-primary" id="exploreHousesBtn">Explore Houses</button>
+    </div>
 
     <details class="admin-tools">
       <summary><span class="chev"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></span> Admin tools</summary>
