@@ -1,3 +1,7 @@
+function escapeHtml(str) {
+  return String(str ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
 function deptCardHtml(dept) {
   return `
   <div class="house-card">
@@ -119,19 +123,22 @@ async function openApplyModal(deptKey) {
         </div>
 
         <div id="applyFormArea">
+          <div class="applying-as">
+            <img src="${discordAvatarUrl(getDiscordUser())}" alt="" />
+            <div>
+              <div class="hint">Applying as</div>
+              <div class="applying-as-name">${escapeHtml(getDiscordUser().username)}</div>
+            </div>
+          </div>
           <div class="more-grid">
             <div class="field">
               <label>Roblox username</label>
               <div class="input-wrap">${DEPT_ICONS.badge}<input id="q_roblox" placeholder="Your Roblox username" /></div>
             </div>
             <div class="field">
-              <label>Discord username</label>
-              <div class="input-wrap">${DEPT_ICONS.chat}<input id="q_discord" placeholder="e.g. yourname" /></div>
+              <label>Availability <span class="hint">(hours/week, timezone)</span></label>
+              <div class="input-wrap">${DEPT_ICONS.clock}<input id="q_availability" placeholder="e.g. 10hrs/week, EST" /></div>
             </div>
-          </div>
-          <div class="field">
-            <label>Availability <span class="hint">(hours/week, timezone)</span></label>
-            <div class="input-wrap">${DEPT_ICONS.clock}<input id="q_availability" placeholder="e.g. 10hrs/week, EST" /></div>
           </div>
 
           <div class="field">
@@ -207,6 +214,19 @@ function showSuccess(dept) {
 }
 
 async function submitApplication(deptKey) {
+  if (typeof getDiscordUser !== "function" || !getDiscordUser()) {
+    closeModal();
+    const ok = await Dialog.confirm({
+      title: "Sign in to apply",
+      message: "You need to sign in with Discord before submitting an application.",
+      confirmText: "Sign in with Discord",
+      icon: "discord",
+      cardColor: "var(--red)"
+    });
+    if (ok) beginDiscordLogin();
+    return;
+  }
+
   const dept = DEPARTMENTS.find((d) => d.key === deptKey);
   const val = (id) => (document.getElementById(id) ? document.getElementById(id).value.trim() : "");
 
@@ -214,12 +234,10 @@ async function submitApplication(deptKey) {
   dept.questions.forEach((q) => (answers[q.id] = questionValue(q)));
 
   const roblox = val("q_roblox");
-  const discord = val("q_discord");
   const why = val("q_why");
 
   const missing = [];
   if (!roblox) missing.push("Roblox username");
-  if (!discord) missing.push("Discord username");
   if (!why) missing.push("Why you want to join");
   dept.questions.forEach((q) => {
     if (q.required && !answers[q.id]) missing.push(q.label);
@@ -235,7 +253,6 @@ async function submitApplication(deptKey) {
   const form = new FormData();
   form.append("department", deptKey);
   form.append("robloxUsername", roblox);
-  form.append("discordUsername", discord);
   form.append("availability", val("q_availability"));
   form.append("why", why);
   form.append("answers", JSON.stringify(answers));

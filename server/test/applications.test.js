@@ -7,23 +7,57 @@ setupTestDb();
 const app = require("../app");
 const request = require("supertest")(app);
 
-test("rejects an application missing required fields", async () => {
+// Submitting an application now requires being signed in with Discord (see
+// POST /api/applications) — this one generic identity covers every test
+// below that doesn't care WHO the applicant is (field validation, the
+// admin approve/decline/delete plumbing), so they don't each need their
+// own bespoke fetch mock just to get past that gate. Tests that DO care
+// about a specific applicant identity (DM delivery, /mine, ownership
+// checks) install their own more detailed mock and restore this one
+// afterward via realFetch in a finally block.
+const REAL_FETCH = global.fetch;
+const GENERIC_APPLICANT_TOKEN = "generic-applicant-token";
+global.fetch = async (url, opts) => {
+  const urlStr = String(url);
+  const authHeader = (opts && opts.headers && opts.headers.Authorization) || "";
+  if (urlStr === "https://discord.com/api/users/@me") {
+    if (authHeader.replace("Bearer ", "") === GENERIC_APPLICANT_TOKEN) {
+      return { ok: true, json: async () => ({ id: "generic-applicant-id", username: "GenericApplicant" }) };
+    }
+    return { ok: false, status: 401 };
+  }
+  return REAL_FETCH(url, opts);
+};
+
+test("rejects an application submitted without signing in with Discord first", async () => {
   const res = await request.post("/api/applications").send({
     department: "lore",
     robloxUsername: "Tester",
-    discordUsername: "tester",
     why: "Because",
     answers: JSON.stringify({})
   });
+  assert.equal(res.status, 401);
+});
+
+test("rejects an application missing required fields", async () => {
+  const res = await request
+    .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
+    .send({
+      department: "lore",
+      robloxUsername: "Tester",
+      why: "Because",
+      answers: JSON.stringify({})
+    });
   assert.equal(res.status, 400);
 });
 
 test("accepts a complete application and stores it", async () => {
   const res = await request
     .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
     .field("department", "lore")
     .field("robloxUsername", "Tester")
-    .field("discordUsername", "tester")
     .field("availability", "5hrs/week")
     .field("why", "I love writing lore")
     .field(
@@ -56,9 +90,9 @@ test("GET /api/applications requires the admin secret", async () => {
 test("DELETE /api/applications/:id requires the admin secret and removes just that ticket", async () => {
   const created = await request
     .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
     .field("department", "lore")
     .field("robloxUsername", "ToDelete")
-    .field("discordUsername", "todelete")
     .field("why", "Testing deletion")
     .field(
       "answers",
@@ -91,9 +125,9 @@ test("DELETE /api/applications/:id requires the admin secret and removes just th
 test("POST /api/applications/:id/approve requires the admin secret and marks just that ticket approved", async () => {
   const created = await request
     .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
     .field("department", "lore")
     .field("robloxUsername", "ToApprove")
-    .field("discordUsername", "toapprove")
     .field("why", "Testing approval")
     .field(
       "answers",
@@ -122,7 +156,7 @@ test("POST /api/applications/:id/approve requires the admin secret and marks jus
   const approve = await request.post(`/api/applications/${id}/approve`).set("x-admin-secret", "test-secret");
   assert.equal(approve.status, 200);
   assert.equal(approve.body.status, "approved");
-  assert.equal(approve.body.dmSent, false); // nobody signed in with Discord when they applied — nothing to DM
+  assert.equal(approve.body.dmSent, false); // no DISCORD_BOT_TOKEN configured in this test — nothing to DM through
 
   const after = await request.get("/api/applications").set("x-admin-secret", "test-secret");
   assert.equal(after.body.find((a) => a.id === id).status, "approved");
@@ -131,9 +165,9 @@ test("POST /api/applications/:id/approve requires the admin secret and marks jus
 test("POST /api/applications/:id/decline requires the admin secret and a reason, and stores it", async () => {
   const created = await request
     .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
     .field("department", "lore")
     .field("robloxUsername", "ToDecline")
-    .field("discordUsername", "todecline")
     .field("why", "Testing decline")
     .field(
       "answers",
@@ -168,7 +202,7 @@ test("POST /api/applications/:id/decline requires the admin secret and a reason,
   assert.equal(declined.status, 200);
   assert.equal(declined.body.status, "declined");
   assert.equal(declined.body.declineReason, "Not a fit right now");
-  assert.equal(declined.body.dmSent, false); // nobody signed in with Discord when they applied
+  assert.equal(declined.body.dmSent, false); // no DISCORD_BOT_TOKEN configured in this test — nothing to DM through
 
   const after = await request.get("/api/applications").set("x-admin-secret", "test-secret");
   const row = after.body.find((a) => a.id === id);
@@ -209,7 +243,6 @@ test("an applicant signed in with Discord when they applied gets DMed and can se
       .set("Authorization", "Bearer applicant-token")
       .field("department", "lore")
       .field("robloxUsername", "SignedInApplicant")
-      .field("discordUsername", "whatever-they-typed")
       .field("why", "Testing DM + inbox notify")
       .field(
         "answers",
@@ -291,7 +324,6 @@ test("an admin can message an applicant on a still-pending application, and they
       .set("Authorization", "Bearer msg-applicant-token")
       .field("department", "lore")
       .field("robloxUsername", "MsgApplicantRblx")
-      .field("discordUsername", "whatever-they-typed")
       .field("why", "Testing messages")
       .field(
         "answers",
@@ -356,9 +388,9 @@ test("an admin can message an applicant on a still-pending application, and they
 test("rejects an unknown department", async () => {
   const res = await request
     .post("/api/applications")
+    .set("Authorization", `Bearer ${GENERIC_APPLICANT_TOKEN}`)
     .field("department", "not-a-real-department")
     .field("robloxUsername", "Tester")
-    .field("discordUsername", "tester")
     .field("why", "Because");
   assert.equal(res.status, 400);
 });

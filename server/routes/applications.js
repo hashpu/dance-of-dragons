@@ -4,7 +4,7 @@ const { pool } = require("../db");
 const { findDepartment } = require("../departments");
 const { requireAdmin } = require("../middleware/requireAdmin");
 const { saveUpload } = require("../uploads");
-const { getRequestDiscordUserId, sendDiscordDM } = require("../discord");
+const { getRequestDiscordUser, getRequestDiscordUserId, sendDiscordDM } = require("../discord");
 
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 8 * 1024 * 1024 } });
 const router = express.Router();
@@ -133,14 +133,21 @@ function applicantMessageDmEmbed({ deptName, body }) {
   };
 }
 
-// POST /api/applications — submit an application (multipart if it includes an image)
+// POST /api/applications — submit an application (multipart if it includes an image).
+// Requires being signed in with Discord — the client already gates opening
+// the form on this (see apply.js's openApplyModal), but that's only ever a
+// courtesy prompt; this is the actual enforcement, so there's no path to a
+// submitted application with no verified Discord identity behind it.
 router.post("/", upload.single("image"), async (req, res, next) => {
   try {
-    const { department, robloxUsername, discordUsername, availability, why } = req.body;
+    const discordUser = await getRequestDiscordUser(req);
+    if (!discordUser) return res.status(401).json({ error: "Sign in with Discord first." });
+
+    const { department, robloxUsername, availability, why } = req.body;
     const dept = findDepartment(department);
     if (!dept) return res.status(400).json({ error: "Unknown department." });
-    if (!robloxUsername || !discordUsername || !why) {
-      return res.status(400).json({ error: "Roblox username, Discord username, and 'why' are required." });
+    if (!robloxUsername || !why) {
+      return res.status(400).json({ error: "Roblox username and 'why' are required." });
     }
 
     let answers = {};
@@ -162,19 +169,17 @@ router.post("/", upload.single("image"), async (req, res, next) => {
       imagePath = await saveUpload(req.file.buffer, req.file.mimetype);
     }
 
-    // Only set if they're actually signed in with Discord on the site right
-    // now — never derived from the free-typed discordUsername field above.
-    // This is what lets an approve/decline notify them later (see
-    // /:id/approve, /:id/decline, and GET /mine below).
-    const discordUserId = await getRequestDiscordUserId(req);
-
+    // Both the username stored and the ID that lets an approve/decline (or
+    // a staff message) notify them later come straight from the verified
+    // token above — never a free-typed field the applicant could get wrong
+    // or spoof.
     const insertRes = await pool.query(
       `INSERT INTO applications (department, roblox_username, discord_username, availability, why, answers, image_path, discord_user_id)
        VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
-      [department, robloxUsername, discordUsername, availability || "", why, JSON.stringify(answers), imagePath, discordUserId]
+      [department, robloxUsername, discordUser.username, availability || "", why, JSON.stringify(answers), imagePath, discordUser.id]
     );
 
-    logApplication(dept, { robloxUsername, discordUsername, availability, why, answers }, imagePath);
+    logApplication(dept, { robloxUsername, discordUsername: discordUser.username, availability, why, answers }, imagePath);
 
     const webhookUrl = process.env[`WEBHOOK_${department.toUpperCase()}`] || process.env.WEBHOOK_APPLICATIONS;
     if (webhookUrl) {
@@ -182,7 +187,7 @@ router.post("/", upload.single("image"), async (req, res, next) => {
         await forwardToDiscord(
           webhookUrl,
           dept,
-          { robloxUsername, discordUsername, availability, why, answers },
+          { robloxUsername, discordUsername: discordUser.username, availability, why, answers },
           req.file ? req.file.buffer : null,
           imageFilename
         );

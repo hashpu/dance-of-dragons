@@ -2241,6 +2241,28 @@ input:focus, select:focus, textarea:focus {
   gap: 14px;
 }
 
+.applying-as {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 10px;
+  background: var(--bg);
+}
+
+.applying-as img {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.applying-as-name {
+  font-weight: 600;
+}
+
 .avatar-field-row { display: flex; align-items: center; gap: 10px; }
 
 .discord-account-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
