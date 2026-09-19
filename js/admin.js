@@ -15,6 +15,7 @@ let allApplications = [];
 let allStaff = [];
 let allDiscordUsers = [];
 let closedDepartments = [];
+let closedDepartmentDetails = [];
 
 // Applications hold fully public, unauthenticated free text (anyone can
 // submit one) that ends up rendered inside a privileged admin session that
@@ -33,6 +34,14 @@ const UNLOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" 
 const KEY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.5"/><path d="M10.5 12.5L19 4M19 4v3.5M19 4h-3.5"/></svg>`;
 const CROWN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l3.5 3L12 5l4.5 6L20 8l-1.6 9H5.6L4 8z"/></svg>`;
 const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12"/></svg>`;
+const DOWNLOAD_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11m0 0l-4-4m4 4l4-4M5 19h14"/></svg>`;
+const PLUS_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12h14"/></svg>`;
+const WARNING_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4L3 20h18L12 4z"/><path d="M12 10v4"/><circle cx="12" cy="17" r="0.5" fill="currentColor"/></svg>`;
+const HOUSE_TAB_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 10.5L12 4l8 6.5V19a1 1 0 01-1 1h-4v-6H9v6H5a1 1 0 01-1-1z"/></svg>`;
+const CLIPBOARD_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9 4.5V4a1 1 0 011-1h4a1 1 0 011 1v.5M9 11h6M9 15h6"/></svg>`;
+const DISCORD_TAB_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8.5" r="3.2"/><path d="M4.5 20c0-3.5 3.2-6 7.5-6s7.5 2.5 7.5 6"/></svg>`;
+const STAFF_TAB_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3"/><path d="M2.5 19c0-3 2.9-5.2 6.5-5.2s6.5 2.2 6.5 5.2"/><path d="M16 4.5a3 3 0 010 6M18.5 13.8c2.4.5 4 2.3 4 5.2"/></svg>`;
+const WRENCH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a4 4 0 00-5.4 4.6L4 16.2V20h3.8l5.3-5.3a4 4 0 004.6-5.4l-2.6 2.6-2-2z"/></svg>`;
 
 function copyBtnHtml(value, label) {
   return `<button type="button" class="ticket-copy-btn" data-copy="${escapeHtml(value)}" title="Copy ${label}" aria-label="Copy ${label}">${COPY_ICON}</button>`;
@@ -90,12 +99,13 @@ function renderGate(errorMessage) {
 }
 
 async function loadDashboard(secret) {
-  const [houses, applications, discordUsers, admin, closed] = await Promise.all([
+  const [houses, applications, discordUsers, admin, closed, closedDetails] = await Promise.all([
     Api.adminGetHouses(secret),
     Api.getApplications(secret),
     Api.searchDiscordUsers("", secret),
     Api.whoami(secret),
-    Api.getClosedDepartments()
+    Api.getClosedDepartments(),
+    Api.getClosedDepartmentsDetailed(secret)
   ]);
   adminSecret = secret;
   allHouses = houses;
@@ -103,6 +113,7 @@ async function loadDashboard(secret) {
   allDiscordUsers = discordUsers;
   currentAdmin = admin;
   closedDepartments = closed;
+  closedDepartmentDetails = closedDetails;
   allStaff = admin.role === "owner" ? await Api.getStaff(secret) : [];
   renderDashboard();
 }
@@ -187,15 +198,52 @@ function houseTableRowHtml(h) {
   `;
 }
 
+// Click a sortable <th> to sort by it; click again to reverse. Only the
+// <tbody> re-renders per keystroke/sort — the header row is static markup
+// from renderDashboard(), so its click handlers are bound once, separately
+// (see the "Sortable table headers" wiring below).
+let houseSort = { key: null, dir: 1 };
+
+function sortHouses(list) {
+  if (!houseSort.key) return list;
+  const { key, dir } = houseSort;
+  return [...list].sort((a, b) => {
+    let av, bv;
+    if (key === "name") {
+      av = a.name.toLowerCase();
+      bv = b.name.toLowerCase();
+    } else if (key === "locked") {
+      av = a.locked ? 1 : 0;
+      bv = b.locked ? 1 : 0;
+    } else {
+      av = a.memberCount;
+      bv = b.memberCount;
+    }
+    if (av < bv) return -1 * dir;
+    if (av > bv) return 1 * dir;
+    return a.name.localeCompare(b.name);
+  });
+}
+
+function updateSortHeaders() {
+  document.querySelectorAll(".admin-th-sort").forEach((th) => {
+    const active = th.dataset.sort === houseSort.key;
+    th.classList.toggle("active", active);
+    th.dataset.dir = active ? (houseSort.dir === 1 ? "asc" : "desc") : "";
+  });
+}
+
 function renderHouseTable() {
   const query = (document.getElementById("houseSearchInput")?.value || "").trim().toLowerCase();
   const filtered = query ? allHouses.filter((h) => h.name.toLowerCase().includes(query) || h.faction.toLowerCase().includes(query)) : allHouses;
+  const sorted = sortHouses(filtered);
 
-  document.getElementById("adminHousesTableBody").innerHTML = filtered.length
-    ? filtered.map(houseTableRowHtml).join("")
+  document.getElementById("adminHousesTableBody").innerHTML = sorted.length
+    ? sorted.map(houseTableRowHtml).join("")
     : `<tr class="admin-empty-row"><td colspan="6">No houses match "${escapeHtml(query)}".</td></tr>`;
 
   bindHouseActions();
+  updateSortHeaders();
 }
 
 function bindHouseActions() {
@@ -453,17 +501,24 @@ function ticketHtml(app) {
   `;
 }
 
-function renderTickets() {
+// Shared by the on-screen ticket list and the CSV export below, so
+// "export" always means exactly what's currently visible/filtered.
+function filteredApplications() {
   const query = (document.getElementById("appSearchInput")?.value || "").trim().toLowerCase();
   const deptFilter = document.getElementById("appDeptFilter")?.value || "";
   const statusFilter = document.getElementById("appStatusFilter")?.value || "";
 
-  const filtered = allApplications.filter((app) => {
+  return allApplications.filter((app) => {
     const matchesQuery = !query || app.roblox_username.toLowerCase().includes(query) || app.discord_username.toLowerCase().includes(query);
     const matchesDept = !deptFilter || app.department === deptFilter;
     const matchesStatus = !statusFilter || (app.status || "pending") === statusFilter;
     return matchesQuery && matchesDept && matchesStatus;
   });
+}
+
+function renderTickets() {
+  const query = (document.getElementById("appSearchInput")?.value || "").trim().toLowerCase();
+  const filtered = filteredApplications();
 
   const el = document.getElementById("adminTicketsList");
   el.innerHTML = filtered.length ? filtered.map(ticketHtml).join("") : `<p class="empty-state">No applications match.</p>`;
@@ -559,20 +614,99 @@ function renderTickets() {
   });
 }
 
-function renderStats() {
-  const locked = allHouses.filter((h) => h.locked).length;
-  const totalMembers = allHouses.reduce((sum, h) => sum + h.memberCount, 0);
-  const statHtml = (value, label, modifier, tab) => `
+// Builds a CSV from a header + array-of-arrays and triggers a browser
+// download — shared by every "Export CSV" button on the dashboard so they
+// all produce the same quoting/escaping and file-naming convention.
+function downloadCsv(filename, header, rows) {
+  const csvField = (v) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+  const csv = [header, ...rows].map((row) => row.map(csvField).join(",")).join("\r\n");
+
+  const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  URL.revokeObjectURL(url);
+}
+
+// Exports exactly what the toolbar's search/status/department filters
+// currently show — "export" means the same list the admin is looking at.
+function exportApplicationsCsv() {
+  const rows = filteredApplications();
+  if (!rows.length) {
+    Dialog.alert({ title: "Nothing to export", message: "No applications match the current filters." });
+    return;
+  }
+
+  const header = ["ID", "Department", "Roblox username", "Discord username", "Status", "Availability", "Why they want to join", "Submitted"];
+  const lines = rows.map((app) => {
+    const dept = DEPARTMENTS.find((d) => d.key === app.department);
+    return [
+      app.id,
+      dept ? dept.name : app.department,
+      app.roblox_username,
+      app.discord_username,
+      app.status || "pending",
+      app.availability || "",
+      app.why || "",
+      app.created_at ? new Date(app.created_at).toISOString() : ""
+    ];
+  });
+  downloadCsv(`applications-${new Date().toISOString().slice(0, 10)}.csv`, header, lines);
+}
+
+function exportHousesCsv() {
+  if (!allHouses.length) {
+    Dialog.alert({ title: "Nothing to export", message: "There are no houses yet." });
+    return;
+  }
+  const header = ["Slug", "Name", "Faction", "Locked", "Password set", "Leader (Discord ID)", "Members"];
+  const lines = allHouses.map((h) => [
+    h.slug,
+    h.name,
+    h.faction,
+    h.locked ? "Yes" : "No",
+    h.hasPassword ? "Yes" : "No",
+    h.lordDiscordUserId || "",
+    h.memberCount
+  ]);
+  downloadCsv(`houses-${new Date().toISOString().slice(0, 10)}.csv`, header, lines);
+}
+
+// Shared by the header's stat row and the Maintenance tab's overview row —
+// same clickable card, jumps straight to the tab it's counting.
+function statCardHtml(value, label, modifier, tab) {
+  return `
     <button type="button" class="admin-stat${modifier ? ` admin-stat-${modifier}` : ""}" onclick="switchTab('${tab}')">
       <div class="admin-stat-value">${value}</div><div class="admin-stat-label">${label}</div>
     </button>
   `;
+}
+
+function renderStats() {
+  const locked = allHouses.filter((h) => h.locked).length;
+  const totalMembers = allHouses.reduce((sum, h) => sum + h.memberCount, 0);
   document.getElementById("adminStats").innerHTML =
-    statHtml(allHouses.length, "Houses", "accent", "houses") +
-    statHtml(locked, "Locked", "danger", "houses") +
-    statHtml(allHouses.length - locked, "Unlocked", "success", "houses") +
-    statHtml(totalMembers, "Family tree members", "", "houses") +
-    statHtml(allApplications.length, "Applications", "accent", "applications");
+    statCardHtml(allHouses.length, "Houses", "accent", "houses") +
+    statCardHtml(locked, "Locked", "danger", "houses") +
+    statCardHtml(allHouses.length - locked, "Unlocked", "success", "houses") +
+    statCardHtml(totalMembers, "Family tree members", "", "houses") +
+    statCardHtml(allApplications.length, "Applications", "accent", "applications");
+}
+
+function renderMaintenanceStats() {
+  const el = document.getElementById("adminMaintenanceStats");
+  if (!el) return;
+  const pending = allApplications.filter((a) => (a.status || "pending") === "pending").length;
+  el.innerHTML =
+    statCardHtml(DEPARTMENTS.length, "Departments", "", "applications") +
+    statCardHtml(closedDepartments.length, "Departments closed", closedDepartments.length ? "danger" : "success", "applications") +
+    statCardHtml(pending, "Pending applications", pending ? "accent" : "", "applications") +
+    statCardHtml(allStaff.length, "Staff accounts", "", "staff") +
+    statCardHtml(allDiscordUsers.length, "Discord sign-ins", "", "signins");
 }
 
 function updateTabCounts() {
@@ -581,6 +715,7 @@ function updateTabCounts() {
   document.getElementById("signinsTabCount").textContent = allDiscordUsers.length;
   const staffCount = document.getElementById("staffTabCount");
   if (staffCount) staffCount.textContent = allStaff.length;
+  renderMaintenanceStats();
 }
 
 // Formats a timestamp as a short relative label ("3h ago") with the exact
@@ -690,11 +825,14 @@ function renderDiscordUsersList() {
 
 function deptLockRowHtml(dept) {
   const closed = closedDepartments.includes(dept.key);
+  const detail = closed ? closedDepartmentDetails.find((d) => d.department === dept.key) : null;
+  const closedSince = detail ? relativeTime(detail.closedAt) : null;
   return `
     <div class="admin-dept-lock-row" data-key="${dept.key}">
       <div class="admin-dept-lock-info">
         <span class="admin-dept-lock-name">${escapeHtml(dept.name)}</span>
         <span class="a-badge ${closed ? "a-badge-locked" : "a-badge-unlocked"}"><span class="dot"></span>${closed ? "Closed" : "Open"}</span>
+        ${closedSince ? `<span class="admin-table-time" title="${escapeHtml(closedSince.title)}">since ${closedSince.text}</span>` : ""}
       </div>
       <button class="a-btn ${closed ? "a-btn-primary" : "a-btn-danger"}" data-action="toggle-dept-lock" data-key="${dept.key}">
         ${closed ? "Reopen" : "Close"}
@@ -739,8 +877,12 @@ function renderDeptLocks() {
 }
 
 async function refreshDeptLocks() {
-  closedDepartments = await Api.getClosedDepartments();
+  [closedDepartments, closedDepartmentDetails] = await Promise.all([
+    Api.getClosedDepartments(),
+    Api.getClosedDepartmentsDetailed(adminSecret)
+  ]);
   renderDeptLocks();
+  renderMaintenanceStats();
 }
 
 function switchTab(name) {
@@ -757,11 +899,11 @@ function renderDashboard() {
     <div class="admin-stats" id="adminStats"></div>
 
     <div class="admin-tabs">
-      <button class="admin-tab active" data-tab="houses">Houses <span class="count" id="housesTabCount">0</span></button>
-      <button class="admin-tab" data-tab="applications">Applications <span class="count" id="appsTabCount">0</span></button>
-      <button class="admin-tab" data-tab="signins">Discord Sign-Ins <span class="count" id="signinsTabCount">0</span></button>
-      ${isOwner ? `<button class="admin-tab" data-tab="staff">Staff <span class="count" id="staffTabCount">0</span></button>` : ""}
-      ${isOwner ? `<button class="admin-tab" data-tab="maintenance">Maintenance</button>` : ""}
+      <button class="admin-tab active" data-tab="houses">${HOUSE_TAB_ICON}Houses <span class="count" id="housesTabCount">0</span></button>
+      <button class="admin-tab" data-tab="applications">${CLIPBOARD_ICON}Applications <span class="count" id="appsTabCount">0</span></button>
+      <button class="admin-tab" data-tab="signins">${DISCORD_TAB_ICON}Discord Sign-Ins <span class="count" id="signinsTabCount">0</span></button>
+      ${isOwner ? `<button class="admin-tab" data-tab="staff">${STAFF_TAB_ICON}Staff <span class="count" id="staffTabCount">0</span></button>` : ""}
+      ${isOwner ? `<button class="admin-tab" data-tab="maintenance">${WRENCH_ICON}Maintenance</button>` : ""}
     </div>
 
     <div class="admin-panel active" data-panel="houses">
@@ -771,7 +913,14 @@ function renderDashboard() {
       <div class="admin-table-wrap">
         <table class="admin-table">
           <thead>
-            <tr><th>House</th><th>Status</th><th>Password</th><th>Leader</th><th>Members</th><th></th></tr>
+            <tr>
+              <th class="admin-th-sort" data-sort="name">House</th>
+              <th class="admin-th-sort" data-sort="locked">Status</th>
+              <th>Password</th>
+              <th>Leader</th>
+              <th class="admin-th-sort" data-sort="members">Members</th>
+              <th></th>
+            </tr>
           </thead>
           <tbody id="adminHousesTableBody"></tbody>
         </table>
@@ -793,6 +942,7 @@ function renderDashboard() {
           <option value="">All departments</option>
           ${deptOptions}
         </select>
+        <button class="a-row-btn" id="exportApplicationsBtn" title="Export the filtered list as CSV">${DOWNLOAD_ICON}<span>Export CSV</span></button>
       </div>
       <div id="adminTicketsList"></div>
     </div>
@@ -822,12 +972,36 @@ function renderDashboard() {
       isOwner
         ? `
     <div class="admin-panel" data-panel="maintenance">
-      <div class="admin-danger-zone">
+      <p class="admin-section-desc">Site-wide housekeeping and data tools. Safe actions never remove or overwrite existing data; the danger zone can't be undone.</p>
+      <div class="admin-stats" id="adminMaintenanceStats"></div>
+
+      <div class="admin-action-group">
+        <h3>Safe actions</h3>
+        <div class="admin-action-cards">
+          <div class="admin-action-card">
+            <div class="admin-action-card-icon">${PLUS_ICON}</div>
+            <h4>Add any new houses</h4>
+            <p>Adds houses from the seed list that don't exist here yet. Never touches an existing house or its members.</p>
+            <button class="a-btn" id="adminSeedMissingBtn">Add new houses</button>
+          </div>
+          <div class="admin-action-card">
+            <div class="admin-action-card-icon">${DOWNLOAD_ICON}</div>
+            <h4>Export houses as CSV</h4>
+            <p>Downloads every house's lock status, password state, leader, and member count.</p>
+            <button class="a-btn" id="adminExportHousesBtn">Export CSV</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-action-group">
         <h3>Danger zone</h3>
-        <p>These affect every visitor's data. Only use them deliberately.</p>
-        <div class="admin-danger-actions">
-          <button class="a-btn" id="adminSeedMissingBtn">Add any new houses (safe)</button>
-          <button class="a-btn a-btn-danger" id="adminResetAllBtn">Reset all house data to defaults</button>
+        <div class="admin-action-cards">
+          <div class="admin-action-card danger">
+            <div class="admin-action-card-icon">${WARNING_ICON}</div>
+            <h4>Reset all house data</h4>
+            <p>Resets every house's lore, locks, and members back to default, for every visitor. This cannot be undone.</p>
+            <button class="a-btn a-btn-danger" id="adminResetAllBtn">Reset everything</button>
+          </div>
         </div>
       </div>
     </div>`
@@ -840,8 +1014,16 @@ function renderDashboard() {
   });
 
   document.getElementById("houseSearchInput").addEventListener("input", renderHouseTable);
+  document.querySelectorAll(".admin-th-sort").forEach((th) => {
+    th.addEventListener("click", () => {
+      const key = th.dataset.sort;
+      houseSort = { key, dir: houseSort.key === key ? houseSort.dir * -1 : 1 };
+      renderHouseTable();
+    });
+  });
   document.getElementById("appSearchInput").addEventListener("input", renderTickets);
   document.getElementById("appDeptFilter").addEventListener("change", renderTickets);
+  document.getElementById("exportApplicationsBtn").addEventListener("click", exportApplicationsCsv);
   document.getElementById("appStatusFilter").addEventListener("change", renderTickets);
   document.getElementById("discordUserSearchInput").addEventListener("input", renderDiscordUsersList);
 
@@ -890,6 +1072,8 @@ function renderDashboard() {
       await refreshHouses();
       await refreshApplications();
     };
+
+    document.getElementById("adminExportHousesBtn").addEventListener("click", exportHousesCsv);
 
     document.getElementById("addStaffBtn").onclick = async () => {
       const user = await Dialog.search({
@@ -941,6 +1125,7 @@ function renderDashboard() {
   renderDeptLocks();
   renderTickets();
   renderDiscordUsersList();
+  renderMaintenanceStats();
 }
 
 (async function initAdminPage() {

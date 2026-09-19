@@ -91,6 +91,7 @@ const Api = {
   discordMe: () => apiFetch("/discord/me"),
   submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData }),
   getClosedDepartments: () => apiFetch("/applications/closed-departments"),
+  getClosedDepartmentsDetailed: (secret) => apiFetch("/admin/departments/closed", { headers: { "x-admin-secret": secret } }),
   closeDepartment: (key, secret) => apiFetch(`/admin/departments/${key}/close`, { method: "POST", headers: { "x-admin-secret": secret } }),
   openDepartment: (key, secret) => apiFetch(`/admin/departments/${key}/open`, { method: "POST", headers: { "x-admin-secret": secret } })
 };

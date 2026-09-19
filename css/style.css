@@ -2688,8 +2688,7 @@ input:focus, select:focus, textarea:focus {
   padding-top: 18px;
   margin-bottom: 18px;
 }
-.more-options summary,
-.admin-tools summary {
+.more-options summary {
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2698,38 +2697,10 @@ input:focus, select:focus, textarea:focus {
   font-size: 13px;
   list-style: none;
 }
-.more-options summary::-webkit-details-marker,
-.admin-tools summary::-webkit-details-marker { display: none; }
-.more-options .chev,
-.admin-tools .chev { display: inline-flex; width: 14px; height: 14px; transition: transform 0.15s; }
-.more-options[open] .chev,
-.admin-tools[open] .chev { transform: rotate(90deg); }
+.more-options summary::-webkit-details-marker { display: none; }
+.more-options .chev { display: inline-flex; width: 14px; height: 14px; transition: transform 0.15s; }
+.more-options[open] .chev { transform: rotate(90deg); }
 .more-options[open] summary { margin-bottom: 18px; }
-.admin-tools[open] summary { margin-bottom: 14px; }
-
-/* Admin tools disclosure — tucks maintainer-only actions (reset data, assign
-   a Lord) behind a collapsed toggle so a normal visitor's page reads clean,
-   reusing the .more-options summary/chevron behavior above. */
-.admin-tools {
-  margin: 6px 0 30px;
-  padding: 14px 18px;
-  border: 1px dashed var(--panel-border);
-  border-radius: 4px;
-  background: rgba(255, 255, 255, 0.015);
-}
-.admin-tools summary {
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 1.5px;
-  text-transform: uppercase;
-}
-.admin-tools summary:hover { color: var(--text); }
-.admin-tools-actions {
-  display: flex;
-  gap: 20px;
-  flex-wrap: wrap;
-}
-.admin-tools-actions .btn-link { margin: 0; text-align: left; }
 
 .more-grid {
   display: grid;

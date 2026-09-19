@@ -119,6 +119,20 @@ router.post("/departments/:key/open", requireAdmin, async (req, res, next) => {
   }
 });
 
+// GET /api/admin/departments/closed — admin-only detail view (which
+// departments are closed AND when), for the dashboard to show "Closed 3h
+// ago" next to the toggle. Separate from the public
+// GET /api/applications/closed-departments (a plain key list the Apply page
+// already relies on) so that endpoint's response shape never has to change.
+router.get("/departments/closed", requireAdmin, async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("SELECT department, closed_at FROM closed_departments");
+    res.json(rows.map((r) => ({ department: r.department, closedAt: r.closed_at })));
+  } catch (err) {
+    next(err);
+  }
+});
+
 // POST /api/admin/reset — wipes and reseeds all houses/members/applications.
 // Destructive: erases every visitor's family trees back to defaults. Only
 // for the owner's own deliberate "reset everything" request.

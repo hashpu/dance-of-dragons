@@ -89,3 +89,27 @@ test("opening a department that was never closed is a no-op, not an error", asyn
   const res = await request.post("/api/admin/departments/warfare/open").set("x-admin-secret", "test-secret");
   assert.equal(res.status, 200);
 });
+
+test("GET /api/admin/departments/closed requires the admin secret and reports when each one was closed", async () => {
+  const noAuth = await request.get("/api/admin/departments/closed");
+  assert.equal(noAuth.status, 401);
+
+  const empty = await request.get("/api/admin/departments/closed").set("x-admin-secret", "test-secret");
+  assert.equal(empty.status, 200);
+  assert.deepEqual(empty.body, []);
+
+  await request.post("/api/admin/departments/media/close").set("x-admin-secret", "test-secret");
+
+  const withOne = await request.get("/api/admin/departments/closed").set("x-admin-secret", "test-secret");
+  assert.equal(withOne.status, 200);
+  assert.equal(withOne.body.length, 1);
+  assert.equal(withOne.body[0].department, "media");
+  assert.ok(withOne.body[0].closedAt);
+
+  // the public list stays a plain key array — admin.js's detailed endpoint
+  // above is additive, not a replacement for it.
+  const publicList = await request.get("/api/applications/closed-departments");
+  assert.deepEqual(publicList.body, ["media"]);
+
+  await request.post("/api/admin/departments/media/open").set("x-admin-secret", "test-secret");
+});
