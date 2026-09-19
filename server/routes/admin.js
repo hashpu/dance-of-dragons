@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const express = require("express");
 const { pool } = require("../db");
 const { seed, seedMissingHouses } = require("../seed");
+const { findDepartment } = require("../departments");
 const { requireAdmin, requireOwner } = require("../middleware/requireAdmin");
 
 const router = express.Router();
@@ -84,6 +85,34 @@ router.delete("/staff/:id", requireOwner, async (req, res, next) => {
   try {
     const { rows } = await pool.query("DELETE FROM staff_accounts WHERE id = $1 RETURNING id", [req.params.id]);
     if (!rows[0]) return res.status(404).json({ error: "Staff account not found." });
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/admin/departments/:key/close — closes a department to new
+// applications. Staff-allowed (safe, reversible) like seed-missing below,
+// not owner-only. The actual enforcement is server-side in POST
+// /api/applications — this just flips the switch it checks.
+router.post("/departments/:key/close", requireAdmin, async (req, res, next) => {
+  try {
+    const key = req.params.key;
+    if (!findDepartment(key)) return res.status(404).json({ error: "Unknown department." });
+    const { rows: existing } = await pool.query("SELECT department FROM closed_departments WHERE department = $1", [key]);
+    if (!existing[0]) {
+      await pool.query("INSERT INTO closed_departments (department) VALUES ($1)", [key]);
+    }
+    res.json({ ok: true });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// POST /api/admin/departments/:key/open — reopens one.
+router.post("/departments/:key/open", requireAdmin, async (req, res, next) => {
+  try {
+    await pool.query("DELETE FROM closed_departments WHERE department = $1", [req.params.key]);
     res.json({ ok: true });
   } catch (err) {
     next(err);

@@ -146,6 +146,12 @@ router.post("/", upload.single("image"), async (req, res, next) => {
     const { department, robloxUsername, availability, why } = req.body;
     const dept = findDepartment(department);
     if (!dept) return res.status(400).json({ error: "Unknown department." });
+
+    const { rows: closedRows } = await pool.query("SELECT 1 FROM closed_departments WHERE department = $1", [department]);
+    if (closedRows[0]) {
+      return res.status(403).json({ error: "This department isn't accepting applications right now." });
+    }
+
     if (!robloxUsername || !why) {
       return res.status(400).json({ error: "Roblox username and 'why' are required." });
     }
@@ -197,6 +203,18 @@ router.post("/", upload.single("image"), async (req, res, next) => {
     }
 
     res.status(201).json({ ok: true, id: insertRes.rows[0].id });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// GET /api/applications/closed-departments — public, no admin secret: the
+// Apply page needs this to show a department as closed to every visitor,
+// not just signed-in admins reviewing the dashboard.
+router.get("/closed-departments", async (req, res, next) => {
+  try {
+    const { rows } = await pool.query("SELECT department FROM closed_departments");
+    res.json(rows.map((r) => r.department));
   } catch (err) {
     next(err);
   }

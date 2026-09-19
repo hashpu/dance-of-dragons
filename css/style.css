@@ -1353,6 +1353,15 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; sc
 .house-card:hover::before { transform: translateX(120%); }
 .house-card:hover::after { opacity: 1; height: 3px; }
 
+.house-card-closed { opacity: 0.6; }
+.house-card-closed:hover {
+  transform: none;
+  border-color: var(--panel-border);
+  box-shadow: none;
+}
+.house-card-closed:hover::before { transform: translateX(-140%); }
+.house-card-closed:hover::after { opacity: 0; height: 0; }
+
 /* Small corner brackets, like a mounted heraldic plaque — opposite corners
    only so they never collide with the lock badge (top-right). */
 .house-card-corner {
@@ -1490,6 +1499,13 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; sc
   font-family: inherit;
   transition: transform 0.12s ease-out, box-shadow 0.15s ease-out, background 0.15s;
 }
+.btn:disabled {
+  cursor: default;
+  opacity: 0.5;
+  filter: grayscale(0.4);
+  transform: none !important;
+}
+.btn:disabled::before { display: none; }
 .btn::before {
   content: "";
   position: absolute;

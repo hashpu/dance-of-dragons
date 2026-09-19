@@ -2,18 +2,33 @@ function escapeHtml(str) {
   return String(str ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 }
 
+const APPLY_LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg>`;
+
+// Which departments have applications closed right now (see the admin
+// dashboard's Applications tab) — fetched once on load. The server is the
+// real gate (POST /api/applications rejects a closed department outright);
+// this is just so the Apply page reflects that instead of letting someone
+// fill out a whole form only to have it rejected at the end.
+let closedDepartments = [];
+
 function deptCardHtml(dept) {
+  const closed = closedDepartments.includes(dept.key);
   return `
-  <div class="house-card">
+  <div class="house-card${closed ? " house-card-closed" : ""}">
     <span class="house-card-corner house-card-corner-tl" aria-hidden="true"></span>
     <span class="house-card-corner house-card-corner-br" aria-hidden="true"></span>
+    ${closed ? `<span class="house-lock-badge" title="Applications closed">${APPLY_LOCK_ICON}</span>` : ""}
     <div class="house-card-head">
       <div class="house-icon"><span class="house-icon-ring"></span>${DEPT_ICONS[dept.icon]}</div>
       <div class="house-card-heading"><h3 class="house-name">${dept.name}</h3></div>
     </div>
     <p class="house-desc">${dept.blurb}</p>
     <div class="house-card-footer">
-      <button class="btn btn-primary btn-block" onclick="openApplyModal('${dept.key}')">Apply →</button>
+      ${
+        closed
+          ? `<button class="btn btn-outline btn-block" disabled>Applications Closed</button>`
+          : `<button class="btn btn-primary btn-block" onclick="openApplyModal('${dept.key}')">Apply →</button>`
+      }
     </div>
   </div>`;
 }
@@ -25,6 +40,7 @@ function deptCardHtml(dept) {
 // divide evenly, and gives a character-roleplay application real weight
 // instead of blending in with the generic staff department cards.
 function featuredDeptHtml(dept) {
+  const closed = closedDepartments.includes(dept.key);
   return `
   <div class="rally-cta featured-dept-cta">
     <div class="rally-cta-icon">${DEPT_ICONS[dept.icon]}</div>
@@ -32,11 +48,21 @@ function featuredDeptHtml(dept) {
       <strong>${dept.name}</strong>
       <p>${dept.blurb}</p>
     </div>
-    <button class="btn btn-primary" onclick="openApplyModal('${dept.key}')">Apply →</button>
+    ${
+      closed
+        ? `<button class="btn btn-outline" disabled>Applications Closed</button>`
+        : `<button class="btn btn-primary" onclick="openApplyModal('${dept.key}')">Apply →</button>`
+    }
   </div>`;
 }
 
-function renderDeptGrid() {
+async function renderDeptGrid() {
+  try {
+    closedDepartments = await Api.getClosedDepartments();
+  } catch (e) {
+    closedDepartments = [];
+  }
+
   const regular = DEPARTMENTS.filter((d) => !d.featured);
   const featured = DEPARTMENTS.filter((d) => d.featured);
 
@@ -169,6 +195,17 @@ function groupQuestionsBySection(questions) {
 async function openApplyModal(deptKey) {
   const dept = DEPARTMENTS.find((d) => d.key === deptKey);
   if (!dept) return;
+
+  if (closedDepartments.includes(deptKey)) {
+    await Dialog.alert({
+      kicker: dept.name,
+      title: "Applications closed",
+      message: "This department isn't accepting applications right now. Check back later.",
+      icon: "lock",
+      cardColor: "var(--red)"
+    });
+    return;
+  }
 
   if (typeof getDiscordUser !== "function" || !getDiscordUser()) {
     const ok = await Dialog.confirm({

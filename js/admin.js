@@ -14,6 +14,7 @@ let allHouses = [];
 let allApplications = [];
 let allStaff = [];
 let allDiscordUsers = [];
+let closedDepartments = [];
 
 // Applications hold fully public, unauthenticated free text (anyone can
 // submit one) that ends up rendered inside a privileged admin session that
@@ -85,17 +86,19 @@ function renderGate(errorMessage) {
 }
 
 async function loadDashboard(secret) {
-  const [houses, applications, discordUsers, admin] = await Promise.all([
+  const [houses, applications, discordUsers, admin, closed] = await Promise.all([
     Api.adminGetHouses(secret),
     Api.getApplications(secret),
     Api.searchDiscordUsers("", secret),
-    Api.whoami(secret)
+    Api.whoami(secret),
+    Api.getClosedDepartments()
   ]);
   adminSecret = secret;
   allHouses = houses;
   allApplications = applications;
   allDiscordUsers = discordUsers;
   currentAdmin = admin;
+  closedDepartments = closed;
   allStaff = admin.role === "owner" ? await Api.getStaff(secret) : [];
   renderDashboard();
 }
@@ -681,6 +684,61 @@ function renderDiscordUsersList() {
     : `<p class="empty-state">${allDiscordUsers.length ? `No accounts match "${escapeHtml(query)}".` : "Nobody's signed in with Discord yet."}</p>`;
 }
 
+function deptLockRowHtml(dept) {
+  const closed = closedDepartments.includes(dept.key);
+  return `
+    <div class="admin-dept-lock-row" data-key="${dept.key}">
+      <div class="admin-dept-lock-info">
+        <span class="admin-dept-lock-name">${escapeHtml(dept.name)}</span>
+        <span class="a-badge ${closed ? "a-badge-locked" : "a-badge-unlocked"}"><span class="dot"></span>${closed ? "Closed" : "Open"}</span>
+      </div>
+      <button class="a-btn ${closed ? "a-btn-primary" : "a-btn-danger"}" data-action="toggle-dept-lock" data-key="${dept.key}">
+        ${closed ? "Reopen" : "Close"}
+      </button>
+    </div>
+  `;
+}
+
+function renderDeptLocks() {
+  const el = document.getElementById("adminDeptLocks");
+  if (!el) return;
+  el.innerHTML = DEPARTMENTS.map(deptLockRowHtml).join("");
+
+  el.querySelectorAll('[data-action="toggle-dept-lock"]').forEach((btn) => {
+    btn.onclick = async () => {
+      const key = btn.dataset.key;
+      const dept = DEPARTMENTS.find((d) => d.key === key);
+      const closed = closedDepartments.includes(key);
+      if (!closed) {
+        const ok = await Dialog.confirm({
+          kicker: "Admin only",
+          title: `Close ${dept ? dept.name : "this department"} to applications?`,
+          message: "Members won't be able to open or submit an application to it until you reopen it.",
+          confirmText: "Close department",
+          danger: true
+        });
+        if (!ok) return;
+      }
+      btn.disabled = true;
+      try {
+        if (closed) {
+          await Api.openDepartment(key, adminSecret);
+        } else {
+          await Api.closeDepartment(key, adminSecret);
+        }
+        await refreshDeptLocks();
+      } finally {
+        btn.disabled = false;
+      }
+    };
+  });
+}
+
+async function refreshDeptLocks() {
+  closedDepartments = await Api.getClosedDepartments();
+  renderDeptLocks();
+}
+
 function switchTab(name) {
   document.querySelectorAll(".admin-tab").forEach((btn) => btn.classList.toggle("active", btn.dataset.tab === name));
   document.querySelectorAll(".admin-panel").forEach((panel) => panel.classList.toggle("active", panel.dataset.panel === name));
@@ -717,6 +775,8 @@ function renderDashboard() {
     </div>
 
     <div class="admin-panel" data-panel="applications">
+      <p class="admin-section-desc">Close a department to stop new applications — members won't be able to open or submit one until you reopen it. Existing applications aren't affected.</p>
+      <div class="admin-dept-locks" id="adminDeptLocks"></div>
       <div class="admin-toolbar">
         <input type="text" id="appSearchInput" class="admin-search" placeholder="Search by Roblox or Discord username..." />
         <select id="appStatusFilter" class="admin-filter-select">
@@ -874,6 +934,7 @@ function renderDashboard() {
   renderStats();
   updateTabCounts();
   renderHouseTable();
+  renderDeptLocks();
   renderTickets();
   renderDiscordUsersList();
 }

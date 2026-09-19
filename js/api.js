@@ -89,5 +89,8 @@ const Api = {
   searchHouseDiscordUsers: (slug, query, housePassword) =>
     apiFetch(`/houses/${slug}/discord-users?q=${encodeURIComponent(query || "")}`, { housePassword }),
   discordMe: () => apiFetch("/discord/me"),
-  submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData })
+  submitApplication: (formData) => apiFetch("/applications", { method: "POST", body: formData }),
+  getClosedDepartments: () => apiFetch("/applications/closed-departments"),
+  closeDepartment: (key, secret) => apiFetch(`/admin/departments/${key}/close`, { method: "POST", headers: { "x-admin-secret": secret } }),
+  openDepartment: (key, secret) => apiFetch(`/admin/departments/${key}/open`, { method: "POST", headers: { "x-admin-secret": secret } })
 };

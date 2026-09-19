@@ -66,6 +66,7 @@
 :root[data-theme="light"] .admin-page .ticket-card:hover { border-color: #c5c5ca; }
 :root[data-theme="light"] .admin-page .admin-table tbody tr:hover { background: rgba(0, 0, 0, 0.03); }
 :root[data-theme="light"] .admin-page .admin-danger-zone { background: rgba(0, 0, 0, 0.03); }
+:root[data-theme="light"] .admin-page .admin-dept-lock-row { background: rgba(0, 0, 0, 0.03); }
 @media (prefers-color-scheme: light) {
   :root[data-theme="system"] .admin-page .a-btn:hover { background: #e4e4e6; border-color: #c5c5ca; }
   :root[data-theme="system"] .admin-page .a-btn-primary:hover { background: #3f3f45; border-color: #3f3f45; }
@@ -74,6 +75,7 @@
   :root[data-theme="system"] .admin-page .ticket-card:hover { border-color: #c5c5ca; }
   :root[data-theme="system"] .admin-page .admin-table tbody tr:hover { background: rgba(0, 0, 0, 0.03); }
   :root[data-theme="system"] .admin-page .admin-danger-zone { background: rgba(0, 0, 0, 0.03); }
+  :root[data-theme="system"] .admin-page .admin-dept-lock-row { background: rgba(0, 0, 0, 0.03); }
 }
 .admin-page h1, .admin-page h2, .admin-page h3 { font-family: "Inter", system-ui, sans-serif; letter-spacing: normal; }
 
@@ -465,6 +467,20 @@
 .admin-danger-zone h3 { margin: 0 0 4px; font-size: 14px; color: var(--a-text); }
 .admin-danger-zone p { margin: 0 0 14px; font-size: 13px; color: var(--a-muted); }
 .admin-danger-actions { display: flex; gap: 12px; flex-wrap: wrap; }
+
+.admin-dept-locks { display: grid; gap: 8px; margin-bottom: 22px; }
+.admin-dept-lock-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--a-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+}
+.admin-dept-lock-info { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.admin-dept-lock-name { font-size: 13.5px; font-weight: 600; color: var(--a-text); }
 
 /* Secret gate */
 .admin-gate {

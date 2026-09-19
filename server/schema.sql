@@ -161,3 +161,16 @@ CREATE TABLE IF NOT EXISTS application_messages (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS application_messages_app_idx ON application_messages(application_id);
+
+-- A department present here has its applications closed: the Apply page
+-- shows it as unavailable, and POST /api/applications rejects new
+-- submissions to it server-side (the client-side disabling alone isn't
+-- enough to actually stop someone from submitting). Row existing = closed;
+-- no row = open, which is why closing/reopening is just insert/delete
+-- rather than a boolean column on some other table (departments aren't
+-- database rows at all otherwise — they're the static list in
+-- server/departments.js).
+CREATE TABLE IF NOT EXISTS closed_departments (
+  department TEXT PRIMARY KEY,
+  closed_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
