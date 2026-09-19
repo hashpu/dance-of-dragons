@@ -61,6 +61,7 @@
 }
 :root[data-theme="light"] .admin-page .a-btn:hover { background: #e4e4e6; border-color: #c5c5ca; }
 :root[data-theme="light"] .admin-page .a-btn-primary:hover { background: #3f3f45; border-color: #3f3f45; }
+:root[data-theme="light"] .admin-page .a-row-btn:hover { background: #e4e4e6; border-color: #c5c5ca; }
 :root[data-theme="light"] .admin-page .a-badge-locked { color: #4a4a4e; }
 :root[data-theme="light"] .admin-page .a-badge-unlocked { color: #146b46; }
 :root[data-theme="light"] .admin-page .ticket-card:hover { border-color: #c5c5ca; }
@@ -70,6 +71,7 @@
 @media (prefers-color-scheme: light) {
   :root[data-theme="system"] .admin-page .a-btn:hover { background: #e4e4e6; border-color: #c5c5ca; }
   :root[data-theme="system"] .admin-page .a-btn-primary:hover { background: #3f3f45; border-color: #3f3f45; }
+  :root[data-theme="system"] .admin-page .a-row-btn:hover { background: #e4e4e6; border-color: #c5c5ca; }
   :root[data-theme="system"] .admin-page .a-badge-locked { color: #4a4a4e; }
   :root[data-theme="system"] .admin-page .a-badge-unlocked { color: #146b46; }
   :root[data-theme="system"] .admin-page .ticket-card:hover { border-color: #c5c5ca; }
@@ -270,6 +272,45 @@
 .a-link { background: none; border: none; padding: 0; font: inherit; color: var(--a-accent); cursor: pointer; font-size: 12.5px; font-weight: 600; }
 .a-link:hover { text-decoration: underline; }
 .a-link-danger { color: var(--a-danger); }
+.a-btn-success {
+  background: color-mix(in srgb, var(--a-success) 14%, var(--a-panel-2));
+  border-color: color-mix(in srgb, var(--a-success) 45%, var(--a-border));
+  color: var(--a-success);
+}
+.a-btn-success:hover {
+  background: color-mix(in srgb, var(--a-success) 24%, var(--a-panel-2));
+  border-color: var(--a-success);
+}
+
+/* Compact icon+label buttons for a table row's actions — clearly clickable
+   buttons instead of a wall of plain-text links crammed into one cell. */
+.a-row-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 6px 10px;
+  border-radius: 6px;
+  border: 1px solid var(--a-border);
+  background: var(--a-panel-2);
+  color: var(--a-text);
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, border-color 0.15s, transform 0.08s;
+}
+.a-row-btn svg { width: 13px; height: 13px; flex-shrink: 0; }
+.a-row-btn:hover { background: #20232b; border-color: #363a45; }
+.a-row-btn:active { transform: scale(0.96); }
+.a-row-btn-danger {
+  color: var(--a-danger);
+  border-color: color-mix(in srgb, var(--a-danger) 45%, var(--a-border));
+}
+.a-row-btn-danger:hover {
+  background: color-mix(in srgb, var(--a-danger) 20%, var(--a-panel-2));
+  border-color: var(--a-danger);
+}
 
 /* Houses table */
 .admin-table-wrap { border: 1px solid var(--a-border); border-radius: 8px; overflow: hidden; overflow-x: auto; box-shadow: 0 12px 28px -18px rgba(0, 0, 0, 0.7); }
@@ -302,8 +343,7 @@
   color: var(--a-muted);
   letter-spacing: 0.2px;
 }
-.admin-table-actions { display: flex; flex-wrap: wrap; gap: 8px 14px; justify-content: flex-end; }
-.admin-table-actions .a-link { white-space: nowrap; }
+.admin-table-actions { display: flex; flex-wrap: wrap; gap: 6px; justify-content: flex-end; }
 .admin-empty-row td { text-align: center; color: var(--a-muted); padding: 30px 16px; }
 
 .admin-page .empty-state {

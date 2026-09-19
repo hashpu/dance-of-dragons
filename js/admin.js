@@ -29,6 +29,10 @@ const CHEVRON_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
 const LOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 018 0v3"/></svg>`;
 const COPY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 00-2-2H6a2 2 0 00-2 2v8a2 2 0 002 2h2"/></svg>`;
 const CHECK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"/></svg>`;
+const UNLOCK_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5V7.5a4 4 0 017.8-1.3"/></svg>`;
+const KEY_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="15" r="3.5"/><path d="M10.5 12.5L19 4M19 4v3.5M19 4h-3.5"/></svg>`;
+const CROWN_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 8l3.5 3L12 5l4.5 6L20 8l-1.6 9H5.6L4 8z"/></svg>`;
+const TRASH_ICON = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h16M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0l1 12a2 2 0 002 2h4a2 2 0 002-2l1-12"/></svg>`;
 
 function copyBtnHtml(value, label) {
   return `<button type="button" class="ticket-copy-btn" data-copy="${escapeHtml(value)}" title="Copy ${label}" aria-label="Copy ${label}">${COPY_ICON}</button>`;
@@ -169,12 +173,12 @@ function houseTableRowHtml(h) {
         <div class="admin-table-actions">
           ${
             currentAdmin && currentAdmin.role === "owner"
-              ? `<button class="a-link" data-action="reset-password" data-slug="${h.slug}">Reset password</button>
-                 ${h.locked ? `<button class="a-link" data-action="clear-lock" data-slug="${h.slug}">Clear lock</button>` : ""}
-                 <button class="a-link" data-action="set-lord-discord" data-slug="${h.slug}">${h.lordDiscordUserId ? "Change" : "Set"} ${leaderTitle(h)}</button>
-                 ${h.lordDiscordUserId ? `<button class="a-link a-link-danger" data-action="clear-lord-discord" data-slug="${h.slug}">Remove ${leaderTitle(h)}</button>` : ""}
-                 ${h.lordRoleId ? `<button class="a-link a-link-danger" data-action="clear-lord-role" data-slug="${h.slug}">Remove ${leaderTitle(h)} (Role)</button>` : ""}
-                 <button class="a-link a-link-danger" data-action="delete-house" data-slug="${h.slug}">Delete</button>`
+              ? `<button class="a-row-btn" data-action="reset-password" data-slug="${h.slug}" title="Reset password">${KEY_ICON}<span>Reset password</span></button>
+                 ${h.locked ? `<button class="a-row-btn" data-action="clear-lock" data-slug="${h.slug}" title="Clear lock">${UNLOCK_ICON}<span>Clear lock</span></button>` : ""}
+                 <button class="a-row-btn" data-action="set-lord-discord" data-slug="${h.slug}" title="${h.lordDiscordUserId ? "Change" : "Set"} ${leaderTitle(h)}">${CROWN_ICON}<span>${h.lordDiscordUserId ? "Change" : "Set"} ${leaderTitle(h)}</span></button>
+                 ${h.lordDiscordUserId ? `<button class="a-row-btn a-row-btn-danger" data-action="clear-lord-discord" data-slug="${h.slug}" title="Remove ${leaderTitle(h)}">${TRASH_ICON}<span>Remove ${leaderTitle(h)}</span></button>` : ""}
+                 ${h.lordRoleId ? `<button class="a-row-btn a-row-btn-danger" data-action="clear-lord-role" data-slug="${h.slug}" title="Remove ${leaderTitle(h)} (Role)">${TRASH_ICON}<span>Remove ${leaderTitle(h)} (Role)</span></button>` : ""}
+                 <button class="a-row-btn a-row-btn-danger" data-action="delete-house" data-slug="${h.slug}" title="Delete">${TRASH_ICON}<span>Delete</span></button>`
               : ""
           }
         </div>
