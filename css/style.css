@@ -821,6 +821,26 @@ html { scrollbar-color: var(--panel-border) var(--bg); scrollbar-width: thin; sc
 .rally-cta-text p { margin: 0; font-family: "Cormorant Garamond", Georgia, serif; font-size: 15px; color: var(--muted); }
 .rally-cta .btn { flex-shrink: 0; }
 
+/* The one featured (character-roleplay) department — reuses the same gold
+   accent as Lord/leadership UI elsewhere so it actually reads as special,
+   instead of looking identical to every other generic .rally-cta banner. */
+.featured-dept-cta {
+  border-left-color: var(--gold);
+  background:
+    radial-gradient(90% 160% at 0% 0%, color-mix(in srgb, var(--gold) 14%, transparent), transparent 60%),
+    var(--panel);
+}
+.featured-dept-cta:hover {
+  border-color: var(--gold);
+  box-shadow: 0 16px 34px -18px var(--gold);
+}
+.featured-dept-cta .rally-cta-icon {
+  background: color-mix(in srgb, var(--gold) 16%, transparent);
+  border-color: color-mix(in srgb, var(--gold) 45%, transparent);
+  color: var(--gold);
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--gold) 8%, transparent);
+}
+
 /* Homepage "How It Works" section — a plain, boxless icon+text grid (unlike
    .rally-tier's framed-plaque cards elsewhere on this page) with one small
    floating widget on the side, mocking up the real profile-card UI. The
